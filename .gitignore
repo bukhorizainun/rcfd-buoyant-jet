@@ -1,0 +1,23 @@
+# Local junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS-generated thumbnails
+ehthumbs.db
+
+# MATLAB / build artifacts (not expected here, but just in case)
+*.asv
+*.m~
+*.mexw64
+
+# Python cache (not expected here, but just in case)
+__pycache__/
+*.pyc

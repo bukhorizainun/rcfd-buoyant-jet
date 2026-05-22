@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data-based Numerical Simulation of Buoyant Jet Flow — Step 1 Summary</title>
+<meta name="description" content="Step 1 progress summary of the master's thesis: CFD reference, recurrence-CFD workflow, and a face-swap-diffusion parameter sweep on the buoyant-jet test case.">
+<meta name="author" content="Mochamad Bukhori Zainun">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+<!-- KaTeX for math -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+
+<!-- Plotly.js for interactive plot -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+
+<!-- Time-series data (CORS-safe under file://) -->
+<script src="assets/data/step1b_traces.js"></script>
+
+<link rel="stylesheet" href="styles.css">
+
+<!-- Apply theme before paint to avoid flash -->
+<script>
+(function() {
+  try {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = saved || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle" type="button"
+        title="Toggle light/dark mode" aria-label="Toggle dark mode">
+  <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+  <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+  </svg>
+</button>
+
+<nav class="toc">
+  <h4>Contents</h4>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#testcase">The Test Case</a></li>
+    <li><a href="#rcfd">rCFD in a Nutshell</a></li>
+    <li><a href="#fsd">Face-Swap Diffusion</a></li>
+    <li><a href="#step1a">Step 1a Results</a></li>
+    <li><a href="#step1b">Step 1b: Sweep</a></li>
+    <li><a href="#quantitative">Quantitative Results</a></li>
+    <li><a href="#visual">Visual Comparison</a></li>
+    <li><a href="#discussion">Discussion</a></li>
+    <li><a href="#outlook">Outlook: Step 2</a></li>
+    <li><a href="#references">References</a></li>
+  </ol>
+</nav>
+
+<header class="article-header">
+  <div class="inner">
+    <div class="eyebrow">Master's thesis — Progress summary</div>
+    <h1>Data-based Numerical Simulation of Buoyant Jet Flow</h1>
+    <div class="subtitle">Step 1 — CFD reference, rCFD workflow, and a face-swap-diffusion parameter study</div>
+    <div class="meta">
+      <span><strong>Mochamad Bukhori Zainun</strong> — k12438440</span>
+      <span>Supervisor: <strong>Prof. Stefan Pirker</strong></span>
+      <span>Department of Particulate Flow Modelling, JKU Linz</span>
+      <span>May 2026</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<div class="tldr">
+  <h3>TL;DR</h3>
+  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a turbulent CFD reference (k-$\omega$ SST), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$).</p>
+</div>
+
+<p>This page brings together Step 1a (the workflow) and Step 1b (the parameter sweep). It explains the buoyant-jet problem, how rCFD works, what each $f_{sd}$ value does to the temperature field, and what we would suggest for Step 2.</p>
+
+<!-- =========================================================== -->
+<h2 id="background">1 — Background</h2>
+
+<p>Running a full CFD simulation for a long time is expensive. The flow itself settles into a repeating pattern within a few seconds, but the things we care about (heat, mixing, stratification) may need minutes or hours to develop. Doing a full Navier-Stokes solve for that long is wasteful.</p>
+
+<p><strong>Recurrence CFD</strong> (rCFD), introduced by Lichtenegger and Pirker in 2016 <a href="#ref-lichtenegger2016">[1]</a>, uses this repetition. After a short CFD run, the velocity field is saved as a database of cell-to-cell (C2C) shift patterns. The temperature is then moved through the chamber by applying these saved patterns over and over again. No Navier-Stokes solve is needed during this replay phase.</p>
+
+<p>The catch is that the C2C shifts only move things around; they do not mix anything. To bring back the missing mixing we need a small diffusion step, controlled by one dimensionless number: the face-swap diffusion $f_{sd}$. This page shows how we built the workflow (Step 1a) and how we then tuned $f_{sd}$ (Step 1b).</p>
+
+<!-- =========================================================== -->
+<h2 id="testcase">2 — The Buoyant-Jet Test Case</h2>
+
+<p>The test case is a closed rectangular tank filled with water at $293$ K. A small horizontal jet enters at mid-height. From $t=0$ to $t=315$ s the jet is warm ($T_\text{high}=333$ K); after $t=315$ s it switches back to cold. The warm water is lighter than the cold water, so it rises to the top of the tank and a vertical thermal layer builds up.</p>
+
+<p>We follow the temperature field with two numbers:</p>
+
+<ul>
+  <li>The <strong>average temperature</strong> $T_\text{mean}(t)$, which tells us how much heat is in the tank.</li>
+  <li>The <strong>vertical centre of gravity of the heat</strong> $CoG_y(t)$, which tells us how high or low the warm fluid sits.</li>
+</ul>
+
+<p>Both values are written to <code>rCFD_temperature.out</code> at every rCFD step, and the same numbers are computed for the CFD reference.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_01_spinup_energy.png" alt="CFD spin-up energy convergence">
+  <figcaption><span class="label">Figure 1.</span> Energy in the tank during the CFD spin-up. After a few tens of seconds the energy stops changing, which means the flow has reached a steady, repeating regime. This is what rCFD needs before we can build a useful database.</figcaption>
+</figure>
+
+<!-- =========================================================== -->
+<h2 id="rcfd">3 — rCFD in a Nutshell</h2>
+
+<p>rCFD has two phases: <em>preparation</em> (run a short CFD, save the flow patterns) and <em>replay</em> (use those saved patterns to push the temperature around). The diagram below shows the whole pipeline at a glance &mdash; the animated dots illustrate how data flows between the steps.</p>
+
+<figure class="workflow wide">
+  <svg viewBox="0 0 1100 360" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="rCFD pipeline diagram">
+    <defs>
+      <marker id="wfArrowHead" viewBox="0 0 10 10" refX="8" refY="5"
+              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+
+    <!-- Phase labels -->
+    <text x="275" y="32" text-anchor="middle"
+          class="wf-phase-label prep">Preparation &mdash; runs once</text>
+    <text x="825" y="32" text-anchor="middle"
+          class="wf-phase-label replay">Replay &mdash; fast loop</text>
+
+    <!-- Phase separator -->
+    <line x1="550" y1="55" x2="550" y2="265"
+          stroke="var(--ink-faint)" stroke-width="1"
+          stroke-dasharray="3 5" opacity="0.4"/>
+
+    <!-- ============ Box 1: Short CFD run ============ -->
+    <g class="wf-box" transform="translate(40, 80)"
+       data-tip-title="Short CFD run"
+       data-tip="A conventional Navier-Stokes simulation, just long enough to reach the recurrent regime (about 30 s of simulated time). This is the only expensive step; it runs once.">
+      <title>Short CFD run</title>
+      <rect class="bg preparation" x="0" y="0" width="220" height="170"/>
+      <!-- Icon: chamber outline with velocity arrows -->
+      <g transform="translate(50, 30)">
+        <rect class="wf-icon-fill" x="0" y="0" width="120" height="65" rx="4"/>
+        <line class="wf-icon-stroke" x1="15" y1="18" x2="48" y2="18" marker-end="url(#wfArrowHead)"/>
+        <line class="wf-icon-stroke" x1="55" y1="34" x2="92" y2="34" marker-end="url(#wfArrowHead)"/>
+        <line class="wf-icon-stroke" x1="20" y1="48" x2="55" y2="48" marker-end="url(#wfArrowHead)"/>
+      </g>
+      <text class="wf-title" x="110" y="125" text-anchor="middle">Short CFD run</text>
+      <text class="wf-sub"   x="110" y="148" text-anchor="middle">~30 s of velocity field</text>
+    </g>
+
+    <!-- Arrow 1 (Box1 -> Box2) -->
+    <g style="color: var(--ink-faint)">
+      <path id="wfPath1" class="wf-arrow" d="M 265 165 L 305 165"/>
+      <circle r="4.5" fill="var(--accent)">
+        <animateMotion dur="2.4s" repeatCount="indefinite" rotate="auto">
+          <mpath href="#wfPath1"/>
+        </animateMotion>
+      </circle>
+    </g>
+
+    <!-- ============ Box 2: C2C database ============ -->
+    <g class="wf-box" transform="translate(310, 80)"
+       data-tip-title="C2C shift database"
+       data-tip="For every recorded frame, lists which neighbour cell each cell's fluid moves into during one time step. Saved to disk and reused for every rCFD replay.">
+      <title>C2C shift database</title>
+      <rect class="bg preparation" x="0" y="0" width="220" height="170"/>
+      <!-- Icon: grid of cells with one shift arrow -->
+      <g transform="translate(60, 26)">
+        <rect class="wf-icon-fill" x="0"   y="0"  width="22" height="22"/>
+        <rect class="wf-icon-fill" x="25"  y="0"  width="22" height="22"/>
+        <rect class="wf-icon-fill" x="50"  y="0"  width="22" height="22"/>
+        <rect class="wf-icon-fill" x="75"  y="0"  width="22" height="22"/>
+        <rect class="wf-icon-fill" x="0"   y="25" width="22" height="22"/>
+        <rect class="wf-icon-fill" x="25"  y="25" width="22" height="22" fill-opacity="0.55"/>
+        <rect class="wf-icon-fill" x="50"  y="25" width="22" height="22"/>
+        <rect class="wf-icon-fill" x="75"  y="25" width="22" height="22"/>
+        <line class="wf-icon-stroke" x1="36" y1="34" x2="58" y2="34" marker-end="url(#wfArrowHead)"/>
+      </g>
+      <text class="wf-title" x="110" y="125" text-anchor="middle">C2C database</text>
+      <text class="wf-sub"   x="110" y="148" text-anchor="middle">cell-to-cell shift patterns</text>
+    </g>
+
+    <!-- Arrow 2 (Box2 -> Box3, crosses the phase divider) -->
+    <g style="color: var(--ink-faint)">
+      <path id="wfPath2" class="wf-arrow" d="M 535 165 L 575 165"/>
+      <circle r="4.5" fill="var(--accent)">
+        <animateMotion dur="2.4s" begin="0.6s" repeatCount="indefinite">
+          <mpath href="#wfPath2"/>
+        </animateMotion>
+      </circle>
+    </g>
+
+    <!-- ============ Box 3: Shift & diffuse ============ -->
+    <g class="wf-box" transform="translate(580, 80)"
+       data-tip-title="Shift &amp; diffuse"
+       data-tip="The core rCFD step. Pick a frame from the C2C database, translate the temperature field along its shift map, then apply the face-swap diffusion operator with parameter f_sd to add the missing mixing.">
+      <title>Shift &amp; diffuse</title>
+      <rect class="bg replay" x="0" y="0" width="220" height="170"/>
+      <!-- Icon: three cells with shift arrows + a small "diffuse" wave -->
+      <g transform="translate(50, 28)">
+        <circle class="wf-icon-fill" cx="22" cy="20" r="16"/>
+        <circle class="wf-icon-fill" cx="62" cy="20" r="16"/>
+        <circle class="wf-icon-fill" cx="102" cy="20" r="16"/>
+        <line class="wf-icon-stroke" x1="38" y1="20" x2="48" y2="20" marker-end="url(#wfArrowHead)"/>
+        <line class="wf-icon-stroke" x1="78" y1="20" x2="88" y2="20" marker-end="url(#wfArrowHead)"/>
+        <path class="wf-icon-stroke" d="M 18 55 Q 30 48 42 55 T 66 55 T 90 55 T 110 55" fill="none"/>
+      </g>
+      <text class="wf-title" x="110" y="125" text-anchor="middle">Shift &amp; diffuse</text>
+      <text class="wf-sub"   x="110" y="148" text-anchor="middle">apply C2C, then face-swap mixing</text>
+    </g>
+
+    <!-- Arrow 3 (Box3 -> Box4) -->
+    <g style="color: var(--ink-faint)">
+      <path id="wfPath3" class="wf-arrow" d="M 805 165 L 845 165"/>
+      <circle r="4.5" fill="#c87b1f">
+        <animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite">
+          <mpath href="#wfPath3"/>
+        </animateMotion>
+      </circle>
+    </g>
+
+    <!-- ============ Box 4: Output T field ============ -->
+    <g class="wf-box" transform="translate(850, 80)"
+       data-tip-title="Output T field"
+       data-tip="One temperature-field snapshot per replay step. After 600 steps the full 600 s of thermal transport is reproduced, at roughly one thirty-seventh of the original CFD cost.">
+      <title>Output T field</title>
+      <rect class="bg replay" x="0" y="0" width="220" height="170"/>
+      <!-- Icon: stratified chamber -->
+      <g transform="translate(55, 26)">
+        <rect x="0" y="0"  width="110" height="15" fill="#c83737" opacity="0.80"/>
+        <rect x="0" y="15" width="110" height="11" fill="#d97f0b" opacity="0.80"/>
+        <rect x="0" y="26" width="110" height="11" fill="#e2c64b" opacity="0.80"/>
+        <rect x="0" y="37" width="110" height="11" fill="#5db478" opacity="0.80"/>
+        <rect x="0" y="48" width="110" height="15" fill="#3b6db5" opacity="0.80"/>
+      </g>
+      <text class="wf-title" x="110" y="125" text-anchor="middle">Output T field</text>
+      <text class="wf-sub"   x="110" y="148" text-anchor="middle">one snapshot per replay step</text>
+    </g>
+
+    <!-- Loop arrow: from output (bottom-right) under the boxes back to Shift &amp; diffuse (bottom-left of that box) -->
+    <g style="color: #c87b1f">
+      <path id="wfPathLoop" class="wf-arrow loop"
+            d="M 960 268 C 960 320, 690 320, 690 268"/>
+      <circle r="4" fill="#c87b1f">
+        <animateMotion dur="3.6s" begin="1.8s" repeatCount="indefinite">
+          <mpath href="#wfPathLoop"/>
+        </animateMotion>
+      </circle>
+    </g>
+    <text x="825" y="345" text-anchor="middle"
+          class="wf-sub" style="font-style: italic; fill: #c87b1f; font-size: 12px;">
+      repeat 600 times (one replay step per simulated second)
+    </text>
+  </svg>
+  <figcaption>The rCFD pipeline. Preparation (left half, blue) runs once: a short CFD simulation produces a database of cell-to-cell (C2C) shift patterns. Replay (right half, orange) runs many times: each step picks a pattern from the database, applies it to the temperature field, and adds a small amount of face-swap diffusion. Hover any box for a longer description.</figcaption>
+</figure>
+
+<h3>3.1 — Preparation: building the C2C database</h3>
+
+<p>During preparation, the CFD solver writes, at every saved frame, a small list that says: "the fluid in cell $i$ moved into cell $j$ during this time step". This list is called the cell-to-cell (C2C) shift map. The database is just many of these maps, taken from the repeating regime of the CFD run.</p>
+
+<h3>3.2 — Replay: moving the temperature</h3>
+
+<p>During replay, rCFD picks a frame from the database and uses its C2C map to move the temperature field one step. This shifts warm and cold pockets across the tank, but it never solves the Navier-Stokes equations again.</p>
+
+<p>The shift only moves things; it does not mix them. So a pure C2C replay would give an unrealistically sharp boundary between warm and cold zones. The next section shows how rCFD adds the missing mixing.</p>
+
+<!-- =========================================================== -->
+<h2 id="fsd">4 — Face-Swap Diffusion</h2>
+
+<p>After each C2C shift, rCFD walks over every internal face and moves a small amount of heat between the two neighbouring cells. This is the <strong>face-swap diffusion operator</strong>, first proposed by Pirker and Lichtenegger in 2018 <a href="#ref-pirker2018">[2]</a> under the name "global balance safety belt", and later rewritten in a cleaner mathematical form by Lumetzberger et al. in 2025 <a href="#ref-lumetzberger2025">[3]</a>.</p>
+
+<p>It is controlled by two numbers:</p>
+
+<ul>
+  <li><code>face_swap_max_per_loop</code> (default $1/8$): a safety cap on how much volume can move across a face in one sweep.</li>
+  <li><code>face_swap_diffusion</code> = $f_{sd}$ (set by the user): the total amount of mixing per rCFD time step. If $f_{sd}$ is larger than the cap, the operator splits the work into several sweeps of size $0.125$ each.</li>
+</ul>
+
+<p>For one face between cells $c_0$ and $c_1$ with $T_{c_1} > T_{c_0}$ the operation is:</p>
+
+<p>$$ \Delta T = \frac{T_{c_1} - T_{c_0}}{2} \cdot \min(V_{c_0}, V_{c_1}) \cdot f_\text{loop} $$</p>
+
+<p>$$ T_{c_0} \mathrel{+}= \Delta T, \qquad T_{c_1} \mathrel{-}= \Delta T $$</p>
+
+<p>where $f_\text{loop} = f_{sd}/n_\text{loops}$ is the strength of one sweep.</p>
+
+<div class="note">It is important to note that $f_{sd}$ is a dimensionless number, not a physical diffusion coefficient in m²/s. The rCFD library does have a different "local diffusion" option, which uses a real Fickian flux. That option needs a per-cell diffusion field that we do not generate in Step 1, so we leave it switched off here.</div>
+
+<!-- =========================================================== -->
+<h2 id="step1a">5 — Step 1a: Workflow on Windows 11</h2>
+
+<p>The rCFD tutorial was originally written for Linux. Step 1a takes the same tutorial and makes it run end-to-end on Windows 11 with ANSYS Fluent 2022 R2. The main changes were:</p>
+
+<ul>
+  <li>Replacing Linux shell commands inside the Scheme files with Windows equivalents (<code>xcopy</code> instead of a looped <code>cp</code>, absolute paths with backslashes).</li>
+  <li>Installing the Visual Studio C++ tools so that Fluent can compile the UDF library at runtime.</li>
+  <li>Adding clean-up logic so that the old <code>libudf_rcfd_run/</code> folder is deleted before every run. Without this, a stale build from a previous crash would be reused.</li>
+  <li>Fixing an MPI crash that always happened at episode 272 of the replay (it came from a corona-cell sync problem).</li>
+  <li>Fixing blank snapshots: the contour plot had to be drawn before saving the frame.</li>
+</ul>
+
+<p>After these fixes the full workflow runs in about thirty minutes on a four-core laptop: roughly fifteen minutes for the CFD reference, and fifteen minutes for the rCFD replay (600 episodes).</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_02_cfd_tmean_cog.png" alt="CFD reference T_mean and CoG_y traces">
+  <figcaption><span class="label">Figure 2.</span> CFD reference traces of $T_\text{mean}(t)$ (left) and $CoG_y(t)$ (right). The average temperature rises while the warm inlet is on ($t<315$ s), peaks around $t\approx 345$ s, then falls. The centre of gravity climbs as warm fluid collects at the top.</figcaption>
+</figure>
+
+<h3>5.1 — First rCFD replay at $f_{sd} = 0.75$</h3>
+
+<p>For the first replay we used $f_{sd} = 0.75$, the value Prof. Pirker had picked. The rCFD curves follow the CFD curves in shape, but $T_\text{mean}$ sits clearly above the reference. That offset is what motivated Step 1b: instead of guessing the right value of $f_{sd}$, we decided to sweep it.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_comparison_TMean_CoG.png" alt="Step 1a CFD vs rCFD comparison at f_sd = 0.75">
+  <figcaption><span class="label">Figure 3.</span> Step 1a comparison: CFD reference (black) versus rCFD replay at $f_{sd} = 0.75$. The rCFD trace for $T_\text{mean}$ stays above the reference during the warm phase; $CoG_y$ follows the reference quite well, but its peak arrives later.</figcaption>
+</figure>
+
+<!-- =========================================================== -->
+<h2 id="step1b">6 — Step 1b: The Parameter Sweep</h2>
+
+<p>Step 1b uses seven values of $f_{sd}$ that cover more than two orders of magnitude. The CFD reference and the C2C database stay the same for every case &mdash; only the rCFD replay (and its UDF library) is rebuilt with the new value.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Case</th><th>$f_{sd}$</th><th class="num">Inner sweeps</th><th>Role in the sweep</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>0.000</td><td class="num">1</td><td>Pure C2C shift, no mixing</td></tr>
+<tr><td>2</td><td>0.125</td><td class="num">1</td><td>rCFD source default</td></tr>
+<tr><td>3</td><td>0.375</td><td class="num">3</td><td>Moderate mixing</td></tr>
+<tr><td>4</td><td>0.500</td><td class="num">4</td><td>Intermediate value around the optimum</td></tr>
+<tr><td>5</td><td>0.750</td><td class="num">6</td><td>Step 1a value</td></tr>
+<tr><td>6</td><td>1.500</td><td class="num">12</td><td>Strong mixing</td></tr>
+<tr><td>7</td><td>3.000</td><td class="num">24</td><td>Extreme mixing (expected to over-smooth)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Three PowerShell scripts under <code>step1b/</code> handle the edit-recompile-run-archive loop, so that one case never overwrites another. The full seven-case sweep took just over two hours of wall-clock time. The CFD reference itself took 9 h 43 min, so rCFD is roughly 37 times faster than CFD on this case.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_step1b_wallclock.png" alt="Wall-clock time: CFD reference vs rCFD per case">
+  <figcaption><span class="label">Figure 4.</span> Wall-clock time of the CFD reference (left, brick red) against each rCFD case (blue, with the test case in orange). The contrast is the point of rCFD: one full CFD run takes about $9$ hours and $43$ minutes; the average rCFD replay only takes $15.8$ minutes, which is roughly $37\times$ faster.</figcaption>
+</figure>
+
+<!-- =========================================================== -->
+<h2 id="quantitative">7 — Quantitative Results</h2>
+
+<p>For every case we put the rCFD trace on the CFD time grid and compute five standard error metrics, following Hyndman and Koehler <a href="#ref-hyndman2006">[4]</a>: signed bias, MAE, RMSE, error standard deviation, and the maximum absolute error.</p>
+
+<figure class="wide">
+  <div id="plotOverlay" style="width: 100%; min-height: 460px;">
+    <!-- Static fallback for non-JS / print -->
+    <noscript>
+      <img src="assets/figures/fig_step1b_diffusivity_overlay.png"
+           alt="Overlay of T_mean and CoG_y for CFD reference and seven rCFD cases"
+           style="width: 100%;">
+    </noscript>
+  </div>
+  <figcaption><span class="label">Figure 5 (interactive).</span> Mean temperature $T_\text{mean}(t)$ on the left, thermal centre of gravity $CoG_y(t)$ on the right, for the CFD reference (thick black) and the seven rCFD cases. Hover over a curve to see the exact value at that time. Click a legend entry to hide or show that trace. Drag inside the plot to zoom, double-click to reset.</figcaption>
+</figure>
+
+<script>
+(function() {
+  // ------------ Interactive overlay plot (Plotly) ------------------
+  const palette = {
+    cfd:   '#000000',
+    rcfd: [
+      '#0b66b0',  // 0.000
+      '#1a8a3a',  // 0.125
+      '#d97f0b',  // 0.375
+      '#9c2cb8',  // 0.500
+      '#c83737',  // 0.750
+      '#7a6a2a',  // 1.500
+      '#5e5e5e'   // 3.000
+    ]
+  };
+
+  function buildTraces(data) {
+    const tracesT = [];
+    const tracesC = [];
+
+    // CFD reference (thick black, no markers)
+    tracesT.push({
+      x: data.cfd.t, y: data.cfd.T,
+      mode: 'lines', name: 'CFD reference',
+      line: { color: palette.cfd, width: 2.8 },
+      hovertemplate: '<b>CFD reference</b><br>t = %{x:.1f} s<br>T = %{y:.2f} K<extra></extra>',
+      legendgroup: 'cfd', xaxis: 'x', yaxis: 'y'
+    });
+    tracesC.push({
+      x: data.cfd.t, y: data.cfd.CoG_dy_mm,
+      mode: 'lines', name: 'CFD reference',
+      line: { color: palette.cfd, width: 2.8 },
+      hovertemplate: '<b>CFD reference</b><br>t = %{x:.1f} s<br>ΔCoG = %{y:.3f} mm<extra></extra>',
+      legendgroup: 'cfd', xaxis: 'x2', yaxis: 'y2',
+      showlegend: false
+    });
+
+    data.cases.forEach((c, i) => {
+      const color = palette.rcfd[i] || '#888';
+      const lbl   = 'f_sd = ' + c.label;
+      tracesT.push({
+        x: c.t, y: c.T,
+        mode: 'lines', name: lbl,
+        line: { color: color, width: 1.6 },
+        hovertemplate: '<b>' + lbl + '</b><br>t = %{x:.1f} s<br>T = %{y:.2f} K<extra></extra>',
+        legendgroup: c.suffix, xaxis: 'x', yaxis: 'y'
+      });
+      tracesC.push({
+        x: c.t, y: c.CoG_dy_mm,
+        mode: 'lines', name: lbl,
+        line: { color: color, width: 1.6 },
+        hovertemplate: '<b>' + lbl + '</b><br>t = %{x:.1f} s<br>ΔCoG = %{y:.3f} mm<extra></extra>',
+        legendgroup: c.suffix, xaxis: 'x2', yaxis: 'y2',
+        showlegend: false
+      });
+    });
+
+    return [...tracesT, ...tracesC];
+  }
+
+  // CFD trace colour adapts to theme so the thick black line is visible
+  // on the dark background.
+  function themeColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return {
+      dark,
+      bg:       cs.getPropertyValue('--bg').trim()       || '#ffffff',
+      text:     cs.getPropertyValue('--ink').trim()      || '#1a1a1a',
+      grid:     dark ? '#2a3038' : '#e6e6e6',
+      accent:   cs.getPropertyValue('--accent').trim()   || '#00467f',
+      cfdLine:  dark ? '#f0f0f0' : '#000000'
+    };
+  }
+
+  let lastTraces = null;
+  let lastData   = null;
+
+  function plotOverlay(data) {
+    lastData = data;
+    const tc = themeColors();
+    // Override the CFD trace colour for the current theme
+    const traces = buildTraces(data);
+    traces.forEach(t => {
+      if (t.name === 'CFD reference') t.line.color = tc.cfdLine;
+    });
+    lastTraces = traces;
+
+    const layout = {
+      grid: { rows: 1, columns: 2, pattern: 'independent', xgap: 0.10 },
+      xaxis:  { domain: [0,    0.45], title: { text: 'Time (s)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 600],
+                color: tc.text },
+      yaxis:  { title: { text: 'T<sub>mean</sub> (K)' },
+                gridcolor: tc.grid, zeroline: false, range: [290, 324],
+                color: tc.text },
+      xaxis2: { domain: [0.55, 1.0],  title: { text: 'Time (s)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 600],
+                color: tc.text },
+      yaxis2: { title: { text: 'ΔCoG<sub>y</sub> (mm)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 1.2],
+                color: tc.text },
+      annotations: [
+        { text: '<b>Mean temperature</b>',
+          x: 0.225, xref: 'paper', y: 1.06, yref: 'paper',
+          xanchor: 'center', showarrow: false,
+          font: { size: 14, color: tc.accent } },
+        { text: '<b>Thermal centre of gravity</b>',
+          x: 0.775, xref: 'paper', y: 1.06, yref: 'paper',
+          xanchor: 'center', showarrow: false,
+          font: { size: 14, color: tc.accent } }
+      ],
+      legend: {
+        orientation: 'h', x: 0.5, xanchor: 'center', y: -0.18,
+        font: { size: 11, color: tc.text }, bgcolor: 'rgba(0,0,0,0)'
+      },
+      margin: { t: 50, b: 90, l: 60, r: 25 },
+      hovermode: 'closest',
+      hoverlabel: { font: { family: 'Inter, sans-serif', size: 12 } },
+      font: { family: 'Inter, "Source Serif Pro", sans-serif', size: 12, color: tc.text },
+      paper_bgcolor: tc.bg,
+      plot_bgcolor:  tc.bg
+    };
+    const config = {
+      responsive: true,
+      displaylogo: false,
+      modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'],
+      toImageButtonOptions: { format: 'png', filename: 'step1b_diffusivity_overlay', scale: 2 }
+    };
+    Plotly.newPlot('plotOverlay', traces, layout, config);
+  }
+
+  document.addEventListener('themechange', () => {
+    if (lastData) plotOverlay(lastData);
+  });
+
+  // Data is preloaded via <script src="assets/data/step1b_traces.js">
+  // which assigns window.step1bTraces -- this works under file:// (no fetch).
+  function tryRender() {
+    if (typeof Plotly === 'undefined' || !window.step1bTraces) {
+      // Plotly or data not ready yet -- retry on next tick.
+      return setTimeout(tryRender, 80);
+    }
+    try {
+      plotOverlay(window.step1bTraces);
+    } catch (err) {
+      console.warn('Interactive plot failed, falling back to PNG:', err);
+      const el = document.getElementById('plotOverlay');
+      el.innerHTML = '<img src="assets/figures/fig_step1b_diffusivity_overlay.png" ' +
+                     'alt="Overlay of T_mean and CoG_y" style="width: 100%;">';
+    }
+  }
+  tryRender();
+})();
+</script>
+
+<h3>7.1 — Mean temperature errors</h3>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>$f_{sd}$</th><th class="num">Bias (K)</th><th class="num">MAE (K)</th><th class="num">RMSE (K)</th><th class="num">Max abs (K)</th></tr>
+</thead>
+<tbody>
+<tr class="best"><td>0.000 <span class="tag-best">best</span></td><td class="num">−0.377</td><td class="num">0.761</td><td class="num">1.076</td><td class="num">2.569</td></tr>
+<tr><td>0.125</td><td class="num">+0.340</td><td class="num">0.852</td><td class="num">1.080</td><td class="num">2.278</td></tr>
+<tr><td>0.375</td><td class="num">+0.556</td><td class="num">1.062</td><td class="num">1.360</td><td class="num">2.834</td></tr>
+<tr><td>0.500</td><td class="num">+0.572</td><td class="num">1.147</td><td class="num">1.459</td><td class="num">2.955</td></tr>
+<tr><td>0.750</td><td class="num">+0.575</td><td class="num">1.297</td><td class="num">1.634</td><td class="num">3.162</td></tr>
+<tr><td>1.500</td><td class="num">+0.630</td><td class="num">1.726</td><td class="num">2.142</td><td class="num">3.879</td></tr>
+<tr><td>3.000</td><td class="num">+0.899</td><td class="num">2.512</td><td class="num">3.045</td><td class="num">5.394</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>7.2 — Centre-of-gravity errors</h3>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>$f_{sd}$</th><th class="num">Bias (mm)</th><th class="num">MAE (mm)</th><th class="num">RMSE (mm)</th><th class="num">Max abs (mm)</th></tr>
+</thead>
+<tbody>
+<tr><td>0.000</td><td class="num">−0.046</td><td class="num">0.087</td><td class="num">0.116</td><td class="num">0.268</td></tr>
+<tr><td>0.125</td><td class="num">−0.057</td><td class="num">0.071</td><td class="num">0.097</td><td class="num">0.218</td></tr>
+<tr><td>0.375</td><td class="num">−0.057</td><td class="num">0.059</td><td class="num">0.074</td><td class="num">0.154</td></tr>
+<tr class="best"><td>0.500 <span class="tag-best">best</span></td><td class="num">−0.059</td><td class="num">0.060</td><td class="num">0.069</td><td class="num">0.129</td></tr>
+<tr><td>0.750</td><td class="num">−0.066</td><td class="num">0.068</td><td class="num">0.072</td><td class="num">0.108</td></tr>
+<tr><td>1.500</td><td class="num">−0.112</td><td class="num">0.114</td><td class="num">0.137</td><td class="num">0.260</td></tr>
+<tr><td>3.000</td><td class="num">−0.223</td><td class="num">0.231</td><td class="num">0.281</td><td class="num">0.501</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Two things jump out. First, the $T_\text{mean}$ error always gets smaller as $f_{sd}$ goes down &mdash; the best mean-temperature case is the no-mixing case, $f_{sd}=0$. Second, the $CoG_y$ error has a real minimum in the middle of the sweep, at $f_{sd}=0.500$, which is slightly better than the next-best values $0.750$ and $0.375$.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_step1b_error_abs.png" alt="Absolute error in T_mean and CoG_y over time">
+  <figcaption><span class="label">Figure 6.</span> Absolute error against the CFD reference over time: $T_\text{mean}$ (left), $CoG_y$ (right). The $T_\text{mean}$ error envelope grows with $f_{sd}$; the $CoG_y$ envelope is smallest at $f_{sd}=0.500$.</figcaption>
+</figure>
+
+<!-- =========================================================== -->
+<h2 id="visual">8 — Visual Comparison</h2>
+
+<h3>8.1 — CFD reference vs rCFD per case</h3>
+
+<p>Figure 7 pairs the CFD reference contour with each rCFD case at the same moment, $t=300$ s. All panels use the same colour scale and are cropped to the chamber only, so the comparison is as direct as it can be.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_step1b_cfd_vs_rcfd_snapshots.png" alt="Side-by-side CFD vs rCFD snapshot grid">
+  <figcaption><span class="label">Figure 7.</span> CFD reference versus rCFD per $f_{sd}$ at $t=300$ s. Blue = 293 K, red = 333 K. Only the chamber is shown (inlet/outlet bars and the CFD streamline panel are removed).</figcaption>
+</figure>
+
+<h3>8.2 — Pick one case, compare against the CFD reference</h3>
+
+<p>Drag the slider below (or click a tick label) to pick an $f_{sd}$ value. The right-hand panel switches to that case while the left-hand panel keeps showing the CFD reference. Both panels play together on the same timeline as the gallery below, so the scrubber controls everything at once.</p>
+
+<div class="fsd-picker" id="fsdPicker">
+  <div class="picker-header">
+    <span class="picker-label">Current $f_{sd}$:</span>
+    <span class="picker-value" id="fsdValueDisplay">0.500</span>
+    <span class="picker-best" id="fsdBestBadge" style="display:none">best CoG_y</span>
+  </div>
+  <div class="fsd-slider-wrap">
+    <input class="fsd-slider" type="range" id="fsdSlider"
+           min="0" max="6" step="1" value="3">
+    <div class="fsd-ticks" id="fsdTicks">
+      <span class="tick" data-i="0" style="left: 0%">0.000</span>
+      <span class="tick" data-i="1" style="left: 16.6%">0.125</span>
+      <span class="tick" data-i="2" style="left: 33.3%">0.375</span>
+      <span class="tick active" data-i="3" style="left: 50%">0.500</span>
+      <span class="tick" data-i="4" style="left: 66.6%">0.750</span>
+      <span class="tick" data-i="5" style="left: 83.3%">1.500</span>
+      <span class="tick" data-i="6" style="left: 100%">3.000</span>
+    </div>
+  </div>
+
+  <div class="fsd-display">
+    <div class="panel">
+      <div class="panel-label">CFD reference</div>
+      <video data-sync class="js-sync-video" muted playsinline preload="auto">
+        <source src="assets/videos/CFD_reference.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="panel">
+      <div class="panel-label">rCFD replay <span id="fsdPanelLabel">at f<sub>sd</sub> = 0.500</span></div>
+      <div class="video-stack" id="fsdVideoStack">
+        <video data-sync data-fsd-pick="0" class="js-sync-video" muted playsinline preload="auto"><source src="assets/videos/rCFD_diff_000.mp4"  type="video/mp4"></video>
+        <video data-sync data-fsd-pick="1" class="js-sync-video" muted playsinline preload="auto"><source src="assets/videos/rCFD_diff_0125.mp4" type="video/mp4"></video>
+        <video data-sync data-fsd-pick="2" class="js-sync-video" muted playsinline preload="auto"><source src="assets/videos/rCFD_diff_0375.mp4" type="video/mp4"></video>
+        <video data-sync data-fsd-pick="3" class="js-sync-video active" muted playsinline preload="auto"><source src="assets/videos/rCFD_diff_05.mp4"   type="video/mp4"></video>
+        <video data-sync data-fsd-pick="4" class="js-sync-video" muted playsinline preload="auto"><source src="assets/videos/rCFD_diff_075.mp4"  type="video/mp4"></video>
+        <video data-sync data-fsd-pick="5" class="js-sync-video" muted playsinline preload="auto"><source src="assets/videos/rCFD_diff_15.mp4"   type="video/mp4"></video>
+        <video data-sync data-fsd-pick="6" class="js-sync-video" muted playsinline preload="auto"><source src="assets/videos/rCFD_diff_30.mp4"   type="video/mp4"></video>
+      </div>
+    </div>
+  </div>
+
+  <div class="fsd-metrics" id="fsdMetrics">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<script>
+(function() {
+  // -------- f_sd picker: switch the right-hand video + metrics card --
+  // Metrics taken from Tables 7.1 and 7.2 (Hyndman & Koehler 2006 metrics).
+  const cases = [
+    { val: 0.000, label: '0.000', biasT: -0.377, mae_T: 0.761, rmseT: 1.076, maxT: 2.569,
+                                   biasC: -0.046, mae_C: 0.087, rmseC: 0.116, maxC: 0.268 },
+    { val: 0.125, label: '0.125', biasT: +0.340, mae_T: 0.852, rmseT: 1.080, maxT: 2.278,
+                                   biasC: -0.057, mae_C: 0.071, rmseC: 0.097, maxC: 0.218 },
+    { val: 0.375, label: '0.375', biasT: +0.556, mae_T: 1.062, rmseT: 1.360, maxT: 2.834,
+                                   biasC: -0.057, mae_C: 0.059, rmseC: 0.074, maxC: 0.154 },
+    { val: 0.500, label: '0.500', biasT: +0.572, mae_T: 1.147, rmseT: 1.459, maxT: 2.955,
+                                   biasC: -0.059, mae_C: 0.060, rmseC: 0.069, maxC: 0.129 },
+    { val: 0.750, label: '0.750', biasT: +0.575, mae_T: 1.297, rmseT: 1.634, maxT: 3.162,
+                                   biasC: -0.066, mae_C: 0.068, rmseC: 0.072, maxC: 0.108 },
+    { val: 1.500, label: '1.500', biasT: +0.630, mae_T: 1.726, rmseT: 2.142, maxT: 3.879,
+                                   biasC: -0.112, mae_C: 0.114, rmseC: 0.137, maxC: 0.260 },
+    { val: 3.000, label: '3.000', biasT: +0.899, mae_T: 2.512, rmseT: 3.045, maxT: 5.394,
+                                   biasC: -0.223, mae_C: 0.231, rmseC: 0.281, maxC: 0.501 }
+  ];
+  // Best values across all 7 cases (smallest absolute)
+  const bestRmseT = Math.min(...cases.map(c => c.rmseT));
+  const bestRmseC = Math.min(...cases.map(c => c.rmseC));
+  const bestMAE_T = Math.min(...cases.map(c => c.mae_T));
+  const bestMAE_C = Math.min(...cases.map(c => c.mae_C));
+  const bestBiasT = Math.min(...cases.map(c => Math.abs(c.biasT)));
+  const bestBiasC = Math.min(...cases.map(c => Math.abs(c.biasC)));
+
+  const slider     = document.getElementById('fsdSlider');
+  const valDisplay = document.getElementById('fsdValueDisplay');
+  const panelLabel = document.getElementById('fsdPanelLabel');
+  const bestBadge  = document.getElementById('fsdBestBadge');
+  const metricsEl  = document.getElementById('fsdMetrics');
+  const stack      = document.getElementById('fsdVideoStack');
+  const ticks      = document.querySelectorAll('#fsdTicks .tick');
+
+  function sign(x, digits) {
+    const s = x.toFixed(digits);
+    return (x > 0 ? '+' : '') + s;
+  }
+
+  function fmt(val, unit, isBest) {
+    const cls = isBest ? 'fsd-metric best' : 'fsd-metric';
+    return `<div class="${cls}">
+              <span class="key">${val.key}</span>
+              <span class="val">${val.text}<span class="unit"> ${unit}</span></span>
+            </div>`;
+  }
+
+  function render(idx) {
+    const c = cases[idx];
+    valDisplay.textContent = c.label;
+    panelLabel.innerHTML   = `at f<sub>sd</sub> = ${c.label}`;
+
+    // best-CoG_y badge
+    if (c.rmseC === bestRmseC) {
+      bestBadge.style.display = '';
+      bestBadge.textContent = 'best CoG_y';
+    } else if (c.rmseT === bestRmseT) {
+      bestBadge.style.display = '';
+      bestBadge.textContent = 'best T_mean';
+    } else {
+      bestBadge.style.display = 'none';
+    }
+
+    // switch active video in the stack
+    stack.querySelectorAll('video').forEach(v => v.classList.remove('active'));
+    const target = stack.querySelector(`video[data-fsd-pick="${idx}"]`);
+    if (target) target.classList.add('active');
+
+    // tick highlight
+    ticks.forEach(t => t.classList.toggle('active', parseInt(t.dataset.i, 10) === idx));
+
+    // metrics card
+    const items = [
+      { group: 'T_mean',
+        cells: [
+          { key: 'Bias',  text: sign(c.biasT, 3), unit: 'K', best: Math.abs(c.biasT) === bestBiasT },
+          { key: 'MAE',   text: c.mae_T.toFixed(3), unit: 'K', best: c.mae_T === bestMAE_T },
+          { key: 'RMSE',  text: c.rmseT.toFixed(3), unit: 'K', best: c.rmseT === bestRmseT },
+          { key: '|Δ|max',text: c.maxT.toFixed(3),  unit: 'K', best: false }
+        ]
+      },
+      { group: 'CoG_y',
+        cells: [
+          { key: 'Bias',  text: sign(c.biasC, 3), unit: 'mm', best: Math.abs(c.biasC) === bestBiasC },
+          { key: 'MAE',   text: c.mae_C.toFixed(3), unit: 'mm', best: c.mae_C === bestMAE_C },
+          { key: 'RMSE',  text: c.rmseC.toFixed(3), unit: 'mm', best: c.rmseC === bestRmseC },
+          { key: '|Δ|max',text: c.maxC.toFixed(3),  unit: 'mm', best: false }
+        ]
+      }
+    ];
+
+    let html = '';
+    items.forEach((group, gi) => {
+      group.cells.forEach((cell, ci) => {
+        const head = ci === 0 ? `<div style="grid-column: 1/-1; font-size: 0.78rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: -0.4rem; margin-top: ${gi > 0 ? '0.4rem' : '0'}">${group.group}</div>` : '';
+        html += head + `<div class="fsd-metric${cell.best ? ' best' : ''}">
+                          <span class="key">${cell.key}</span>
+                          <span class="val">${cell.text}<span class="unit"> ${cell.unit}</span></span>
+                        </div>`;
+      });
+    });
+    metricsEl.innerHTML = html;
+
+    // re-typeset KaTeX in the panel labels
+    if (window.renderMathInElement) {
+      try { window.renderMathInElement(document.querySelector('.picker-header')); } catch (e) {}
+    }
+  }
+
+  slider.addEventListener('input', () => render(parseInt(slider.value, 10)));
+  ticks.forEach(t => {
+    t.addEventListener('click', () => {
+      const i = parseInt(t.dataset.i, 10);
+      slider.value = i;
+      render(i);
+    });
+  });
+
+  render(3);  // default: f_sd = 0.500
+})();
+</script>
+
+<h3>8.3 — Synchronised animation gallery</h3>
+
+<p>The eight clips below all play the same $600$ s of simulated time at $15$ fps. The scrubber controls all of them at the same time, so you can pause at any moment and compare what every case looks like side by side. The CFD reference is shown first, then the seven rCFD cases in order of $f_{sd}$.</p>
+
+<div class="scrubber" id="scrubber">
+  <div class="scrubber-row">
+    <button class="scrub-btn" id="scrubPlay">Play</button>
+    <button class="scrub-btn secondary" id="scrubReset">Reset</button>
+    <input class="scrub-slider" type="range" id="scrubSlider" min="0" max="600" step="0.1" value="0">
+    <span class="scrub-time" id="scrubTime">t = 0 s</span>
+  </div>
+  <div class="scrubber-row">
+    <span class="scrub-label">Speed:</span>
+    <div class="scrub-speed" role="group" aria-label="Playback speed">
+      <button data-speed="0.5">0.5&times;</button>
+      <button data-speed="1" class="active">1&times;</button>
+      <button data-speed="2">2&times;</button>
+      <button data-speed="4">4&times;</button>
+    </div>
+    <span class="scrub-label" style="margin-left:auto">Drag the slider to scrub all clips together.</span>
+  </div>
+</div>
+
+<div class="hero-video">
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="auto"
+           poster="assets/figures/fig_step1b_cfd_vs_rcfd_snapshots.png">
+      <source src="assets/videos/CFD_reference.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="label">CFD reference.</span> The full CFD run. A sharp warm zone fills the upper half while the inlet is hot, and slowly relaxes once the inlet cools.</figcaption>
+  </figure>
+</div>
+
+<div class="gallery">
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="auto">
+      <source src="assets/videos/rCFD_diff_000.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.000$</span>Pure C2C shift, no mixing. The warm and cold halves stay separated by a sharp interface.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="auto">
+      <source src="assets/videos/rCFD_diff_0125.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.125$</span>The rCFD source default. A thin mixing band appears between the warm and cold zones.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="auto">
+      <source src="assets/videos/rCFD_diff_0375.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.375$</span>A clear mixing layer covers about the middle third of the chamber.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="auto">
+      <source src="assets/videos/rCFD_diff_05.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.500$</span>The best match to the CFD reference on the stratification metric $CoG_y$.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="auto">
+      <source src="assets/videos/rCFD_diff_075.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.750$</span>The Step 1a value. A broad smooth gradient fills the lower half of the chamber.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="auto">
+      <source src="assets/videos/rCFD_diff_15.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 1.500$</span>Mixing takes over from the shift map. The warm cap shrinks and the bottom warms up too quickly.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="auto">
+      <source src="assets/videos/rCFD_diff_30.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 3.000$</span>Extreme mixing. The field becomes a near-uniform vertical ramp and the physical jet structure is lost.</figcaption>
+  </figure>
+
+</div>
+
+<script>
+(function() {
+  // -------- Synchronised scrubber for all <video data-sync> elements --
+  // Each video is 40 s real time, 600 frames at 15 fps,
+  // representing 600 s of simulated time. We treat real time = simulated time
+  // by mapping slider 0..600 (simulated seconds) to videoTime 0..40 s.
+  const videos    = Array.from(document.querySelectorAll('video[data-sync]'));
+  const slider    = document.getElementById('scrubSlider');
+  const playBtn   = document.getElementById('scrubPlay');
+  const resetBtn  = document.getElementById('scrubReset');
+  const timeOut   = document.getElementById('scrubTime');
+  const speedBtns = document.querySelectorAll('.scrub-speed button');
+
+  const SIM_DURATION   = 600;        // simulated seconds (full sweep)
+  const VIDEO_DURATION = 40;         // 600 frames / 15 fps
+  const TIME_SCALE     = VIDEO_DURATION / SIM_DURATION;    // 0.0667
+
+  let isPlaying = false;
+  let speed     = 1;
+  let rafId     = null;
+  let lastTs    = null;
+  let simTime   = 0;                 // simulated seconds 0..600
+
+  function setSimTime(t) {
+    simTime = Math.max(0, Math.min(SIM_DURATION, t));
+    slider.value = simTime.toFixed(2);
+    timeOut.textContent = 't = ' + Math.round(simTime) + ' s';
+    const vt = simTime * TIME_SCALE;
+    videos.forEach(v => {
+      if (Number.isFinite(v.duration) && vt <= v.duration) {
+        try { v.currentTime = vt; } catch (e) {}
+      }
+    });
+  }
+
+  function setPlaying(p) {
+    isPlaying = p;
+    playBtn.textContent = isPlaying ? 'Pause' : 'Play';
+    if (isPlaying) {
+      lastTs = null;
+      tick(performance.now());
+    } else {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  }
+
+  function tick(ts) {
+    if (!isPlaying) return;
+    if (lastTs === null) lastTs = ts;
+    const dtMs = ts - lastTs;
+    lastTs = ts;
+    // 40 s of real playback should equal 600 s of simulated time at 1x speed
+    // -> sim time per real second = 15
+    let next = simTime + (dtMs / 1000) * speed * (SIM_DURATION / VIDEO_DURATION);
+    if (next >= SIM_DURATION) {
+      next = SIM_DURATION;
+      setSimTime(next);
+      setPlaying(false);
+      return;
+    }
+    setSimTime(next);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  playBtn.addEventListener('click', () => setPlaying(!isPlaying));
+  resetBtn.addEventListener('click', () => {
+    setPlaying(false);
+    setSimTime(0);
+  });
+  slider.addEventListener('input', () => {
+    setPlaying(false);
+    setSimTime(parseFloat(slider.value));
+  });
+  speedBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      speedBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      speed = parseFloat(btn.dataset.speed);
+    });
+  });
+
+  // initial state
+  videos.forEach(v => {
+    v.addEventListener('loadedmetadata', () => {
+      // make sure first frame is rendered
+      try { v.currentTime = 0; } catch (e) {}
+    });
+  });
+  setSimTime(0);
+})();
+</script>
+
+<!-- =========================================================== -->
+<h2 id="discussion">9 — Discussion</h2>
+
+<h3>9.1 — Why the best value depends on the metric</h3>
+
+<p>$T_\text{mean}$ is just an average over the whole volume; it does not care where the warm fluid sits. Face-swap diffusion conserves mass, but it also <em>speeds up</em> how fast the warm inlet spreads through the chamber. The real CFD needs finite time for advection to do this; rCFD with a high $f_{sd}$ does it almost instantly. As a result, rCFD ends up hotter than CFD during the warm phase, and the higher $f_{sd}$ is, the bigger this overshoot becomes. So the best case for $T_\text{mean}$ is $f_{sd}=0$.</p>
+
+<p>$CoG_y$ measures <em>where</em> the warm region sits in height. Without any face-swap mixing, the rCFD field stays too sharp and the centre of gravity sits too high. With too much mixing, it sits too low. The best value is the one that matches the small-scale mixing in the CFD reference that the shift map alone cannot reproduce. In our sweep that value is $f_{sd}=0.500$.</p>
+
+<h3>9.2 — How sure are we?</h3>
+
+<p>The margin at the $CoG_y$ optimum is small: $0.069$ mm at $f_{sd}=0.500$ against $0.072$ mm at $f_{sd}=0.750$ and $0.074$ mm at $f_{sd}=0.375$, which is about four percent. The minimum is real, but it is also shallow. Any value in the range $[0.375, 0.750]$ would be defensible if there were a separate reason to prefer it.</p>
+
+<!-- =========================================================== -->
+<h2 id="outlook">10 — Outlook: Step 2</h2>
+
+<p>Step 2 adds heat loss through the chamber walls. The wall heat flux is</p>
+
+<p>$$ q_\text{wall}(x, y, z, t) = h \bigl( T_\text{wall}(x, y, z, t) - T_\infty \bigr) $$</p>
+
+<p>so it depends directly on the temperature in the near-wall cells. Heat loss is sensitive to whether the warm fluid sits at the top or has come down, which is exactly what $CoG_y$ measures. For that reason, $f_{sd}=0.500$ looks like a good starting value for Step 2. A small confirmation sweep around $\{0.375, 0.500, 0.750\}$ would then check that the optimum does not move once heat loss is active. The final choice, of course, is up to Prof. Pirker.</p>
+
+<p>Two longer-term ideas are also worth keeping in mind:</p>
+
+<ul>
+  <li><strong>Local diffusion.</strong> Switching from the global $f_{sd}$ to the per-cell Fickian path (<code>local_diff_on = 1</code>) would replace a dimensionless knob with a physical diffusion coefficient, as discussed by Abbasi et al. <a href="#ref-abbasi2020">[5]</a> and Lumetzberger et al. <a href="#ref-lumetzberger2025">[3]</a>. It needs a per-cell <code>local_diff</code> field that has to be written during the rCFD preparation phase.</li>
+  <li><strong>Database reuse.</strong> The current C2C database only knows the adiabatic flow patterns. It does not contain the cold down-flows along the walls that wall heat loss would create. Whether the existing database is still good enough for Step 2, or whether we need to rebuild it, is something Step 2 itself will have to answer.</li>
+</ul>
+
+<!-- =========================================================== -->
+<h2 id="references">References</h2>
+
+<div class="bib">
+<ol>
+  <li id="ref-lichtenegger2016">T. Lichtenegger and S. Pirker, <span class="title">Recurrence CFD — a novel approach to simulate multiphase flows with strongly separated time scales</span>, Chemical Engineering Science <strong>153</strong>, 394–410 (2016).</li>
+  <li id="ref-pirker2018">S. Pirker and T. Lichtenegger, <span class="title">Efficient time-extrapolation of single- and multiphase simulations by transport-based recurrence CFD (rCFD)</span>, Chemical Engineering Science <strong>188</strong>, 65–83 (2018). §2.4 introduces the face-swap diffusion operator under the name "global balance safety belt".</li>
+  <li id="ref-lumetzberger2025">H. Lumetzberger, S. Pirker and T. Lichtenegger, <span class="title">Propagator-moments approximation for recurrence CFD: application to species transport in turbulent flows</span>, Chemical Engineering Science <strong>311</strong>, 121624 (2025). Modern propagator-theoretic derivation of the face-swap operator.</li>
+  <li id="ref-hyndman2006">R. J. Hyndman and A. B. Koehler, <span class="title">Another look at measures of forecast accuracy</span>, International Journal of Forecasting <strong>22</strong>(4), 679–688 (2006). Standard reference for the bias, MAE, RMSE error metrics used here.</li>
+  <li id="ref-abbasi2020">S. Abbasi, S. Pirker and T. Lichtenegger, <span class="title">Application of recurrence CFD (rCFD) to species transport in turbulent vortex shedding</span>, Computers and Fluids <strong>196</strong>, 104348 (2020). Source of the $D_\text{rec} = D + D_\text{sgs}$ decomposition motivating the local-diffusion path.</li>
+  <li id="ref-fluent2022">ANSYS Inc., <span class="title">ANSYS Fluent Theory Guide, Release 2022 R2</span>, Canonsburg, PA (2022).</li>
+  <li id="ref-menter1994">F. R. Menter, <span class="title">Two-equation eddy-viscosity turbulence models for engineering applications</span>, AIAA Journal <strong>32</strong>(8), 1598–1605 (1994). Original k-$\omega$ SST model used to produce the CFD reference.</li>
+  <li id="ref-pfm">Particulate Flow Modelling, JKU Linz, <span class="title">rCFDreloaded source code</span>, internal repository (2026). Implementation reference for the face-swap operator (<code>src/rCFD_swap.h</code>).</li>
+</ol>
+</div>
+
+<script>
+(function() {
+  // -------- Custom tooltip for SVG workflow boxes -------------------
+  const boxes = document.querySelectorAll('.workflow .wf-box[data-tip]');
+  if (!boxes.length) return;
+
+  const tip = document.createElement('div');
+  tip.className = 'wf-tooltip';
+  document.body.appendChild(tip);
+
+  function showTip(box, ev) {
+    tip.innerHTML = '<strong>' + box.dataset.tipTitle + '</strong>' + box.dataset.tip;
+    tip.classList.add('show');
+
+    const r  = box.getBoundingClientRect();
+    const sy = window.scrollY || window.pageYOffset;
+    const sx = window.scrollX || window.pageXOffset;
+    // place above the box if there is room; otherwise below
+    const popH = tip.offsetHeight;
+    const above = r.top - popH - 10 > 0;
+    if (above) {
+      tip.style.top  = (r.top + sy - popH - 10) + 'px';
+    } else {
+      tip.style.top  = (r.bottom + sy + 10) + 'px';
+    }
+    // center horizontally on the box
+    const popW = tip.offsetWidth;
+    let left = r.left + sx + r.width / 2 - popW / 2;
+    // clamp to viewport
+    left = Math.max(8 + sx, Math.min(left, sx + window.innerWidth - popW - 8));
+    tip.style.left = left + 'px';
+  }
+  function hideTip() {
+    tip.classList.remove('show');
+  }
+
+  boxes.forEach(box => {
+    box.addEventListener('mouseenter', (ev) => showTip(box, ev));
+    box.addEventListener('mouseleave', hideTip);
+  });
+  document.addEventListener('scroll', hideTip, { passive: true });
+})();
+</script>
+
+<script>
+(function() {
+  // -------- Theme toggle (light / dark mode) ------------------------
+  const root = document.documentElement;
+  const btn  = document.getElementById('themeToggle');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    // Notify listeners (Plotly re-render etc.)
+    document.dispatchEvent(new CustomEvent('themechange', { detail: { theme: next } }));
+  });
+})();
+</script>
+
+<script>
+(function() {
+  // -------- Sortable tables (click <th> to sort) --------------------
+  // Auto-detects numeric columns. Handles signed values, +/- prefixes,
+  // and ignores embedded badge text (e.g. "best").
+  function parseCell(cell) {
+    // Strip badges and decorations; keep the first numeric-looking token.
+    const raw = (cell.textContent || '').trim();
+    const m = raw.match(/-?\+?\s*\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0].replace(/\s+/g, '')) : NaN;
+  }
+
+  function sortTable(table, colIdx, asc) {
+    const tbody = table.tBodies[0];
+    const rows  = Array.from(tbody.querySelectorAll('tr'));
+    const numericPass = rows.every(r => {
+      const c = r.cells[colIdx];
+      return c && !isNaN(parseCell(c));
+    });
+    rows.sort((a, b) => {
+      const ca = a.cells[colIdx], cb = b.cells[colIdx];
+      if (numericPass) {
+        const va = parseCell(ca), vb = parseCell(cb);
+        return asc ? va - vb : vb - va;
+      } else {
+        const sa = (ca.textContent || '').trim();
+        const sb = (cb.textContent || '').trim();
+        return asc ? sa.localeCompare(sb) : sb.localeCompare(sa);
+      }
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
+
+  document.querySelectorAll('.table-wrap > table').forEach(table => {
+    if (!table.tHead || !table.tBodies[0]) return;
+    table.classList.add('sortable');
+    const headers = Array.from(table.tHead.querySelectorAll('th'));
+    headers.forEach((th, idx) => {
+      let asc = true;
+      th.addEventListener('click', () => {
+        sortTable(table, idx, asc);
+        headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+        th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+        asc = !asc;
+      });
+    });
+  });
+})();
+</script>
+
+<script>
+(function() {
+  // -------- Citation popovers (hover / click on [N]) ----------------
+  const links = document.querySelectorAll('a[href^="#ref-"]');
+  if (!links.length) return;
+
+  // Cache reference contents and assign cite-link styling + numeric label
+  const refMap = {};
+  document.querySelectorAll('.bib li[id^="ref-"]').forEach((li, i) => {
+    refMap[li.id] = {
+      num: i + 1,
+      html: li.innerHTML.trim()
+    };
+  });
+
+  // Reusable popover element
+  const pop = document.createElement('div');
+  pop.className = 'cite-popover';
+  pop.setAttribute('role', 'tooltip');
+  document.body.appendChild(pop);
+
+  let activeLink = null;
+  let hideTimer  = null;
+
+  function positionPopover(link) {
+    const r  = link.getBoundingClientRect();
+    const sy = window.scrollY || window.pageYOffset;
+    const sx = window.scrollX || window.pageXOffset;
+    // place below the citation by default
+    pop.style.left = (r.left + sx) + 'px';
+    pop.style.top  = (r.bottom + sy + 8) + 'px';
+
+    // adjust if overflow on the right
+    const popRect = pop.getBoundingClientRect();
+    const overflowR = popRect.right - window.innerWidth + 12;
+    if (overflowR > 0) {
+      pop.style.left = (r.left + sx - overflowR) + 'px';
+    }
+  }
+
+  function showPopover(link) {
+    const targetId = link.getAttribute('href').slice(1);
+    const ref      = refMap[targetId];
+    if (!ref) return;
+
+    if (activeLink && activeLink !== link) activeLink.classList.remove('active');
+    activeLink = link;
+    activeLink.classList.add('active');
+
+    pop.innerHTML =
+      '<span class="cite-pop-num">' + ref.num + '</span>' +
+      '<span class="cite-pop-body">' + ref.html + '</span>' +
+      '<a class="cite-pop-jump" href="#' + targetId + '">Jump to bibliography &rarr;</a>';
+    positionPopover(link);
+    pop.classList.add('show');
+  }
+
+  function hidePopover() {
+    pop.classList.remove('show');
+    if (activeLink) activeLink.classList.remove('active');
+    activeLink = null;
+  }
+
+  function scheduleHide() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hidePopover, 220);
+  }
+  function cancelHide() {
+    clearTimeout(hideTimer);
+  }
+
+  // Convert each citation link to the cite-link style + handlers
+  links.forEach(link => {
+    if (!refMap[link.getAttribute('href').slice(1)]) return;
+    link.classList.add('cite-link');
+
+    link.addEventListener('mouseenter', () => {
+      cancelHide();
+      showPopover(link);
+    });
+    link.addEventListener('mouseleave', scheduleHide);
+
+    link.addEventListener('click', (ev) => {
+      // Toggle on click; do not jump to the bibliography immediately so
+      // the reader can read the popover in place. The "Jump to ..." link
+      // inside the popover still navigates if they want to.
+      ev.preventDefault();
+      if (activeLink === link && pop.classList.contains('show')) {
+        hidePopover();
+      } else {
+        cancelHide();
+        showPopover(link);
+      }
+    });
+  });
+
+  pop.addEventListener('mouseenter', cancelHide);
+  pop.addEventListener('mouseleave', scheduleHide);
+
+  // Click outside to close
+  document.addEventListener('click', (ev) => {
+    if (!pop.contains(ev.target) && !ev.target.closest('a[href^="#ref-"]')) {
+      hidePopover();
+    }
+  });
+
+  // Esc to close
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') hidePopover();
+  });
+
+  // Reposition on resize/scroll while shown
+  window.addEventListener('resize', () => {
+    if (activeLink) positionPopover(activeLink);
+  });
+  window.addEventListener('scroll', () => {
+    if (activeLink) positionPopover(activeLink);
+  }, { passive: true });
+})();
+</script>
+
+</main>
+
+<footer>
+  <div>© 2026 <span class="author">Mochamad Bukhori Zainun</span> · k12438440</div>
+  <div style="margin-top: 0.4em">Department of Particulate Flow Modelling · Johannes Kepler University Linz</div>
+</footer>
+
+</body>
+</html>
