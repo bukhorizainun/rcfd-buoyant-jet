@@ -357,8 +357,8 @@
 <p>Three PowerShell scripts under <code>step1b/</code> handle the edit-recompile-run-archive loop, so that one case never overwrites another. The full seven-case sweep took just over two hours of wall-clock time. The CFD reference itself took 9 h 43 min, so rCFD is roughly 37 times faster than CFD on this case.</p>
 
 <figure class="wide">
-  <img src="assets/figures/fig_step1b_wallclock.png" alt="Wall-clock time: CFD reference vs rCFD per case">
-  <figcaption><span class="label">Figure 4.</span> Wall-clock time of the CFD reference (left, brick red) against each rCFD case (blue, with the test case in orange). The contrast is the point of rCFD: one full CFD run takes about $9$ hours and $43$ minutes; the average rCFD replay only takes $15.8$ minutes, which is roughly $37\times$ faster.</figcaption>
+  <img src="assets/figures/fig_step1b_wallclock.png" alt="Wall-clock time: CFD reference vs rCFD per case (linear and log scale)">
+  <figcaption><span class="label">Figure 4.</span> Wall-clock time of the CFD reference (brick red) against each rCFD case (blue, with the test case in orange). On the linear scale (left) the contrast is dramatic: one full CFD run takes about $9$ hours and $43$ minutes; the average rCFD replay only takes $15.8$ minutes, which is roughly $37\times$ faster. The logarithmic scale (right) lets the case-to-case differences inside the rCFD group be read off as well.</figcaption>
 </figure>
 
 <!-- =========================================================== -->
