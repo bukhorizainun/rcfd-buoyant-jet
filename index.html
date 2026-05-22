@@ -871,14 +871,10 @@
   let isPlaying = false;
   let speed     = 1;
   let rafId     = null;
-  let lastTs    = null;
   let simTime   = 0;                 // simulated seconds 0..600
 
-  function setSimTime(t) {
-    simTime = Math.max(0, Math.min(SIM_DURATION, t));
-    slider.value = simTime.toFixed(2);
-    timeOut.textContent = 't = ' + Math.round(simTime) + ' s';
-    const vt = simTime * TIME_SCALE;
+  // Apply currentTime to every video (used when scrubbing or resetting).
+  function syncCurrentTimeToAll(vt) {
     videos.forEach(v => {
       if (Number.isFinite(v.duration) && vt <= v.duration) {
         try { v.currentTime = vt; } catch (e) {}
@@ -886,33 +882,59 @@
     });
   }
 
+  function setSimTime(t) {
+    simTime = Math.max(0, Math.min(SIM_DURATION, t));
+    slider.value = simTime.toFixed(2);
+    timeOut.textContent = 't = ' + Math.round(simTime) + ' s';
+    syncCurrentTimeToAll(simTime * TIME_SCALE);
+  }
+
+  // Native HTML5 video playback: needed for iOS Safari and some Android
+  // browsers which only update video frames after .play() has been called
+  // inside a user-gesture handler. We use the first video's currentTime
+  // as the master clock and drive the slider from it.
   function setPlaying(p) {
     isPlaying = p;
     playBtn.textContent = isPlaying ? 'Pause' : 'Play';
     if (isPlaying) {
-      lastTs = null;
-      tick(performance.now());
+      videos.forEach(v => {
+        try { v.playbackRate = speed; } catch (e) {}
+        const pp = v.play();
+        if (pp && typeof pp.catch === 'function') {
+          pp.catch(() => {});   // ignore autoplay-blocked rejections
+        }
+      });
+      rafId = requestAnimationFrame(tick);
     } else {
+      videos.forEach(v => { try { v.pause(); } catch (e) {} });
       if (rafId !== null) cancelAnimationFrame(rafId);
       rafId = null;
     }
   }
 
-  function tick(ts) {
+  function tick() {
     if (!isPlaying) return;
-    if (lastTs === null) lastTs = ts;
-    const dtMs = ts - lastTs;
-    lastTs = ts;
-    // 40 s of real playback should equal 600 s of simulated time at 1x speed
-    // -> sim time per real second = 15
-    let next = simTime + (dtMs / 1000) * speed * (SIM_DURATION / VIDEO_DURATION);
-    if (next >= SIM_DURATION) {
-      next = SIM_DURATION;
-      setSimTime(next);
-      setPlaying(false);
-      return;
+    const master = videos[0];
+    if (master && Number.isFinite(master.currentTime)) {
+      simTime = master.currentTime / TIME_SCALE;
+      slider.value = simTime.toFixed(2);
+      timeOut.textContent = 't = ' + Math.round(simTime) + ' s';
+      if (master.ended || simTime >= SIM_DURATION) {
+        setPlaying(false);
+        return;
+      }
+      // Periodic drift correction: if other videos drift more than ~0.15 s
+      // (~2 frames) from the master, snap them back. Cheap on desktop,
+      // also helps mobile keep the gallery in lock-step.
+      const mt = master.currentTime;
+      for (let i = 1; i < videos.length; i++) {
+        const v = videos[i];
+        if (!Number.isFinite(v.duration)) continue;
+        if (Math.abs(v.currentTime - mt) > 0.15) {
+          try { v.currentTime = mt; } catch (e) {}
+        }
+      }
     }
-    setSimTime(next);
     rafId = requestAnimationFrame(tick);
   }
 
@@ -922,7 +944,14 @@
     setSimTime(0);
   });
   slider.addEventListener('input', () => {
-    setPlaying(false);
+    // Pause while scrubbing; the user can hit play again afterwards.
+    if (isPlaying) {
+      videos.forEach(v => { try { v.pause(); } catch (e) {} });
+      isPlaying = false;
+      playBtn.textContent = 'Play';
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = null;
+    }
     setSimTime(parseFloat(slider.value));
   });
   speedBtns.forEach(btn => {
@@ -930,13 +959,15 @@
       speedBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       speed = parseFloat(btn.dataset.speed);
+      // Update live if currently playing
+      videos.forEach(v => { try { v.playbackRate = speed; } catch (e) {} });
     });
   });
 
-  // initial state
+  // Render first frame on each video as soon as metadata is ready, so the
+  // gallery is not blank before the user hits Play.
   videos.forEach(v => {
     v.addEventListener('loadedmetadata', () => {
-      // make sure first frame is rendered
       try { v.currentTime = 0; } catch (e) {}
     });
   });
