@@ -853,6 +853,27 @@
 
 <script>
 (function() {
+  // -------- Mobile adaptation ---------------------------------------
+  // Touch devices (especially iOS Safari) only allow a few <video>
+  // elements to play simultaneously. The gallery has eight videos,
+  // which is too many. On touch devices we drop them from the synced
+  // scrubber and give them native controls so the user can play one
+  // at a time.
+  const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+  if (isCoarse) {
+    document.querySelectorAll('.gallery video[data-sync]').forEach(v => {
+      v.removeAttribute('data-sync');
+      v.setAttribute('controls', '');
+      v.preload = 'metadata';
+    });
+    const note = document.createElement('div');
+    note.className = 'scrub-label';
+    note.style.cssText = 'margin-top:0.7rem;color:var(--ink-soft);font-size:0.78rem;font-style:italic;line-height:1.5;';
+    note.textContent = 'On touch devices the eight gallery clips below play individually — tap each to view. The scrubber controls the picker pair above.';
+    const scrubberEl = document.getElementById('scrubber');
+    if (scrubberEl) scrubberEl.appendChild(note);
+  }
+
   // -------- Synchronised scrubber for all <video data-sync> elements --
   // Each video is 40 s real time, 600 frames at 15 fps,
   // representing 600 s of simulated time. We treat real time = simulated time
