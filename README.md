@@ -1,7 +1,5 @@
 # Data-based Numerical Simulation of Buoyant Jet Flow — Step 1 Summary
 
-Interactive web summary of Step 1 of the master's thesis at JKU Linz.
-
 **Author:** Mochamad Bukhori Zainun (k12438440)
 **Supervisor:** Prof. Stefan Pirker
 **Department:** Particulate Flow Modelling, Johannes Kepler University Linz
