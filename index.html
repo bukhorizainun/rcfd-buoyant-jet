@@ -40,6 +40,19 @@
 </head>
 <body>
 
+<button class="share-btn" id="shareLinkBtn" type="button"
+        title="Copy a link to this view (current section + selected f_sd + time)"
+        aria-label="Copy link to this view">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+  </svg>
+  <span class="share-btn-label">Share view</span>
+</button>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <button class="theme-toggle" id="themeToggle" type="button"
         title="Toggle light/dark mode" aria-label="Toggle dark mode">
   <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -89,6 +102,14 @@
 <div class="tldr">
   <h3>TL;DR</h3>
   <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a turbulent CFD reference (k-$\omega$ SST), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$).</p>
+  <button class="quick-tour-trigger" id="quickTourBtn" type="button"
+          title="Auto-scroll through the five key figures (~60 s)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    </svg>
+    <span>Take the 60-second tour</span>
+  </button>
 </div>
 
 <p>This page brings together Step 1a (the workflow) and Step 1b (the parameter sweep). It explains the buoyant-jet problem, how rCFD works, what each $f_{sd}$ value does to the temperature field, and what we would suggest for Step 2.</p>
@@ -356,7 +377,7 @@
 
 <p>Three PowerShell scripts under <code>step1b/</code> handle the edit-recompile-run-archive loop, so that one case never overwrites another. The full seven-case sweep took just over two hours of wall-clock time. The CFD reference itself took 9 h 43 min, so rCFD is roughly 37 times faster than CFD on this case.</p>
 
-<figure class="wide">
+<figure class="wide" id="wallClockFigure">
   <img src="assets/figures/fig_step1b_wallclock.png" alt="Wall-clock time: CFD reference vs rCFD per case (linear and log scale)">
   <figcaption><span class="label">Figure 4.</span> Wall-clock time of the CFD reference (brick red) against each rCFD case (blue, with the test case in orange). On the linear scale (left) the contrast is dramatic: one full CFD run takes about $9$ hours and $43$ minutes; the average rCFD replay only takes $15.8$ minutes, which is roughly $37\times$ faster. The logarithmic scale (right) lets the case-to-case differences inside the rCFD group be read off as well.</figcaption>
 </figure>
@@ -366,7 +387,7 @@
 
 <p>For every case we put the rCFD trace on the CFD time grid and compute five standard error metrics, following Hyndman and Koehler <a href="#ref-hyndman2006">[4]</a>: signed bias, MAE, RMSE, error standard deviation, and the maximum absolute error.</p>
 
-<figure class="wide">
+<figure class="wide" id="quantPlotFigure">
   <div id="plotOverlay" style="width: 100%; min-height: 460px;">
     <!-- Static fallback for non-JS / print -->
     <noscript>
@@ -1270,6 +1291,368 @@
   window.addEventListener('scroll', () => {
     if (activeLink) positionPopover(activeLink);
   }, { passive: true });
+})();
+</script>
+
+<div class="quick-tour-overlay" id="quickTour" hidden>
+  <div class="qt-bar">
+    <div class="qt-progress" aria-hidden="true">
+      <div class="qt-progress-fill" id="qtProgressFill"></div>
+    </div>
+    <div class="qt-content">
+      <div class="qt-step-info">
+        <span class="qt-step-num" id="qtStepNum">1</span>
+        <span class="qt-step-total">of <span id="qtStepTotal">5</span></span>
+      </div>
+      <div class="qt-caption" id="qtCaption"></div>
+      <div class="qt-controls">
+        <button class="qt-btn" id="qtPrev" type="button" title="Previous stop" aria-label="Previous">‹</button>
+        <button class="qt-btn primary" id="qtPlayPause" type="button" title="Pause / Resume">⏸</button>
+        <button class="qt-btn" id="qtNext" type="button" title="Next stop" aria-label="Next">›</button>
+        <button class="qt-btn qt-close" id="qtClose" type="button" title="Exit tour" aria-label="Close">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // -------- 60-second quick tour ------------------------------------
+  // Auto-scrolls through five key views, ~12 s per stop. The user can
+  // pause, step manually, or exit. Pulse outline highlights the target.
+
+  const stops = [
+    {
+      selector: '.tldr',
+      caption: 'Headline first: best <strong>T<sub>mean</sub></strong> at f<sub>sd</sub>=0, best <strong>CoG<sub>y</sub></strong> at f<sub>sd</sub>=0.5. The rest of the page is how we got there.'
+    },
+    {
+      selector: '.workflow',
+      caption: 'rCFD in one diagram: record cell-to-cell shifts during a short CFD run, then <em>replay</em> them with a small mixing step. Hover the boxes for details.'
+    },
+    {
+      selector: '#wallClockFigure',
+      caption: 'CFD reference takes <strong>9 h 43 min</strong>; each rCFD replay only <strong>~16 min</strong> — a <strong>37×</strong> speed-up. The whole point of rCFD.'
+    },
+    {
+      selector: '#quantPlotFigure',
+      caption: 'The interactive comparison. Hover any curve for exact values, click the legend to isolate a case. Tables below sort by Bias, MAE, RMSE.'
+    },
+    {
+      selector: '#scrubber',
+      caption: 'See it move: drag the scrubber to compare all seven rCFD cases against the CFD reference at any time. This is the part PDF can’t do.'
+    }
+  ];
+
+  const btn         = document.getElementById('quickTourBtn');
+  const overlay     = document.getElementById('quickTour');
+  const captionEl   = document.getElementById('qtCaption');
+  const stepNumEl   = document.getElementById('qtStepNum');
+  const stepTotEl   = document.getElementById('qtStepTotal');
+  const progressEl  = document.getElementById('qtProgressFill');
+  const playPause   = document.getElementById('qtPlayPause');
+  const prevBtn     = document.getElementById('qtPrev');
+  const nextBtn     = document.getElementById('qtNext');
+  const closeBtn    = document.getElementById('qtClose');
+
+  if (!btn || !overlay) return;
+
+  stepTotEl.textContent = stops.length;
+
+  const STOP_MS = 12000;
+  let idx       = 0;
+  let timer     = null;
+  let rafId     = null;
+  let startedAt = 0;
+  let elapsed   = 0;
+  let paused    = false;
+  let highlighted = null;
+
+  function setHighlight(el) {
+    if (highlighted) highlighted.classList.remove('qt-highlight');
+    highlighted = el;
+    if (el) el.classList.add('qt-highlight');
+  }
+
+  function goTo(i) {
+    idx = (i + stops.length) % stops.length;
+    const stop = stops[idx];
+    const el   = document.querySelector(stop.selector);
+    captionEl.innerHTML = stop.caption;
+    stepNumEl.textContent = idx + 1;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlight(el);
+    }
+    elapsed = 0;
+    startedAt = performance.now();
+    if (!paused) restartTimer();
+    updateProgress();
+  }
+
+  function restartTimer() {
+    clearTimeout(timer);
+    cancelAnimationFrame(rafId);
+    timer = setTimeout(() => {
+      if (idx < stops.length - 1) goTo(idx + 1);
+      else exit(true);
+    }, STOP_MS - elapsed);
+    startedAt = performance.now();
+    tickProgress();
+  }
+
+  function tickProgress() {
+    if (paused) return;
+    updateProgress();
+    rafId = requestAnimationFrame(tickProgress);
+  }
+
+  function updateProgress() {
+    const now = paused ? startedAt : performance.now();
+    const e   = Math.min(STOP_MS, elapsed + (paused ? 0 : now - startedAt));
+    progressEl.style.width = (100 * e / STOP_MS).toFixed(1) + '%';
+  }
+
+  function pause() {
+    if (paused) return;
+    paused = true;
+    elapsed += performance.now() - startedAt;
+    clearTimeout(timer);
+    cancelAnimationFrame(rafId);
+    playPause.textContent = '▶';
+    playPause.title = 'Resume tour';
+  }
+  function resume() {
+    if (!paused) return;
+    paused = false;
+    playPause.textContent = '⏸';
+    playPause.title = 'Pause tour';
+    restartTimer();
+  }
+
+  function enter() {
+    overlay.hidden = false;
+    document.body.classList.add('qt-active');
+    paused = false;
+    elapsed = 0;
+    goTo(0);
+  }
+  function exit(reachedEnd) {
+    overlay.hidden = true;
+    document.body.classList.remove('qt-active');
+    clearTimeout(timer);
+    cancelAnimationFrame(rafId);
+    setHighlight(null);
+    paused = false;
+    elapsed = 0;
+    if (reachedEnd) {
+      // Soft toast that the tour is done
+      const toast = document.getElementById('toast');
+      if (toast) {
+        toast.textContent = 'Tour complete — explore the page or rerun it from the TL;DR.';
+        toast.classList.add('show');
+        clearTimeout(exit._t);
+        exit._t = setTimeout(() => toast.classList.remove('show'), 2400);
+      }
+    }
+  }
+
+  btn.addEventListener('click', enter);
+  playPause.addEventListener('click', () => paused ? resume() : pause());
+  prevBtn.addEventListener('click',  () => goTo(idx - 1));
+  nextBtn.addEventListener('click',  () => goTo(idx + 1));
+  closeBtn.addEventListener('click', () => exit(false));
+
+  // Keyboard during tour: arrows + space + esc
+  document.addEventListener('keydown', (ev) => {
+    if (overlay.hidden) return;
+    if (ev.key === 'ArrowRight') { ev.preventDefault(); goTo(idx + 1); }
+    else if (ev.key === 'ArrowLeft')  { ev.preventDefault(); goTo(idx - 1); }
+    else if (ev.key === ' ')          { ev.preventDefault(); paused ? resume() : pause(); }
+    else if (ev.key === 'Escape')     { ev.preventDefault(); exit(false); }
+  });
+})();
+</script>
+
+<script>
+(function() {
+  // -------- Permalink: encode f_sd picker + scrubber time in URL hash --
+  // Format:  #<section-anchor>?fsd=<0..6>&t=<seconds>
+  // Either part is optional. Plain section anchors (#visual) still work.
+
+  const fsdSlider  = document.getElementById('fsdSlider');
+  const scrubSlider = document.getElementById('scrubSlider');
+  const shareBtn   = document.getElementById('shareLinkBtn');
+  const toast      = document.getElementById('toast');
+
+  function parseHash() {
+    const h = (location.hash || '').replace(/^#/, '');
+    if (!h) return { section: '', params: {} };
+    const qIdx = h.indexOf('?');
+    let section, paramStr;
+    if (qIdx >= 0) {
+      section  = h.slice(0, qIdx);
+      paramStr = h.slice(qIdx + 1);
+    } else if (/^(fsd|t)=/.test(h)) {
+      // Hash starts with a param key (e.g. "#fsd=4&t=300") — no anchor
+      section  = '';
+      paramStr = h;
+    } else {
+      section  = h;
+      paramStr = '';
+    }
+    const params = {};
+    new URLSearchParams(paramStr).forEach((v, k) => { params[k] = v; });
+    return { section, params };
+  }
+
+  function buildHash(section, params) {
+    const usp = new URLSearchParams();
+    Object.keys(params).forEach(k => {
+      if (params[k] !== undefined && params[k] !== '') usp.set(k, String(params[k]));
+    });
+    const qs = usp.toString();
+    if (!section && !qs) return '';
+    return section + (qs ? '?' + qs : '');
+  }
+
+  // Apply a state object to the picker/scrubber by setting values and
+  // dispatching 'input' so the existing render functions fire.
+  function applyState(params) {
+    if (params.fsd !== undefined && fsdSlider) {
+      const i = Math.max(0, Math.min(6, parseInt(params.fsd, 10)));
+      if (Number.isFinite(i) && String(i) !== fsdSlider.value) {
+        fsdSlider.value = String(i);
+        fsdSlider.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+    if (params.t !== undefined && scrubSlider) {
+      const t = parseFloat(params.t);
+      if (Number.isFinite(t) && t >= 0 && t <= 600) {
+        scrubSlider.value = t.toFixed(2);
+        scrubSlider.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  }
+
+  // Throttled writer: keeps the URL fresh while the user drags sliders
+  // without flooding history.replaceState.
+  let writeTimer = null;
+  function scheduleWrite() {
+    clearTimeout(writeTimer);
+    writeTimer = setTimeout(writeHash, 200);
+  }
+  function writeHash() {
+    const cur = parseHash();
+    const fsdVal = fsdSlider ? parseInt(fsdSlider.value, 10) : null;
+    const tVal   = scrubSlider ? parseFloat(scrubSlider.value) : null;
+    const params = {};
+    // Only include non-default values to keep URLs short.
+    if (fsdVal !== null && fsdVal !== 3) params.fsd = fsdVal;          // 3 = 0.500 (default)
+    if (tVal   !== null && Math.round(tVal) > 0) params.t = Math.round(tVal);
+    const newHash = buildHash(cur.section, params);
+    const want = newHash ? ('#' + newHash) : (location.pathname + location.search);
+    if ((location.hash || '') !== ('#' + newHash) && newHash !== '') {
+      history.replaceState(null, '', want);
+    } else if (newHash === '' && location.hash) {
+      // Both defaults — drop the hash entirely if we control it
+      if (!cur.section) history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
+
+  // Identify the section currently in view (topmost visible h2).
+  function currentSection() {
+    const headings = Array.from(document.querySelectorAll('h2[id]'));
+    const scroll = window.scrollY + 140;  // account for fixed header offset
+    let best = '';
+    for (const h of headings) {
+      if (h.offsetTop <= scroll) best = h.id;
+      else break;
+    }
+    return best;
+  }
+
+  // -------- Initial hash restoration ---------------------------------
+  // Wait one tick so picker/scrubber IIFEs have attached their listeners.
+  setTimeout(() => {
+    const { section, params } = parseHash();
+    if (Object.keys(params).length) applyState(params);
+    if (section) {
+      // Re-scroll because we might have stripped query from hash visually
+      const target = document.getElementById(section);
+      if (target) {
+        // Smooth-scroll honors prefers-reduced-motion via html.scroll-behavior
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, 0);
+
+  // -------- Wire up live URL updates ---------------------------------
+  if (fsdSlider)   fsdSlider.addEventListener('input', scheduleWrite);
+  if (scrubSlider) scrubSlider.addEventListener('input', scheduleWrite);
+
+  // -------- Hashchange (e.g. user clicked a TOC link, pasted URL) ----
+  window.addEventListener('hashchange', () => {
+    const { params } = parseHash();
+    if (Object.keys(params).length) applyState(params);
+  });
+
+  // -------- Share button --------------------------------------------
+  function showToast(msg) {
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  // Public site URL — used when the page is opened via file:// so the
+  // copied link is shareable. Adjust here if the GitHub Pages URL changes.
+  const PUBLIC_URL = 'https://bukhorizainun.github.io/rcfd-buoyant-jet-step1/';
+
+  function publicBase() {
+    const isLocal = location.protocol === 'file:' ||
+                    /^(localhost|127\.|0\.0\.0\.0|::1)/.test(location.hostname || '');
+    if (isLocal) return PUBLIC_URL;
+    // Preserve current host + path (e.g. someone forked the repo and
+    // hosts it elsewhere — still shareable).
+    return location.origin + location.pathname;
+  }
+
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      // Compose hash from current state + current section in view
+      const fsdVal = fsdSlider ? parseInt(fsdSlider.value, 10) : null;
+      const tVal   = scrubSlider ? parseFloat(scrubSlider.value) : null;
+      const params = {};
+      if (fsdVal !== null && fsdVal !== 3) params.fsd = fsdVal;
+      if (tVal   !== null && Math.round(tVal) > 0) params.t = Math.round(tVal);
+      const section = currentSection();
+      const hash = buildHash(section, params);
+      const url  = publicBase() + (hash ? '#' + hash : '');
+
+      // Try Clipboard API first; fall back to a hidden textarea
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      } catch (e) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = url;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus(); ta.select();
+          copied = document.execCommand('copy');
+          document.body.removeChild(ta);
+        } catch (ee) { copied = false; }
+      }
+      showToast(copied ? 'Link copied to clipboard' : 'Could not copy — URL: ' + url);
+      // Also reflect into the URL bar so the user sees the share state
+      if (hash) history.replaceState(null, '', '#' + hash);
+    });
+  }
 })();
 </script>
 
