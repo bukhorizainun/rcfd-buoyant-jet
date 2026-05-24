@@ -314,13 +314,15 @@
   <li><code>face_swap_diffusion</code> = $f_{sd}$ (set by the user): the total amount of mixing per rCFD time step. If $f_{sd}$ is larger than the cap, the operator splits the work into several sweeps of size $0.125$ each.</li>
 </ul>
 
-<p>For one face between cells $c_0$ and $c_1$ with $T_{c_1} > T_{c_0}$ the operation is:</p>
+<p>For one internal face between cells $c_0$ and $c_1$ (the code in <code>rCFD_swap.h</code> first orders them so that $c_1$ is the hotter cell, $T_{c_1} > T_{c_0}$), one sweep computes a volume-weighted swap amount:</p>
 
-<p>$$ \Delta T = \frac{T_{c_1} - T_{c_0}}{2} \cdot \min(V_{c_0}, V_{c_1}) \cdot f_\text{loop} $$</p>
+<p>$$ S = \frac{T_{c_1} - T_{c_0}}{2} \cdot \min\!\left(V_{c_0}\varphi_{c_0},\, V_{c_1}\varphi_{c_1}\right) \cdot f_\text{loop}, \qquad f_\text{loop} = \frac{f_{sd}}{n_\text{loops}} $$</p>
 
-<p>$$ T_{c_0} \mathrel{+}= \Delta T, \qquad T_{c_1} \mathrel{-}= \Delta T $$</p>
+<p>which is accumulated for both cells and then turned into an actual temperature change by dividing by each cell's own (phase) volume:</p>
 
-<p>where $f_\text{loop} = f_{sd}/n_\text{loops}$ is the strength of one sweep.</p>
+<p>$$ T_{c_0} \;\leftarrow\; T_{c_0} + \frac{S}{V_{c_0}\varphi_{c_0}}, \qquad T_{c_1} \;\leftarrow\; T_{c_1} - \frac{S}{V_{c_1}\varphi_{c_1}} $$</p>
+
+<p>Here $V$ is the cell volume, $\varphi$ the volume fraction (vof; $\varphi = 1$ for our single-phase water), and $f_\text{loop} = f_{sd}/n_\text{loops}$ the strength of one sweep. The same extensive quantity $S$ leaves $c_1$ and enters $c_0$, so the operator conserves the total $\sum_c T_c V_c \varphi_c$ — it is mass/energy-conserving. On a uniform mesh ($V_{c_0} = V_{c_1}$) the volume factors cancel and this reduces to the familiar symmetric form $\Delta T = \tfrac{1}{2}(T_{c_1} - T_{c_0})\, f_\text{loop}$.</p>
 
 <div class="note">It is important to note that $f_{sd}$ is a dimensionless number, not a physical diffusion coefficient in m²/s. The rCFD library does have a different "local diffusion" option, which uses a real Fickian flux. That option needs a per-cell diffusion field that we do not generate in Step 1, so we leave it switched off here.</div>
 
@@ -337,7 +339,7 @@
   <li>Fixing blank snapshots: the contour plot had to be drawn before saving the frame.</li>
 </ul>
 
-<p>After these fixes the full workflow runs in about thirty minutes on a four-core laptop: roughly fifteen minutes for the CFD reference, and fifteen minutes for the rCFD replay (600 episodes).</p>
+<p>After these fixes the full workflow runs end-to-end on a four-core laptop. The rCFD replay (600 episodes) takes about fifteen minutes; the CFD reference that the recurrence database is built from is far more expensive, at about 9&nbsp;h 43&nbsp;min (see Section 6).</p>
 
 <figure class="wide">
   <img src="assets/figures/fig_02_cfd_tmean_cog.png" alt="CFD reference T_mean and CoG_y traces">
