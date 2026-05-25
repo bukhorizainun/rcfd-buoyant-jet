@@ -21,3 +21,4 @@ ehthumbs.db
 # Python cache (not expected here, but just in case)
 __pycache__/
 *.pyc
+.gstack/
