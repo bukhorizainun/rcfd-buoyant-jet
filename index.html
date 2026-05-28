@@ -101,7 +101,7 @@
 
 <div class="tldr">
   <h3>TL;DR</h3>
-  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a turbulent CFD reference (k-$\omega$ SST), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$).</p>
+  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$).</p>
   <button class="quick-tour-trigger" id="quickTourBtn" type="button"
           title="Auto-scroll through the five key figures (~60 s)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -127,6 +127,12 @@
 <h2 id="testcase">2 — The Buoyant-Jet Test Case</h2>
 
 <p>The test case is a closed rectangular tank filled with water at $293$ K. A small horizontal jet enters at mid-height. From $t=0$ to $t=315$ s the jet is warm ($T_\text{high}=333$ K); after $t=315$ s it switches back to cold. The warm water is lighter than the cold water, so it rises to the top of the tank and a vertical thermal layer builds up.</p>
+
+<p>How big and how fast is this jet? The tank is about $7.5$ cm tall, and the mesh is made of small cubic cells of $1$ mm. The jet comes in through a small opening of $5$ mm $\times$ $5$ mm in the middle of the wall, at a speed of $U = 0.02$ m/s. For water the kinematic viscosity is about $\nu = 1.0\times10^{-6}$ m²/s. From these numbers we get the jet Reynolds number:</p>
+
+<p>$$ Re = \frac{U\,D}{\nu} = \frac{0.02 \times 0.005}{1.0\times10^{-6}} \approx 100. $$</p>
+
+<p>A water jet only becomes turbulent at a much higher value, around $Re \sim 2000$. Here $Re \approx 100$ is about $20$ times smaller, so the flow stays laminar. This is the reason a laminar model fits this case better than a turbulence model.</p>
 
 <p>We follow the temperature field with two numbers:</p>
 
@@ -259,7 +265,8 @@
     <!-- ============ Box 4: Output T field ============ -->
     <g class="wf-box" transform="translate(850, 80)"
        data-tip-title="Output T field"
-       data-tip="One temperature-field snapshot per replay step. After 600 steps the full 600 s of thermal transport is reproduced, at roughly one thirty-seventh of the original CFD cost.">
+       data-tip="One temperature-field snapshot per replay step. After 600 steps the full 600 s of thermal transport is reproduced, at a small fraction of the original CFD cost (well over a hundred times cheaper once snapshot rendering is switched off).">
+
       <title>Output T field</title>
       <rect class="bg replay" x="0" y="0" width="220" height="170"/>
       <!-- Icon: stratified chamber -->
@@ -305,7 +312,102 @@
 <!-- =========================================================== -->
 <h2 id="fsd">4 — Face-Swap Diffusion</h2>
 
-<p>After each C2C shift, rCFD walks over every internal face and moves a small amount of heat between the two neighbouring cells. This is the <strong>face-swap diffusion operator</strong>, first proposed by Pirker and Lichtenegger in 2018 <a href="#ref-pirker2018">[2]</a> under the name "global balance safety belt", and later rewritten in a cleaner mathematical form by Lumetzberger et al. in 2025 <a href="#ref-lumetzberger2025">[3]</a>.</p>
+<p>After each C2C shift, rCFD goes over every internal face and moves a small amount of heat from the warmer cell to the cooler one. This is the <strong>face-swap diffusion operator</strong>. It is <em>mass-neutral</em>: whatever one cell loses, the other cell gains, so the total heat in the tank does not change. It only adds the mixing that the shift alone cannot give. This face-swap step comes from Pirker and Lichtenegger in 2018 <a href="#ref-pirker2018">[2]</a>, and Lumetzberger et al. in 2025 <a href="#ref-lumetzberger2025">[3]</a> later wrote it in a cleaner mathematical form.</p>
+
+<figure class="workflow wide">
+  <svg viewBox="0 0 1100 340" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="Face-swap diffusion diagram: before, swap, after">
+    <defs>
+      <marker id="fsArrowHead" viewBox="0 0 10 10" refX="8" refY="5"
+              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+
+    <text x="550" y="26" text-anchor="middle" class="wf-phase-label">
+      One face-swap step — mass-neutral mixing across a shared face
+    </text>
+
+    <!-- ===== Box 1: before (sharp) ===== -->
+    <g class="wf-box" transform="translate(45, 55)"
+       data-tip-title="Two neighbour cells"
+       data-tip="Right after the C2C shift, two cells that share a face can sit at very different temperatures — a sharp jump. The bare shift moves heat around but does not smooth it out.">
+      <rect class="bg" x="0" y="0" width="250" height="195"/>
+      <g transform="translate(65, 34)">
+        <rect x="0"  y="0" width="60" height="60" fill="#3b6db5" opacity="0.85"/>
+        <rect x="60" y="0" width="60" height="60" fill="#c83737" opacity="0.85"/>
+        <line x1="60" y1="-6" x2="60" y2="66" stroke="var(--ink)" stroke-width="2"/>
+        <text x="30" y="36" text-anchor="middle" style="fill:#fff;font-family:var(--sans);font-size:12px;font-weight:600">cold</text>
+        <text x="90" y="36" text-anchor="middle" style="fill:#fff;font-family:var(--sans);font-size:12px;font-weight:600">hot</text>
+        <text x="30" y="84" text-anchor="middle" class="wf-sub">c&#8320;</text>
+        <text x="90" y="84" text-anchor="middle" class="wf-sub">c&#8321;</text>
+      </g>
+      <text class="wf-title" x="125" y="160" text-anchor="middle">Two neighbour cells</text>
+      <text class="wf-sub"   x="125" y="181" text-anchor="middle">sharp jump after the shift</text>
+    </g>
+
+    <!-- arrow 1 -->
+    <g style="color: var(--ink-faint)">
+      <path id="fsPath1" class="wf-arrow" d="M 300 152 L 420 152"/>
+      <circle r="4.5" fill="var(--accent)">
+        <animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#fsPath1"/></animateMotion>
+      </circle>
+    </g>
+
+    <!-- ===== Box 2: the swap ===== -->
+    <g class="wf-box" transform="translate(425, 55)"
+       data-tip-title="Swap across the face"
+       data-tip="The operator moves a heat amount S = ½ (T₁ − T₀) · V · f_sd from the hotter cell to the cooler one. Cell c₀ gains exactly what c₁ loses, so it is mass-neutral. f_sd sets the strength; above the 1/8 cap the work is split into several inner sweeps.">
+      <rect class="bg" x="0" y="0" width="250" height="195"/>
+      <g transform="translate(65, 44)">
+        <rect x="0"  y="0" width="60" height="60" fill="#3b6db5" opacity="0.85"/>
+        <rect x="60" y="0" width="60" height="60" fill="#c83737" opacity="0.85"/>
+        <line x1="60" y1="-6" x2="60" y2="66" stroke="var(--ink)" stroke-width="2"/>
+        <!-- heat S moves from the hot cell to the cold cell -->
+        <path id="fsSwap" d="M 92 -3 C 92 -32, 28 -32, 28 -3" fill="none"
+              stroke="#c83737" stroke-width="2.2" marker-end="url(#fsArrowHead)"
+              style="color:#c83737"/>
+        <circle r="3.6" fill="#c83737">
+          <animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#fsSwap"/></animateMotion>
+        </circle>
+      </g>
+      <text class="wf-title" x="125" y="150" text-anchor="middle">Swap across the face</text>
+      <text class="wf-sub"   x="125" y="170" text-anchor="middle">S = &#189; (T&#8321; &#8722; T&#8320;) &#183; V &#183; f_sd</text>
+      <text class="wf-sub"   x="125" y="186" text-anchor="middle">c&#8320; gains S, &#160; c&#8321; loses S</text>
+    </g>
+
+    <!-- arrow 2 -->
+    <g style="color: var(--ink-faint)">
+      <path id="fsPath2" class="wf-arrow" d="M 680 152 L 800 152"/>
+      <circle r="4.5" fill="var(--accent)">
+        <animateMotion dur="2.4s" begin="0.8s" repeatCount="indefinite"><mpath href="#fsPath2"/></animateMotion>
+      </circle>
+    </g>
+
+    <!-- ===== Box 3: after (mixed) ===== -->
+    <g class="wf-box" transform="translate(805, 55)"
+       data-tip-title="Partly mixed"
+       data-tip="After the swap the two cells are closer in temperature, but the total heat is unchanged. Repeated over every internal face at every step, this rebuilds the mixing the shift alone cannot produce.">
+      <rect class="bg" x="0" y="0" width="250" height="195"/>
+      <g transform="translate(65, 34)">
+        <rect x="0"  y="0" width="60" height="60" fill="#5db478" opacity="0.85"/>
+        <rect x="60" y="0" width="60" height="60" fill="#d97f0b" opacity="0.85"/>
+        <line x1="60" y1="-6" x2="60" y2="66" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+        <text x="30" y="36" text-anchor="middle" style="fill:#fff;font-family:var(--sans);font-size:11px;font-weight:600">warm</text>
+        <text x="90" y="36" text-anchor="middle" style="fill:#fff;font-family:var(--sans);font-size:10px;font-weight:600">warmer</text>
+        <text x="30" y="84" text-anchor="middle" class="wf-sub">c&#8320;</text>
+        <text x="90" y="84" text-anchor="middle" class="wf-sub">c&#8321;</text>
+      </g>
+      <text class="wf-title" x="125" y="160" text-anchor="middle">Partly mixed</text>
+      <text class="wf-sub"   x="125" y="181" text-anchor="middle">total heat unchanged</text>
+    </g>
+
+    <text x="550" y="322" text-anchor="middle" class="wf-sub" style="font-style:italic">
+      repeated over every internal face, every rCFD step — f_sd sets how strong it is
+    </text>
+  </svg>
+  <figcaption>The face-swap diffusion operator on one shared face. The cells start with a sharp hot/cold jump (left). The operator moves a small amount of heat $S$ from the hotter cell to the cooler one (middle); cell $c_0$ gains exactly what cell $c_1$ loses, so the total heat does not change. The result (right) is a smoother, partly mixed pair. The same step runs over every internal face at each rCFD step.</figcaption>
+</figure>
 
 <p>It is controlled by two numbers:</p>
 
@@ -325,6 +427,92 @@
 <p>Here $V$ is the cell volume, $\varphi$ the volume fraction (vof; $\varphi = 1$ for our single-phase water), and $f_\text{loop} = f_{sd}/n_\text{loops}$ the strength of one sweep. The same extensive quantity $S$ leaves $c_1$ and enters $c_0$, so the operator conserves the total $\sum_c T_c V_c \varphi_c$ — it is mass/energy-conserving. On a uniform mesh ($V_{c_0} = V_{c_1}$) the volume factors cancel and this reduces to the familiar symmetric form $\Delta T = \tfrac{1}{2}(T_{c_1} - T_{c_0})\, f_\text{loop}$.</p>
 
 <div class="note">It is important to note that $f_{sd}$ is a dimensionless number, not a physical diffusion coefficient in m²/s. The rCFD library does have a different "local diffusion" option, which uses a real Fickian flux. That option needs a per-cell diffusion field that we do not generate in Step 1, so we leave it switched off here.</div>
+
+<h3>4.1 — A different tool: the global balance safety belt</h3>
+
+<div class="note">The same 2018 paper also has a second tool called the <strong>global balance safety belt</strong> (§2.4). It is easy to mix this up with face-swap diffusion, but it does a different job. A <em>global error monitor</em> tracks how much heat (or species) <em>should</em> be in the tank — the "active mass", set by the initial amount plus the in/out fluxes — and compares it with how much is actually there after the shift. If they do not match, the same face exchange is run in a <em>mass-acting</em> way — <em>mass-reducing</em> if the total is too high, <em>mass-gaining</em> if too low — to close the gap. So the safety belt keeps the totals right (conservation), while the face-swap diffusion $f_{sd}$ that we tune here only mixes and leaves the totals unchanged. In the code they even live in separate files: <code>rCFD_swap.h</code> for the face-swap diffusion, and <code>rCFD_balance.h</code> for the safety belt.</div>
+
+<figure class="workflow wide">
+  <svg viewBox="0 0 1100 340" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="Safety belt: the face swap run in three modes — mass reducing, mass neutral, mass gaining">
+    <defs>
+      <marker id="sbArrowHead" viewBox="0 0 10 10" refX="8" refY="5"
+              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+
+    <text x="550" y="24" text-anchor="middle" class="wf-phase-label">
+      Global error monitor → correct by mass-acting face swaps
+    </text>
+
+    <!-- ===== Box 1: mass reducing ===== -->
+    <g class="wf-box" transform="translate(45, 50)"
+       data-tip-title="Mass-reducing mode"
+       data-tip="Used when the global total sits too high. The face exchange runs so the sending cell gives up scalar that is not passed on — the red slice leaves the domain — so the global total drops back to the target.">
+      <rect class="bg" x="0" y="0" width="250" height="200"/>
+      <g transform="translate(66, 40)">
+        <rect x="0"  y="0" width="50" height="64" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <rect x="2"  y="22" width="46" height="40" fill="#d97f0b" opacity="0.8"/>
+        <rect x="2"  y="14" width="46" height="8"  fill="#c83737"/>
+        <path d="M 25 12 L 7 -16" fill="none" stroke="#c83737" stroke-width="2"
+              marker-end="url(#sbArrowHead)" style="color:#c83737"/>
+        <text x="0" y="-8" class="wf-sub" style="font-size:9px;fill:#c83737" text-anchor="start">removed</text>
+        <rect x="58" y="0" width="50" height="64" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <rect x="60" y="46" width="46" height="16" fill="#d97f0b" opacity="0.8"/>
+        <text x="25" y="78" class="wf-sub" text-anchor="middle">c&#8321;</text>
+        <text x="83" y="78" class="wf-sub" text-anchor="middle">c&#8320;</text>
+      </g>
+      <text class="wf-title" x="125" y="162" text-anchor="middle">Mass reducing</text>
+      <text class="wf-sub"   x="125" y="183" text-anchor="middle">total too high → remove</text>
+    </g>
+
+    <!-- ===== Box 2: mass neutral ===== -->
+    <g class="wf-box" transform="translate(425, 50)"
+       data-tip-title="Mass-neutral mode"
+       data-tip="The ordinary face-swap diffusion: the sending cell gives exactly what the receiving cell gains, so the total does not change. This is the f_sd mixing — it makes no correction to the balance.">
+      <rect class="bg" x="0" y="0" width="250" height="200"/>
+      <g transform="translate(66, 40)">
+        <rect x="0"  y="0" width="50" height="64" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <rect x="2"  y="26" width="46" height="36" fill="#d97f0b" opacity="0.8"/>
+        <rect x="58" y="0" width="50" height="64" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <rect x="60" y="40" width="46" height="22" fill="#d97f0b" opacity="0.8"/>
+        <path d="M 25 18 C 42 0, 66 0, 83 34" fill="none" stroke="#0b66b0" stroke-width="2"
+              marker-end="url(#sbArrowHead)" style="color:#0b66b0"/>
+        <text x="25" y="78" class="wf-sub" text-anchor="middle">c&#8321;</text>
+        <text x="83" y="78" class="wf-sub" text-anchor="middle">c&#8320;</text>
+      </g>
+      <text class="wf-title" x="125" y="162" text-anchor="middle">Mass neutral</text>
+      <text class="wf-sub"   x="125" y="183" text-anchor="middle">balanced → plain diffusion</text>
+    </g>
+
+    <!-- ===== Box 3: mass gaining ===== -->
+    <g class="wf-box" transform="translate(805, 50)"
+       data-tip-title="Mass-gaining mode"
+       data-tip="Used when the global total sits too low. The face exchange runs so the receiving cell gains more than the sending cell gives up — the red slice is created — so the global total rises back to the target.">
+      <rect class="bg" x="0" y="0" width="250" height="200"/>
+      <g transform="translate(66, 40)">
+        <rect x="0"  y="0" width="50" height="64" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <rect x="2"  y="22" width="46" height="40" fill="#d97f0b" opacity="0.8"/>
+        <rect x="58" y="0" width="50" height="64" fill="none" stroke="var(--ink)" stroke-width="1.4"/>
+        <rect x="60" y="46" width="46" height="16" fill="#d97f0b" opacity="0.8"/>
+        <rect x="60" y="38" width="46" height="8"  fill="#c83737"/>
+        <path d="M 101 -16 L 83 36" fill="none" stroke="#c83737" stroke-width="2"
+              marker-end="url(#sbArrowHead)" style="color:#c83737"/>
+        <text x="108" y="-8" class="wf-sub" style="font-size:9px;fill:#c83737" text-anchor="end">created</text>
+        <text x="25" y="78" class="wf-sub" text-anchor="middle">c&#8321;</text>
+        <text x="83" y="78" class="wf-sub" text-anchor="middle">c&#8320;</text>
+      </g>
+      <text class="wf-title" x="125" y="162" text-anchor="middle">Mass gaining</text>
+      <text class="wf-sub"   x="125" y="183" text-anchor="middle">total too low → add</text>
+    </g>
+
+    <text x="550" y="324" text-anchor="middle" class="wf-sub" style="font-style:italic">
+      the monitor picks one mode each step — only the red (mass-acting) modes change the global total
+    </text>
+  </svg>
+  <figcaption>The global balance safety belt corrects conservation errors with the same one-step face exchange, run in three modes (after Pirker &amp; Lichtenegger 2018). A global error monitor — the change of scalar in a sub-domain must equal its in/out fluxes — picks the mode each step: <em>mass-reducing</em> when the total sits too high, <em>mass-gaining</em> when too low, and <em>mass-neutral</em> (the ordinary $f_{sd}$ diffusion) when the balance is already right. Only the mass-acting modes change the total, and that is what keeps rCFD conservative.</figcaption>
+</figure>
 
 <!-- =========================================================== -->
 <h2 id="step1a">5 — Step 1a: Workflow on Windows 11</h2>
@@ -377,11 +565,11 @@
 </table>
 </div>
 
-<p>Three PowerShell scripts under <code>step1b/</code> handle the edit-recompile-run-archive loop, so that one case never overwrites another. The full seven-case sweep took just over two hours of wall-clock time. The CFD reference itself took 9 h 43 min, so rCFD is roughly 37 times faster than CFD on this case.</p>
+<p>Three PowerShell scripts under <code>step1b/</code> handle the edit-recompile-run-archive loop, so that one case never overwrites another. Without the per-step image files, each rCFD replay finishes in about $0.8$–$4.7$ minutes and the whole seven-case sweep runs in roughly $20$ minutes. The CFD reference solver takes about $569$ minutes (its $583$-minute total minus the time it spent saving images), so rCFD is about $263\times$ faster than CFD on this case. The earlier figure of $37\times$ was dominated by image-saving, which was a small part of the CFD cost but most of the old rCFD runtime.</p>
 
 <figure class="wide" id="wallClockFigure">
   <img src="assets/figures/fig_step1b_wallclock.png" alt="Wall-clock time: CFD reference vs rCFD per case (linear and log scale)">
-  <figcaption><span class="label">Figure 4.</span> Wall-clock time of the CFD reference (brick red) against each rCFD case (blue, with the test case in orange). On the linear scale (left) the contrast is dramatic: one full CFD run takes about $9$ hours and $43$ minutes; the average rCFD replay only takes $15.8$ minutes, which is roughly $37\times$ faster. The logarithmic scale (right) lets the case-to-case differences inside the rCFD group be read off as well.</figcaption>
+  <figcaption><span class="label">Figure 4.</span> Wall-clock time per simulation run. Left: the rCFD replay cost rises with $f_{sd}$ (from about $0.8$ min at $f_{sd}=0$ to $4.7$ min at $f_{sd}=3$), because a larger $f_{sd}$ needs more inner face-swap sweeps; the mean is $2.16$ minutes. Right (log scale): the same rCFD curve against the CFD reference, whose solver takes about $569$ minutes. For a fair comparison both times count only the calculation and leave out the time spent saving image files, so rCFD comes out about $263\times$ faster on average, and $120$–$701\times$ across the sweep.</figcaption>
 </figure>
 
 <!-- =========================================================== -->
@@ -1054,7 +1242,7 @@
 <div class="bib">
 <ol>
   <li id="ref-lichtenegger2016">T. Lichtenegger and S. Pirker, <span class="title">Recurrence CFD — a novel approach to simulate multiphase flows with strongly separated time scales</span>, Chemical Engineering Science <strong>153</strong>, 394–410 (2016).</li>
-  <li id="ref-pirker2018">S. Pirker and T. Lichtenegger, <span class="title">Efficient time-extrapolation of single- and multiphase simulations by transport-based recurrence CFD (rCFD)</span>, Chemical Engineering Science <strong>188</strong>, 65–83 (2018). §2.4 introduces the face-swap diffusion operator under the name "global balance safety belt".</li>
+  <li id="ref-pirker2018">S. Pirker and T. Lichtenegger, <span class="title">Efficient time-extrapolation of single- and multiphase simulations by transport-based recurrence CFD (rCFD)</span>, Chemical Engineering Science <strong>188</strong>, 65–83 (2018). §2.4 describes the one-step cell-to-cell exchange used for face-swap diffusion, and the separate "global balance safety belt" that uses the same exchange to keep the global mass conserved.</li>
   <li id="ref-lumetzberger2025">H. Lumetzberger, S. Pirker and T. Lichtenegger, <span class="title">Propagator-moments approximation for recurrence CFD: application to species transport in turbulent flows</span>, Chemical Engineering Science <strong>311</strong>, 121624 (2025). Modern propagator-theoretic derivation of the face-swap operator.</li>
   <li id="ref-hyndman2006">R. J. Hyndman and A. B. Koehler, <span class="title">Another look at measures of forecast accuracy</span>, International Journal of Forecasting <strong>22</strong>(4), 679–688 (2006). Standard reference for the bias, MAE, RMSE error metrics used here.</li>
   <li id="ref-abbasi2020">S. Abbasi, S. Pirker and T. Lichtenegger, <span class="title">Application of recurrence CFD (rCFD) to species transport in turbulent vortex shedding</span>, Computers and Fluids <strong>196</strong>, 104348 (2020). Source of the $D_\text{rec} = D + D_\text{sgs}$ decomposition motivating the local-diffusion path.</li>
