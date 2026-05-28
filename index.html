@@ -134,10 +134,11 @@
 
 <p>A water jet only becomes turbulent at a much higher value, around $Re \sim 2000$. Here $Re \approx 100$ is about $20$ times smaller, so the flow stays laminar. This is the reason a laminar model fits this case better than a turbulence model.</p>
 
-<p>We follow the temperature field with two numbers:</p>
+<p>We follow the temperature field with three numbers:</p>
 
 <ul>
-  <li>The <strong>average temperature</strong> $T_\text{mean}(t)$, which tells us how much heat is in the tank.</li>
+  <li>The <strong>mean temperature</strong> $T_\text{mean}(t)$, which tells us how much heat is in the tank.</li>
+  <li>The <strong>mean temperature rise</strong> $\Delta T_\text{mean}(t) = T_\text{mean}(t) - 293$ K, which tells us how much the tank has warmed above its starting point.</li>
   <li>The <strong>vertical centre of gravity of the heat</strong> $CoG_y(t)$, which tells us how high or low the warm fluid sits.</li>
 </ul>
 
@@ -426,11 +427,11 @@
 
 <p>Here $V$ is the cell volume, $\varphi$ the volume fraction (vof; $\varphi = 1$ for our single-phase water), and $f_\text{loop} = f_{sd}/n_\text{loops}$ the strength of one sweep. The same extensive quantity $S$ leaves $c_1$ and enters $c_0$, so the operator conserves the total $\sum_c T_c V_c \varphi_c$ — it is mass/energy-conserving. On a uniform mesh ($V_{c_0} = V_{c_1}$) the volume factors cancel and this reduces to the familiar symmetric form $\Delta T = \tfrac{1}{2}(T_{c_1} - T_{c_0})\, f_\text{loop}$.</p>
 
-<div class="note">It is important to note that $f_{sd}$ is a dimensionless number, not a physical diffusion coefficient in m²/s. The rCFD library does have a different "local diffusion" option, which uses a real Fickian flux. That option needs a per-cell diffusion field that we do not generate in Step 1, so we leave it switched off here.</div>
+<div class="note">$f_{sd}$ is a dimensionless number, not a physical diffusion coefficient in m²/s. The rCFD library does have a separate "local diffusion" option that uses a real Fickian flux, but it needs a per-cell diffusion field that we do not generate in Step 1, so we leave it switched off here.</div>
 
 <h3>4.1 — A different tool: the global balance safety belt</h3>
 
-<div class="note">The same 2018 paper also has a second tool called the <strong>global balance safety belt</strong> (§2.4). It is easy to mix this up with face-swap diffusion, but it does a different job. A <em>global error monitor</em> tracks how much heat (or species) <em>should</em> be in the tank — the "active mass", set by the initial amount plus the in/out fluxes — and compares it with how much is actually there after the shift. If they do not match, the same face exchange is run in a <em>mass-acting</em> way — <em>mass-reducing</em> if the total is too high, <em>mass-gaining</em> if too low — to close the gap. So the safety belt keeps the totals right (conservation), while the face-swap diffusion $f_{sd}$ that we tune here only mixes and leaves the totals unchanged. In the code they even live in separate files: <code>rCFD_swap.h</code> for the face-swap diffusion, and <code>rCFD_balance.h</code> for the safety belt.</div>
+<div class="note">The same 2018 paper also has a second tool called the <strong>global balance safety belt</strong> (§2.4). It is easy to mix this up with face-swap diffusion, but it does a different job. A <em>global error monitor</em> tracks how much heat (or species) <em>should</em> be in the tank — the "active mass", set by the initial amount plus the in/out fluxes — and compares it with how much is actually there after the shift. If they do not match, the same face exchange is run in a <em>mass-acting</em> way — <em>mass-reducing</em> if the total is too high, <em>mass-gaining</em> if too low — to close the gap. So the safety belt keeps the totals right (conservation), while the face-swap diffusion $f_{sd}$ that we tune here only mixes and leaves the totals unchanged. In fact, the <em>mass-neutral</em> mode in the diagram below is the very same face-swap diffusion shown earlier — the safety belt just adds the mass-reducing and mass-gaining modes on top. In the code they even live in separate files: <code>rCFD_swap.h</code> for the face-swap diffusion, and <code>rCFD_balance.h</code> for the safety belt.</div>
 
 <figure class="workflow wide">
   <svg viewBox="0 0 1100 340" xmlns="http://www.w3.org/2000/svg" role="img"
@@ -586,7 +587,7 @@
            style="width: 100%;">
     </noscript>
   </div>
-  <figcaption><span class="label">Figure 5 (interactive).</span> Mean temperature $T_\text{mean}(t)$ on the left, thermal centre of gravity $CoG_y(t)$ on the right, for the CFD reference (thick black) and the seven rCFD cases. Hover over a curve to see the exact value at that time. Click a legend entry to hide or show that trace. Drag inside the plot to zoom, double-click to reset.</figcaption>
+  <figcaption><span class="label">Figure 5 (interactive).</span> Mean temperature $T_\text{mean}(t)$ on the left, its rise $\Delta T_\text{mean}(t) = T_\text{mean}(t) - 293$ K in the middle, and the thermal centre of gravity $CoG_y(t)$ on the right, for the CFD reference (thick black) and the seven rCFD cases. Hover over a curve to see the exact value at that time. Click a legend entry to hide or show that trace. Drag inside the plot to zoom, double-click to reset.</figcaption>
 </figure>
 
 <script>
@@ -606,47 +607,60 @@
   };
 
   function buildTraces(data) {
-    const tracesT = [];
-    const tracesC = [];
+    const tracesA = [];   // absolute T_mean   -> x  / y
+    const tracesD = [];   // delta T_mean      -> x2 / y2
+    const tracesC = [];   // delta CoG_y       -> x3 / y3
 
     // CFD reference (thick black, no markers)
-    tracesT.push({
+    tracesA.push({
       x: data.cfd.t, y: data.cfd.T,
       mode: 'lines', name: 'CFD reference',
       line: { color: palette.cfd, width: 2.8 },
       hovertemplate: '<b>CFD reference</b><br>t = %{x:.1f} s<br>T = %{y:.2f} K<extra></extra>',
       legendgroup: 'cfd', xaxis: 'x', yaxis: 'y'
     });
+    tracesD.push({
+      x: data.cfd.t, y: data.cfd.T.map(v => v - 293),
+      mode: 'lines', name: 'CFD reference',
+      line: { color: palette.cfd, width: 2.8 },
+      hovertemplate: '<b>CFD reference</b><br>t = %{x:.1f} s<br>ΔT = %{y:.2f} K<extra></extra>',
+      legendgroup: 'cfd', xaxis: 'x2', yaxis: 'y2', showlegend: false
+    });
     tracesC.push({
       x: data.cfd.t, y: data.cfd.CoG_dy_mm,
       mode: 'lines', name: 'CFD reference',
       line: { color: palette.cfd, width: 2.8 },
       hovertemplate: '<b>CFD reference</b><br>t = %{x:.1f} s<br>ΔCoG = %{y:.3f} mm<extra></extra>',
-      legendgroup: 'cfd', xaxis: 'x2', yaxis: 'y2',
-      showlegend: false
+      legendgroup: 'cfd', xaxis: 'x3', yaxis: 'y3', showlegend: false
     });
 
     data.cases.forEach((c, i) => {
       const color = palette.rcfd[i] || '#888';
       const lbl   = 'f_sd = ' + c.label;
-      tracesT.push({
+      tracesA.push({
         x: c.t, y: c.T,
         mode: 'lines', name: lbl,
         line: { color: color, width: 1.6 },
         hovertemplate: '<b>' + lbl + '</b><br>t = %{x:.1f} s<br>T = %{y:.2f} K<extra></extra>',
         legendgroup: c.suffix, xaxis: 'x', yaxis: 'y'
       });
+      tracesD.push({
+        x: c.t, y: c.T.map(v => v - 293),
+        mode: 'lines', name: lbl,
+        line: { color: color, width: 1.6 },
+        hovertemplate: '<b>' + lbl + '</b><br>t = %{x:.1f} s<br>ΔT = %{y:.2f} K<extra></extra>',
+        legendgroup: c.suffix, xaxis: 'x2', yaxis: 'y2', showlegend: false
+      });
       tracesC.push({
         x: c.t, y: c.CoG_dy_mm,
         mode: 'lines', name: lbl,
         line: { color: color, width: 1.6 },
         hovertemplate: '<b>' + lbl + '</b><br>t = %{x:.1f} s<br>ΔCoG = %{y:.3f} mm<extra></extra>',
-        legendgroup: c.suffix, xaxis: 'x2', yaxis: 'y2',
-        showlegend: false
+        legendgroup: c.suffix, xaxis: 'x3', yaxis: 'y3', showlegend: false
       });
     });
 
-    return [...tracesT, ...tracesC];
+    return [...tracesA, ...tracesD, ...tracesC];
   }
 
   // CFD trace colour adapts to theme so the thick black line is visible
@@ -678,34 +692,44 @@
     lastTraces = traces;
 
     const layout = {
-      grid: { rows: 1, columns: 2, pattern: 'independent', xgap: 0.10 },
-      xaxis:  { domain: [0,    0.45], title: { text: 'Time (s)' },
+      grid: { rows: 1, columns: 3, pattern: 'independent', xgap: 0.09 },
+      xaxis:  { domain: [0,     0.29], title: { text: 'Time (s)' },
                 gridcolor: tc.grid, zeroline: false, range: [0, 600],
                 color: tc.text },
       yaxis:  { title: { text: 'T<sub>mean</sub> (K)' },
                 gridcolor: tc.grid, zeroline: false, range: [290, 324],
                 color: tc.text },
-      xaxis2: { domain: [0.55, 1.0],  title: { text: 'Time (s)' },
+      xaxis2: { domain: [0.355, 0.645], title: { text: 'Time (s)' },
                 gridcolor: tc.grid, zeroline: false, range: [0, 600],
                 color: tc.text },
-      yaxis2: { title: { text: 'ΔCoG<sub>y</sub> (mm)' },
+      yaxis2: { title: { text: 'ΔT<sub>mean</sub> (K)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 30],
+                color: tc.text },
+      xaxis3: { domain: [0.71,  1.0],  title: { text: 'Time (s)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 600],
+                color: tc.text },
+      yaxis3: { title: { text: 'ΔCoG<sub>y</sub> (mm)' },
                 gridcolor: tc.grid, zeroline: false, range: [0, 1.2],
                 color: tc.text },
       annotations: [
         { text: '<b>Mean temperature</b>',
-          x: 0.225, xref: 'paper', y: 1.06, yref: 'paper',
+          x: 0.145, xref: 'paper', y: 1.06, yref: 'paper',
           xanchor: 'center', showarrow: false,
-          font: { size: 14, color: tc.accent } },
+          font: { size: 13, color: tc.accent } },
+        { text: '<b>Mean temperature rise</b>',
+          x: 0.5, xref: 'paper', y: 1.06, yref: 'paper',
+          xanchor: 'center', showarrow: false,
+          font: { size: 13, color: tc.accent } },
         { text: '<b>Thermal centre of gravity</b>',
-          x: 0.775, xref: 'paper', y: 1.06, yref: 'paper',
+          x: 0.855, xref: 'paper', y: 1.06, yref: 'paper',
           xanchor: 'center', showarrow: false,
-          font: { size: 14, color: tc.accent } }
+          font: { size: 13, color: tc.accent } }
       ],
       legend: {
         orientation: 'h', x: 0.5, xanchor: 'center', y: -0.18,
         font: { size: 11, color: tc.text }, bgcolor: 'rgba(0,0,0,0)'
       },
-      margin: { t: 50, b: 90, l: 60, r: 25 },
+      margin: { t: 50, b: 90, l: 55, r: 20 },
       hovermode: 'closest',
       hoverlabel: { font: { family: 'Inter, sans-serif', size: 12 } },
       font: { family: 'Inter, "Source Serif Pro", sans-serif', size: 12, color: tc.text },
@@ -1232,6 +1256,7 @@
 <p>Two longer-term ideas are also worth keeping in mind:</p>
 
 <ul>
+  <li><strong>Laminar reference.</strong> The jet Reynolds number is low ($Re \approx 100$), so re-running the CFD reference with a laminar model — rather than a turbulence model — would make it more consistent. Worth confirming before Step 2 builds on the same reference.</li>
   <li><strong>Local diffusion.</strong> Switching from the global $f_{sd}$ to the per-cell Fickian path (<code>local_diff_on = 1</code>) would replace a dimensionless knob with a physical diffusion coefficient, as discussed by Abbasi et al. <a href="#ref-abbasi2020">[5]</a> and Lumetzberger et al. <a href="#ref-lumetzberger2025">[3]</a>. It needs a per-cell <code>local_diff</code> field that has to be written during the rCFD preparation phase.</li>
   <li><strong>Database reuse.</strong> The current C2C database only knows the adiabatic flow patterns. It does not contain the cold down-flows along the walls that wall heat loss would create. Whether the existing database is still good enough for Step 2, or whether we need to rebuild it, is something Step 2 itself will have to answer.</li>
 </ul>
@@ -1522,7 +1547,7 @@
     },
     {
       selector: '#wallClockFigure',
-      caption: 'CFD reference takes <strong>9 h 43 min</strong>; each rCFD replay only <strong>~16 min</strong> — a <strong>37×</strong> speed-up. The whole point of rCFD.'
+      caption: 'CFD reference takes about <strong>9.7 h</strong>; with snapshots off, each rCFD replay runs in only a <strong>few minutes</strong> — roughly a <strong>263×</strong> speed-up. The whole point of rCFD.'
     },
     {
       selector: '#quantPlotFigure',
