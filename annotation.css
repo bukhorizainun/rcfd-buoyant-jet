@@ -1,0 +1,280 @@
+/* ===================================================================== */
+/* ANNOTATION FEATURE START                                              */
+/* ---------------------------------------------------------------------- */
+/*  Self-contained styles for the "Annotation Mode" overlay + toolbar.    */
+/*  Theme-aware: reuses the site's CSS custom properties (--bg, --ink,    */
+/*  --rule, --accent ...) with hard fallbacks so it also works if loaded  */
+/*  on its own. Nothing here touches the existing thesis layout.          */
+/*  To remove the whole feature: delete annotation.css + annotation.js    */
+/*  and the marked block in index.html.                                   */
+/* ===================================================================== */
+
+/* ---- Full-page drawing canvas ---------------------------------------- */
+/* Positioned at the document origin and sized (in JS) to the full        */
+/* scrollable page, so it scrolls together with the content.              */
+#annot-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 9000;
+  pointer-events: none;          /* transparent to clicks when mode is OFF */
+  touch-action: auto;
+}
+
+/* When annotation mode is ON the canvas captures pointer input.        */
+/* The real cursor is a tool-shaped SVG set inline by JS (updateCursor); */
+/* crosshair here is only the fallback before that runs.                 */
+body.annot-active #annot-canvas {
+  pointer-events: auto;
+  touch-action: none;            /* we handle gestures ourselves */
+  cursor: crosshair;
+}
+
+/* Stop accidental text selection / native callouts while drawing. */
+body.annot-active {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ---- Root container (bottom-right, always visible) ------------------- */
+#annot-root {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 9999;                 /* above everything, incl. lightbox */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  font-family: var(--sans, "Inter", system-ui, sans-serif);
+}
+
+/* ---- The discreet launcher (FAB) ------------------------------------- */
+#annot-fab {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--rule, #e6e6e6);
+  background: var(--bg, #fff);
+  color: var(--ink-soft, #4a4a4a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  transition: transform 0.15s ease, color 0.2s, background-color 0.2s,
+              box-shadow 0.2s;
+  padding: 0;
+}
+#annot-fab:hover {
+  transform: translateY(-2px);
+  color: var(--accent, #00467f);
+}
+#annot-fab svg { width: 22px; height: 22px; display: block; }
+
+/* When expanded the FAB becomes the active/close affordance. */
+#annot-root.is-open #annot-fab {
+  background: var(--accent, #00467f);
+  color: #fff;
+  border-color: var(--accent, #00467f);
+}
+/* swap the pen / close glyphs */
+#annot-fab .annot-ico-close { display: none; }
+#annot-root.is-open #annot-fab .annot-ico-pen   { display: none; }
+#annot-root.is-open #annot-fab .annot-ico-close { display: block; }
+
+/* ---- The expandable toolbar panel ------------------------------------ */
+#annot-toolbar {
+  /* collapsed state */
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transform-origin: bottom right;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s;
+
+  width: 230px;
+  padding: 0.7rem;
+  border-radius: 16px;
+  background: var(--bg, #fff);
+  border: 1px solid var(--rule, #e6e6e6);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.20);
+  color: var(--ink, #1a1a1a);
+}
+#annot-root.is-open #annot-toolbar {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.annot-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint, #888);
+  margin: 0 0 0.55rem 0.15rem;
+}
+
+/* Icon-button grid (Pen, Eraser, Undo, Redo, Clear, Save PNG, PDF). */
+.annot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+}
+.annot-btn {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  border: 1px solid var(--rule, #e6e6e6);
+  background: var(--bg-soft, #f7f7f7);
+  color: var(--ink-soft, #4a4a4a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s,
+              transform 0.1s;
+}
+.annot-btn:hover  { color: var(--accent, #00467f); border-color: var(--accent-soft, #5d8fbf); }
+.annot-btn:active { transform: scale(0.93); }
+.annot-btn svg    { width: 18px; height: 18px; display: block; }
+
+/* a selected tool (pen / eraser) */
+.annot-btn.is-active {
+  background: var(--accent, #00467f);
+  border-color: var(--accent, #00467f);
+  color: #fff;
+}
+/* disabled (undo/redo with empty stacks) */
+.annot-btn[disabled] {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+/* tooltip */
+.annot-btn[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink, #1a1a1a);
+  color: var(--bg, #fff);
+  font-size: 0.66rem;
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: 5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 5;
+}
+.annot-btn[data-tip]:hover::after { opacity: 0.95; }
+
+/* ---- Color + size controls ------------------------------------------- */
+.annot-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.annot-row-label {
+  font-size: 0.72rem;
+  color: var(--ink-faint, #888);
+  width: 38px;
+  flex: none;
+}
+
+/* preset colour swatches */
+.annot-swatches { display: flex; gap: 0.3rem; flex: 1; }
+.annot-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 0 0 1px var(--rule, #e6e6e6);
+}
+.annot-swatch.is-active { border-color: var(--ink, #1a1a1a); }
+
+/* native colour picker (custom colour) */
+#annot-color {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--rule, #e6e6e6);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+#annot-color::-webkit-color-swatch-wrapper { padding: 2px; }
+#annot-color::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+/* pen size slider */
+#annot-size { flex: 1; cursor: pointer; accent-color: var(--accent, #00467f); }
+.annot-size-val {
+  font-size: 0.72rem;
+  color: var(--ink-soft, #4a4a4a);
+  width: 30px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Busy overlay shown while exporting ------------------------------ */
+#annot-busy {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-family: var(--sans, "Inter", sans-serif);
+  font-size: 0.95rem;
+}
+#annot-busy.is-on { display: flex; }
+#annot-busy .annot-busy-card {
+  background: var(--bg, #fff);
+  color: var(--ink, #1a1a1a);
+  padding: 1rem 1.4rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.annot-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--rule, #e6e6e6);
+  border-top-color: var(--accent, #00467f);
+  border-radius: 50%;
+  animation: annot-spin 0.8s linear infinite;
+}
+@keyframes annot-spin { to { transform: rotate(360deg); } }
+
+/* Elements tagged with this class are skipped by html2canvas exports. */
+.annot-no-export { /* marker only; used by JS ignoreElements */ }
+
+/* ---- Responsive: smaller screens ------------------------------------- */
+@media (max-width: 600px) {
+  #annot-toolbar { width: 200px; }
+  #annot-fab { width: 44px; height: 44px; }
+  .annot-btn svg { width: 16px; height: 16px; }
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  #annot-fab, #annot-toolbar, .annot-btn { transition: none; }
+  .annot-spinner { animation: none; }
+}
+/* ===================================================================== */
+/* ANNOTATION FEATURE END                                                */
+/* ===================================================================== */
