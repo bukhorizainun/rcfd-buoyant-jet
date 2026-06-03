@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compile target.mind — MindAR image target</title>
+<style>
+  :root { --cyan:#36d1ff; --violet:#7c4dff; --bg:#05070f; --glass:rgba(14,20,38,.85); --line:rgba(120,150,200,.2); }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:radial-gradient(1000px 700px at 70% -10%,#101935,#05070f 60%);
+         color:#e8eefc; font-family:Inter,system-ui,sans-serif; display:grid; place-items:center; padding:24px; }
+  .card { width:min(640px,100%); background:var(--glass); border:1px solid var(--line); border-radius:20px;
+          padding:28px; backdrop-filter:blur(14px); box-shadow:0 24px 70px rgba(0,0,0,.55); }
+  h1 { font-size:22px; margin:0 0 6px; }
+  p.sub { color:#9fb0d0; margin:0 0 20px; font-size:14px; line-height:1.6; }
+  .drop { border:2px dashed rgba(54,209,255,.5); border-radius:14px; padding:26px; text-align:center;
+          cursor:pointer; transition:.2s; }
+  .drop:hover, .drop.over { background:rgba(54,209,255,.08); }
+  .drop img { max-width:100%; max-height:220px; border-radius:10px; margin-top:14px; display:none; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+  button { font-family:inherit; font-weight:600; font-size:14px; border:none; border-radius:999px;
+           padding:12px 20px; cursor:pointer; }
+  .primary { background:linear-gradient(135deg,var(--cyan),var(--violet)); color:#03060f; }
+  .primary[disabled] { opacity:.45; cursor:not-allowed; }
+  .ghost { background:rgba(255,255,255,.06); color:#e8eefc; border:1px solid var(--line); }
+  .bar { height:6px; border-radius:6px; background:var(--line); overflow:hidden; margin-top:18px; display:none; }
+  .bar span { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--cyan),var(--violet)); transition:width .2s; }
+  .status { margin-top:12px; font-family:"JetBrains Mono",monospace; font-size:12.5px; color:#9fb0d0; min-height:18px; }
+  code { background:rgba(255,255,255,.07); padding:2px 6px; border-radius:6px; font-size:12.5px; }
+  ol { color:#9fb0d0; font-size:13.5px; line-height:1.7; padding-left:20px; }
+  a { color:var(--cyan); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Compile <code>target.mind</code></h1>
+    <p class="sub">Turn your poster image into the MindAR tracking file, entirely in this browser —
+       nothing is uploaded to any server. The image is processed locally with the official MindAR compiler.</p>
+
+    <div class="drop" id="drop">
+      <strong>Drop poster image here</strong> or click to choose
+      <input type="file" id="file" accept="image/*" hidden>
+      <img id="preview" alt="preview">
+    </div>
+
+    <div class="row">
+      <button class="ghost" id="useDefault">Use bundled poster.jpg</button>
+      <button class="primary" id="compile" disabled>Compile &amp; download target.mind</button>
+    </div>
+
+    <div class="bar" id="bar"><span id="barFill"></span></div>
+    <div class="status" id="status"></div>
+
+    <ol style="margin-top:22px">
+      <li>Pick the same image you will physically print as the poster (here: <code>../assets/poster/poster.jpg</code>).</li>
+      <li>Click <em>Compile</em>; when it finishes, <code>target.mind</code> downloads automatically.</li>
+      <li>Move that file to <code>ar/assets/poster/target.mind</code> (replace the placeholder).</li>
+      <li>Reload the poster app and choose <em>Launch AR</em>. Done.</li>
+    </ol>
+    <p class="sub" style="margin-top:14px">Alternative: the hosted tool at
+      <a href="https://hiukim.github.io/mind-ar-js-doc/tools/compile" target="_blank" rel="noopener">hiukim.github.io/mind-ar-js-doc/tools/compile</a>.</p>
+  </div>
+
+  <!-- MindAR image library: the non-AFrame build is an ES module that pulls in
+       hashed sub-chunks, so load it with dynamic import() and expose the
+       Compiler for the classic script below. -->
+  <script type="module">
+    import("https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js")
+      .then((m) => { window.MindARCompiler = m.Compiler; })
+      .catch((e) => { console.error("MindAR compiler failed to load:", e); });
+  </script>
+  <script>
+    const drop = document.getElementById("drop");
+    const fileInput = document.getElementById("file");
+    const preview = document.getElementById("preview");
+    const compileBtn = document.getElementById("compile");
+    const status = document.getElementById("status");
+    const bar = document.getElementById("bar");
+    const barFill = document.getElementById("barFill");
+    let image = null;
+
+    function setImage(img) {
+      image = img;
+      preview.src = img.src;
+      preview.style.display = "block";
+      compileBtn.disabled = false;
+      status.textContent = `Image ready · ${img.naturalWidth}×${img.naturalHeight}px`;
+    }
+    function loadFromURL(url) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => setImage(img);
+      img.onerror = () => status.textContent = "Could not load " + url;
+      img.src = url;
+    }
+
+    drop.addEventListener("click", () => fileInput.click());
+    drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault(); drop.classList.remove("over");
+      const f = e.dataTransfer.files[0]; if (f) readFile(f);
+    });
+    fileInput.addEventListener("change", (e) => { const f = e.target.files[0]; if (f) readFile(f); });
+    document.getElementById("useDefault").addEventListener("click", () => loadFromURL("../assets/poster/poster.jpg"));
+
+    function readFile(f) {
+      const r = new FileReader();
+      r.onload = () => loadFromURL(r.result);
+      r.readAsDataURL(f);
+    }
+
+    compileBtn.addEventListener("click", async () => {
+      if (!image) return;
+      if (!window.MindARCompiler) {
+        status.textContent = "MindAR compiler not available (check your connection).";
+        return;
+      }
+      compileBtn.disabled = true;
+      bar.style.display = "block";
+      status.textContent = "Compiling… this can take 10–60 s for a detailed poster.";
+      try {
+        const compiler = new window.MindARCompiler();
+        await compiler.compileImageTargets([image], (p) => { barFill.style.width = p.toFixed(1) + "%"; });
+        const buffer = await compiler.exportData();
+        const blob = new Blob([buffer]);
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "target.mind";
+        a.click();
+        status.textContent = "Done ✓ target.mind downloaded. Move it to ar/assets/poster/target.mind";
+      } catch (err) {
+        console.error(err);
+        status.textContent = "Compile failed: " + err.message;
+      } finally {
+        compileBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

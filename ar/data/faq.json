@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "comment": "Local knowledge base for the offline AI assistant. The app does a lightweight keyword/semantic match (no external API). 'keywords' boost retrieval; 'question' is the canonical phrasing; 'answer' is shown to the user. Grounded in the real buoyant-jet rCFD study.",
+    "version": 1
+  },
+
+  "greeting": "Hi! I'm the poster's offline research assistant. Ask me about buoyancy, vortices, the Reynolds number, rCFD, face-swap diffusion, or what the results mean.",
+  "fallback": "I don't have that in my local knowledge base yet. Try asking about: buoyancy, vortex formation, Reynolds number, rCFD, face-swap diffusion (f_sd), the test case, or the speed-up. (A cloud LLM can be plugged in later — see the README.)",
+  "suggestions": [
+    "What is buoyancy?",
+    "Why does vortex formation occur?",
+    "What is the Reynolds number?",
+    "What is rCFD?",
+    "What is face-swap diffusion?",
+    "How much faster is rCFD?"
+  ],
+
+  "entries": [
+    {
+      "id": "buoyancy",
+      "question": "What is buoyancy?",
+      "keywords": ["buoyancy", "buoyant", "float", "rise", "density", "lighter", "heavier", "gravity", "warm rises"],
+      "answer": "Buoyancy is the upward force a fluid exerts on anything less dense than itself. Here the jet water is warm (333 K) and therefore lighter than the surrounding 293 K water, so it rises to the top of the tank. That density difference is the engine of the whole flow: it drives the warm fluid upward and builds a stratified thermal layer near the ceiling."
+    },
+    {
+      "id": "buoyant-jet",
+      "question": "What is a buoyant jet?",
+      "keywords": ["buoyant jet", "jet", "plume", "test case", "what is the case", "problem"],
+      "answer": "A buoyant jet is a stream of fluid injected into a surrounding fluid of different density. In this study a small horizontal jet of warm water enters a closed tank of cooler water through a 5 × 5 mm opening at 0.02 m/s. Momentum carries it in horizontally while buoyancy lifts it upward — the combination is what makes the flow interesting."
+    },
+    {
+      "id": "vortex",
+      "question": "Why does vortex formation occur?",
+      "keywords": ["vortex", "vortices", "recirculation", "swirl", "eddy", "rotation", "circulation"],
+      "answer": "As the jet pushes into the still tank, it drags neighbouring fluid along (entrainment). To conserve mass, fluid has to flow back around the jet, and that return flow curls into two counter-rotating recirculation vortices — one above and one below the jet axis. You can see them clearly as the spiral streamlines in the flow-field view."
+    },
+    {
+      "id": "reynolds",
+      "question": "What is the Reynolds number?",
+      "keywords": ["reynolds", "re number", "laminar", "turbulent", "turbulence", "100", "regime"],
+      "answer": "The Reynolds number Re = U·D/ν compares inertia to viscosity. With inlet speed U = 0.02 m/s, opening D = 5 mm, and water viscosity ν ≈ 1×10⁻⁶ m²/s, Re ≈ 100. Water only turns turbulent near Re ≈ 2000, so this jet is firmly laminar — about 20× below the transition. That is why a laminar model fits this case better than a turbulence model."
+    },
+    {
+      "id": "laminar",
+      "question": "Is the flow laminar or turbulent?",
+      "keywords": ["laminar", "turbulent", "turbulence", "smooth", "chaotic", "model", "k-omega"],
+      "answer": "Laminar. The Reynolds number is only about 100, well below the ~2000 transition for a water jet, so the flow is smooth and orderly rather than chaotic. This was confirmed against the Fluent setup, and it means a laminar solver is the right choice — a turbulence model would add mixing that isn't physically there."
+    },
+    {
+      "id": "rcfd",
+      "question": "What is rCFD?",
+      "keywords": ["rcfd", "recurrence", "reduced cfd", "replay", "recurrence cfd", "what is rcfd", "method"],
+      "answer": "rCFD (Recurrence CFD) exploits the fact that many flows repeat similar patterns over time. A short, full CFD run is done once to record the velocity field as a database of cell-to-cell (C2C) shift maps. After that, the temperature is transported just by replaying those saved patterns — no Navier-Stokes equations are solved during replay. It was introduced by Lichtenegger & Pirker (2016)."
+    },
+    {
+      "id": "prep-replay",
+      "question": "What are the preparation and replay phases?",
+      "keywords": ["preparation", "prep", "replay", "phases", "database", "c2c", "two phases", "record"],
+      "answer": "rCFD has two phases. Preparation: run a short CFD simulation and save the recurring flow as a C2C (cell-to-cell) shift database. Replay: repeatedly pick a pattern from that database, shift the temperature field along it, and add a touch of face-swap diffusion. Replay is the cheap part and can be repeated for the whole 600 s of transport."
+    },
+    {
+      "id": "facecswap",
+      "question": "What is face-swap diffusion?",
+      "keywords": ["face-swap", "face swap", "diffusion", "f_sd", "fsd", "mixing", "operator", "smoothing"],
+      "answer": "After the C2C shift moves the temperature field, neighbouring cells can sit at very different temperatures — the pure shift moves heat but doesn't mix it. Face-swap diffusion fixes this: across every internal face it moves a heat amount S = ½·(T₁−T₀)·V·f_sd from the hotter cell to the cooler one. The receiving cell gains exactly what the sending cell loses, so it's mass- and energy-neutral. The parameter f_sd sets how strong the mixing is."
+    },
+    {
+      "id": "fsd-value",
+      "question": "What is the best value of f_sd?",
+      "keywords": ["best", "optimal", "f_sd value", "fsd value", "0.5", "0.500", "tuning", "parameter sweep", "which value"],
+      "answer": "It depends on the metric. For the mean temperature, the lowest error is the no-mixing case f_sd = 0. For the thermal centre of gravity (CoG), there is a genuine minimum in the middle of the sweep at f_sd = 0.500, which beats both 0.375 and 0.750. So 0.500 is the best all-round compromise for reproducing where the heat sits in the tank."
+    },
+    {
+      "id": "cog-tmean",
+      "question": "What are T_mean and CoG?",
+      "keywords": ["t_mean", "tmean", "mean temperature", "cog", "centre of gravity", "center of gravity", "metric", "tracked"],
+      "answer": "Two scalar diagnostics follow the temperature field. T_mean(t) is the volume-averaged temperature — how much heat is in the tank. CoG_y(t) is the thermal centre of gravity in the vertical direction — how high the heat sits. Both are written every step for the CFD reference and for each rCFD case, so they can be compared directly."
+    },
+    {
+      "id": "speedup",
+      "question": "How much faster is rCFD?",
+      "keywords": ["speed", "faster", "speedup", "speed-up", "cost", "wall clock", "wallclock", "cheaper", "time saving", "how fast"],
+      "answer": "A lot. Because replay never solves the Navier-Stokes equations, it runs well over a hundred times cheaper than the full CFD once snapshot rendering is switched off. The short preparation CFD is the only expensive part, and it's done once — after that every replay (and every new parameter value) is nearly free."
+    },
+    {
+      "id": "thermal-layer",
+      "question": "What is the thermal layer / stratification?",
+      "keywords": ["thermal layer", "stratification", "stratified", "layer", "top wall", "ceiling", "warm layer"],
+      "answer": "Because warm water is buoyant, it collects near the top of the tank and forms a stable warm layer over the cooler water below — this is thermal stratification. As the jet keeps running (until t = 315 s) the layer thickens and the centre of gravity of the heat climbs upward, which is exactly what CoG_y(t) measures."
+    },
+    {
+      "id": "entrainment",
+      "question": "What is entrainment?",
+      "keywords": ["entrainment", "drag", "mixing", "surrounding fluid", "pull in"],
+      "answer": "Entrainment is the way a jet pulls surrounding still fluid into itself as it moves. It's what makes the jet spread and slow down, and it's the reason fluid has to recirculate back around the jet — which in turn creates the two vortices seen in the flow field."
+    },
+    {
+      "id": "cfd",
+      "question": "What is CFD?",
+      "keywords": ["cfd", "computational fluid dynamics", "simulation", "navier stokes", "solver", "fluent"],
+      "answer": "CFD (Computational Fluid Dynamics) solves the equations of fluid motion — the Navier-Stokes equations — on a mesh of small cells to predict velocity, pressure and temperature. It is accurate but expensive. This project uses one short CFD run (in ANSYS Fluent) as the reference and as the source of the rCFD pattern database."
+    },
+    {
+      "id": "validation",
+      "question": "How is the method validated?",
+      "keywords": ["validation", "validate", "accuracy", "error", "compare", "agreement", "correct"],
+      "answer": "rCFD is compared against the full CFD reference using T_mean(t) and CoG_y(t), plus side-by-side temperature snapshots at several times. The errors stay small across the whole 600 s, and a sweep over f_sd shows how the mixing strength trades off mean-temperature accuracy against centre-of-gravity accuracy."
+    },
+    {
+      "id": "ai-role",
+      "question": "Where does AI come in?",
+      "keywords": ["ai", "artificial intelligence", "machine learning", "data driven", "data-based", "role of ai", "where is ai"],
+      "answer": "rCFD is a data-based / data-driven method: instead of re-solving the physics, it learns the recurring flow patterns from data and reuses them. That is the same spirit as modern ML surrogates for simulation. Future steps of the thesis explore richer data-driven models (e.g. reduced-order and learned operators) on top of this rCFD baseline."
+    },
+    {
+      "id": "step2",
+      "question": "What is the next step (Step 2)?",
+      "keywords": ["step 2", "next", "outlook", "future", "heat loss", "extension", "what next"],
+      "answer": "Step 2 extends the workflow toward a heat-loss scenario and a multi-database approach, so the replay can pick from several recorded regimes instead of one. The current Step 1 result — that face-swap diffusion with f_sd = 0.500 reproduces the buoyant-jet transport cheaply — is the baseline that Step 2 builds on."
+    }
+  ]
+}

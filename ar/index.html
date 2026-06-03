@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#05070f">
+<title>Data-based Numerical Simulation of Buoyant Jet Flow — Interactive AR Poster</title>
+<meta name="description" content="WebAR interactive scientific poster for a data-based, reduced-CFD (rCFD) study of a laminar buoyant jet. Image tracking, CFD video overlay, 3D model, dashboard and an offline AI assistant — all in the browser.">
+<meta name="author" content="Mochamad Bukhori Zainun">
+
+<!-- Open Graph (nice link previews when the QR/link is shared) -->
+<meta property="og:title" content="Data-based Numerical Simulation of Buoyant Jet Flow — AR Poster">
+<meta property="og:description" content="Scan the poster to open CFD animations, a 3D buoyant-jet model, a live parameter dashboard and an offline AI assistant.">
+<meta property="og:type" content="website">
+
+<!-- Fonts: kept consistent with the Step-1 summary site -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+
+<!--
+  Three.js import map for the standalone 3D model viewer (Feature 5).
+  Loaded lazily by app.js via dynamic import('./viewer3d.js'); A-Frame/MindAR
+  for the AR scene are injected on demand so the first paint stays light.
+-->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+
+<body>
+
+<!-- ===================================================================== -->
+<!-- LOADING SCREEN (Feature 10)                                           -->
+<!-- ===================================================================== -->
+<div id="loader" class="loader" role="status" aria-live="polite">
+  <div class="loader-core">
+    <div class="loader-ring"></div>
+    <div class="loader-glyph">rCFD</div>
+  </div>
+  <div class="loader-title">Data-based Buoyant Jet Flow</div>
+  <div class="loader-sub" id="loaderSub">Initialising interactive poster…</div>
+  <div class="loader-bar"><span id="loaderBar"></span></div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- START SCREEN — choose AR or on-screen demo                            -->
+<!-- ===================================================================== -->
+<div id="start" class="start hidden">
+  <div class="start-card">
+    <div class="badge">JKU Linz · Particulate Flow Modelling</div>
+    <h1 id="startTitle">Data-based Numerical Simulation of Buoyant Jet Flow</h1>
+    <p id="startSub" class="start-sub">Master's Thesis · Step 1 — CFD reference, rCFD workflow &amp; face-swap-diffusion sweep</p>
+    <p class="start-author"><span id="startAuthor">Mochamad Bukhori Zainun (k12438440) · Supervisor: Prof. Stefan Pirker</span></p>
+
+    <div class="start-actions">
+      <button id="btnLaunchAR" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" class="ic"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>
+        Launch AR · Scan Poster
+      </button>
+      <button id="btnDemo" class="btn btn-ghost">
+        <svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3z"/></svg>
+        Explore on screen (no camera)
+      </button>
+    </div>
+
+    <p class="start-hint" id="startHint">
+      Best on a phone in good light. AR needs camera permission and a secure (https) connection.
+    </p>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- AR STAGE — the MindAR <a-scene> is injected here by app.js            -->
+<!-- ===================================================================== -->
+<div id="arStage" class="ar-stage hidden" aria-hidden="true"></div>
+
+<!-- ===================================================================== -->
+<!-- DEMO STAGE — poster on screen with CSS-positioned hotspots            -->
+<!-- ===================================================================== -->
+<div id="demoStage" class="demo-stage hidden">
+  <div class="demo-poster-wrap" id="demoPosterWrap">
+    <img id="demoPoster" class="demo-poster" src="assets/poster/poster.jpg" alt="Buoyant jet research poster">
+    <!-- hotspots injected here -->
+    <div id="demoHotspots" class="demo-hotspots"></div>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- SCAN HINT / FALLBACK (Feature 10)                                     -->
+<!-- ===================================================================== -->
+<div id="scanHint" class="scan-hint hidden">
+  <div class="scan-frame"></div>
+  <p id="scanHintText">Point your camera toward the scientific poster.</p>
+</div>
+
+<!-- DETECTION BANNER (Feature 1) -->
+<div id="banner" class="banner hidden" role="status" aria-live="polite">
+  <div class="banner-line1" id="bannerL1">Poster Detected</div>
+  <div class="banner-line2" id="bannerL2">Buoyant Jet CFD Research</div>
+  <div class="banner-line3" id="bannerL3">Interactive Mode Activated</div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- TOP HUD                                                               -->
+<!-- ===================================================================== -->
+<header id="hud" class="hud hidden">
+  <div class="hud-id">
+    <span class="hud-dot"></span>
+    <div class="hud-id-text">
+      <strong id="hudTitle">Buoyant Jet Flow · rCFD</strong>
+      <small id="hudSub">Interactive Scientific Poster</small>
+    </div>
+  </div>
+  <button id="btnExit" class="hud-x" title="Back to start" aria-label="Back to start">✕</button>
+</header>
+
+<!-- ===================================================================== -->
+<!-- BOTTOM TOOL DOCK                                                      -->
+<!-- ===================================================================== -->
+<nav id="dock" class="dock hidden" aria-label="Tools">
+  <button class="dock-btn" data-panel="dashboard" title="Parameters dashboard">
+    <svg viewBox="0 0 24 24" class="ic"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
+    <span>Data</span>
+  </button>
+  <button class="dock-btn" data-panel="timeline" title="Timeline explorer">
+    <svg viewBox="0 0 24 24" class="ic"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h10"/></svg>
+    <span>Time</span>
+  </button>
+  <button class="dock-btn" data-panel="model3d" title="3D model">
+    <svg viewBox="0 0 24 24" class="ic"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5"/></svg>
+    <span>3D</span>
+  </button>
+  <button class="dock-btn dock-ai" data-panel="ai" title="Ask the AI assistant">
+    <svg viewBox="0 0 24 24" class="ic"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+    <span>Ask AI</span>
+  </button>
+</nav>
+
+<!-- ===================================================================== -->
+<!-- HOTSPOT POPUP (Feature 3)                                             -->
+<!-- ===================================================================== -->
+<div id="popup" class="popup hidden" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+  <div class="popup-card">
+    <button class="panel-x" data-close="popup" aria-label="Close">✕</button>
+    <div class="popup-eyebrow" id="popupEyebrow">Hotspot</div>
+    <h2 id="popupTitle">Title</h2>
+    <div class="popup-media" id="popupMedia"></div>
+    <p class="popup-body" id="popupBody"></p>
+    <div class="popup-stats" id="popupStats"></div>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- DASHBOARD PANEL (Feature 6)                                           -->
+<!-- ===================================================================== -->
+<section id="panel-dashboard" class="panel hidden" aria-labelledby="dashTitle">
+  <div class="panel-head">
+    <div>
+      <h2 id="dashTitle">Simulation Parameters</h2>
+      <p class="panel-sub" id="dashSub"></p>
+    </div>
+    <button class="panel-x" data-close="panel-dashboard" aria-label="Close">✕</button>
+  </div>
+  <div class="metrics" id="metrics"></div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- TIMELINE PANEL (Feature 7)                                            -->
+<!-- ===================================================================== -->
+<section id="panel-timeline" class="panel hidden" aria-labelledby="tlTitle">
+  <div class="panel-head">
+    <div>
+      <h2 id="tlTitle">Timeline Explorer</h2>
+      <p class="panel-sub" id="tlSub"></p>
+    </div>
+    <button class="panel-x" data-close="panel-timeline" aria-label="Close">✕</button>
+  </div>
+  <div class="tl-video-wrap holo">
+    <video id="tlVideo" class="tl-video" muted playsinline preload="metadata"></video>
+    <div class="holo-corner tl"></div><div class="holo-corner tr"></div>
+    <div class="holo-corner bl"></div><div class="holo-corner br"></div>
+  </div>
+  <div class="tl-readout"><span id="tlTime">t = 0 s</span><span id="tlCaption"></span></div>
+  <input id="tlSlider" class="tl-slider" type="range" min="0" max="600" value="0" step="1" aria-label="Simulation time">
+  <div class="tl-marks" id="tlMarks"></div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- AI ASSISTANT PANEL (Feature 8)                                        -->
+<!-- ===================================================================== -->
+<section id="panel-ai" class="panel panel-ai hidden" aria-labelledby="aiTitle">
+  <div class="panel-head">
+    <div>
+      <h2 id="aiTitle">Scientific Assistant</h2>
+      <p class="panel-sub">Offline · answers from this poster's knowledge base</p>
+    </div>
+    <button class="panel-x" data-close="panel-ai" aria-label="Close">✕</button>
+  </div>
+  <div id="chatLog" class="chat-log" aria-live="polite"></div>
+  <div id="chatChips" class="chat-chips"></div>
+  <form id="chatForm" class="chat-form" autocomplete="off">
+    <input id="chatInput" class="chat-input" type="text" placeholder="Ask about buoyancy, vortices, rCFD…" aria-label="Ask a question">
+    <button class="chat-send" type="submit" aria-label="Send">
+      <svg viewBox="0 0 24 24" class="ic"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </form>
+</section>
+
+<!-- ===================================================================== -->
+<!-- 3D MODEL VIEWER MODAL (Feature 5)                                     -->
+<!-- ===================================================================== -->
+<div id="model3d" class="model3d hidden" role="dialog" aria-modal="true" aria-label="3D buoyant jet model">
+  <div class="model3d-head">
+    <div><strong>Buoyant Jet · 3D View</strong><small>drag to rotate · pinch to zoom · two-finger drag to pan</small></div>
+    <button class="panel-x" data-close="model3d" aria-label="Close">✕</button>
+  </div>
+  <div id="model3dCanvas" class="model3d-canvas"></div>
+  <div class="model3d-foot" id="model3dFoot">Procedural buoyant-jet visualisation</div>
+</div>
+
+<!-- ERROR / TOAST -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div id="errorScreen" class="error-screen hidden">
+  <div class="error-card">
+    <h2 id="errTitle">Camera unavailable</h2>
+    <p id="errBody"></p>
+    <button id="errDemo" class="btn btn-primary">Continue on screen instead</button>
+  </div>
+</div>
+
+<!-- App logic (classic script; lazy-loads A-Frame/MindAR and the 3D viewer) -->
+<script src="app.js"></script>
+</body>
+</html>
