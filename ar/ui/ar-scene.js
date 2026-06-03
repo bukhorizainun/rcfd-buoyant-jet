@@ -12,6 +12,9 @@ let infoShownOnce = false;
 let targetVisible = false;
 let onFirstFoundCb = null;
 let onErrorCb = null;
+let arScene = null;
+let arAnchor = null;
+let tapWired = false;
 
 /* Where a hotspot's label box + transparent tap target sit relative to the dot.
  * Lets neighbouring hotspots push their labels to different sides so the text
@@ -129,70 +132,75 @@ function buildARScene() {
   scene.appendChild(anchor);
   stage.appendChild(scene);
 
+  arScene = scene;
+  arAnchor = anchor;
+  enableTapToExplore();
+
   scene.addEventListener("arError", () => { if (onErrorCb) onErrorCb(); });
-  scene.addEventListener("loaded", () => {
-    STATE.arReady = true;
-    enableTapToExplore(scene, anchor);
-  });
+  scene.addEventListener("loaded", () => { STATE.arReady = true; });
 }
 
 /* Manual tap handling. A-Frame's built-in cursor/raycaster does not fire
- * reliably for entities anchored inside a MindAR image target on mobile, so we
- * listen for taps on the WebGL canvas, raycast against the hotspot groups
- * ourselves, and open the matching popup. */
-function enableTapToExplore(scene, anchor) {
-  const THREE = window.AFRAME && window.AFRAME.THREE;
-  const canvas = scene.canvas || (scene.renderer && scene.renderer.domElement);
-  if (!THREE || !canvas) return;
-
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
+ * reliably for entities anchored inside a MindAR image target on phones, and a
+ * mesh raycast against (near-invisible) hotspot planes is fragile. Instead we
+ * listen for taps on the window, project each hotspot's world position to the
+ * screen, and open whichever glowing point is nearest the tap — this mirrors
+ * exactly what the user sees, so it is robust to raycaster/material/matrix
+ * quirks. Listeners are wired once and read the live scene via module refs. */
+function enableTapToExplore() {
+  if (tapWired) return;
+  tapWired = true;
   let lastTouch = 0;
 
-  const handleTap = (clientX, clientY) => {
-    // Don't hijack taps meant for an open panel/popup or while untracked.
-    if (STATE.activePanel) return;
-    if (!$("#popup").classList.contains("hidden")) return;
-    if (!targetVisible) return;
-    const cam = scene.camera;
-    if (!cam) return;
-
-    const rect = canvas.getBoundingClientRect();
-    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-    // Make sure the camera and the MindAR-anchored hotspots have fresh world
-    // matrices, in case the render loop was throttled at tap time.
-    cam.updateMatrixWorld();
-    anchor.object3D.updateWorldMatrix(true, true);
-    raycaster.setFromCamera(pointer, cam);
-
-    const groups = Array.from(anchor.querySelectorAll(".clickable")).map((e) => e.object3D);
-    const hits = raycaster.intersectObjects(groups, true);
-    if (!hits.length) return;
-
-    // Climb from the hit mesh to the owning ".clickable" entity and its data-id.
-    let node = hits[0].object;
-    while (node && !node.el) node = node.parent;
-    let elc = node && node.el;
-    while (elc && !(elc.classList && elc.classList.contains("clickable"))) elc = elc.parentElement;
-    const id = elc && elc.dataset && elc.dataset.id;
-    if (!id) return;
-    const h = STATE.hotspots.hotspots.find((x) => x.id === id);
-    if (h) openPopup(h);
-  };
-
-  canvas.addEventListener("touchend", (e) => {
+  window.addEventListener("touchend", (e) => {
     if (!e.changedTouches || !e.changedTouches.length) return;
     lastTouch = Date.now();
     const t = e.changedTouches[0];
-    handleTap(t.clientX, t.clientY);
-  }, { passive: true });
+    onArTap(t.clientX, t.clientY, e.target);
+  }, { passive: true, capture: true });
 
-  // Desktop / fallback; ignore the synthetic click that follows a touch.
-  canvas.addEventListener("click", (e) => {
+  // Desktop / fallback; skip the synthetic click that follows a touch.
+  window.addEventListener("click", (e) => {
     if (Date.now() - lastTouch < 700) return;
-    handleTap(e.clientX, e.clientY);
+    onArTap(e.clientX, e.clientY, e.target);
+  }, true);
+}
+
+function onArTap(clientX, clientY, target) {
+  if (!targetVisible || !arScene || !arAnchor) return;
+  if (STATE.activePanel) return;
+  if (!$("#popup").classList.contains("hidden")) return;
+  // Ignore taps on the app chrome so dock/HUD/panels keep their own behaviour.
+  if (target && target.closest &&
+      target.closest("#hud, #dock, .panel, .popup, #start, #infoLayer, #model3d, #errorScreen, button, a, input"))
+    return;
+
+  const THREE = window.AFRAME && window.AFRAME.THREE;
+  const canvas = arScene.canvas || (arScene.renderer && arScene.renderer.domElement);
+  const cam = arScene.camera;
+  if (!THREE || !canvas || !cam) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const px = clientX - rect.left, py = clientY - rect.top;
+  cam.updateMatrixWorld();
+  arAnchor.object3D.updateWorldMatrix(true, true);
+
+  const v = new THREE.Vector3();
+  let best = null, bestD = Infinity;
+  arAnchor.querySelectorAll(".clickable").forEach((e) => {
+    e.object3D.getWorldPosition(v);
+    v.project(cam);             // -> normalised device coords
+    if (v.z > 1) return;        // behind the camera
+    const sx = (v.x * 0.5 + 0.5) * rect.width;
+    const sy = (-v.y * 0.5 + 0.5) * rect.height;
+    const d = Math.hypot(sx - px, sy - py);
+    if (d < bestD) { bestD = d; best = e; }
   });
+
+  if (!best || bestD > 0.22 * Math.min(rect.width, rect.height)) return;
+  const id = best.dataset && best.dataset.id;
+  const h = id && STATE.hotspots.hotspots.find((x) => x.id === id);
+  if (h) openPopup(h);
 }
 
 function onTargetFound() {
@@ -229,6 +237,8 @@ export function resetARScene() {
   bannerShown = false;
   infoShownOnce = false;
   targetVisible = false;
+  arScene = null;
+  arAnchor = null;
   const stage = $("#arStage");
   if (stage) { stage.classList.add("hidden"); stage.innerHTML = ""; }
 }
