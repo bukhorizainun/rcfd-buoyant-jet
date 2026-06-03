@@ -1,18 +1,18 @@
 # Conversational Scientific Poster System — *Data-based Numerical Simulation of Buoyant Jet Flow*
 
-A browser-only **WebAR + conversational research** experience for the
+A browser-only WebAR + conversational research experience for the
 master's-thesis poster *Data-based Numerical Simulation of Buoyant Jet Flow*
 (Step 1: CFD reference, recurrence-CFD workflow, face-swap-diffusion sweep).
 
-It is more than an interactive poster — it behaves like an **AI research
-companion embedded in the poster**: visitors can talk to it, get layered
+It is an interactive poster — it behaves like an AI research
+companion embedded in the poster: visitors can talk to it, get layered
 explanations (intuition → CFD → maths), explore "what-if" flow scenarios, and
 dig into hierarchical hotspots. No backend, no build step, no framework; it
 deploys straight to GitHub Pages and everything runs client-side.
 
 Scan the printed poster → the camera locks on → CFD animations, a 3D
 buoyant-jet model, a parameter dashboard, a timeline, glowing hotspots and the
-**offline conversational assistant** appear on top of it.
+offline conversational assistant appear on top of it.
 
 > Author: **Mochamad Bukhori Zainun** (k12438440) · Supervisor: **Prof. Stefan Pirker**
 > Department of Particulate Flow Modelling, JKU Linz.
