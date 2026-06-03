@@ -26,7 +26,7 @@ import { renderInsights } from "./ui/insights.js";
 import { initComparison, pauseComparison } from "./ui/comparison.js";
 import { startBackground } from "./ui/background.js";
 import { startARScene, resetARScene } from "./ui/ar-scene.js";
-import { createFlowSim } from "./simulation/flow-sim.js";
+// flow-sim.js (and its Three.js dependency) is imported lazily in openFlowSim()
 
 /* ---------- boot ---------- */
 (function start() {
@@ -289,9 +289,11 @@ function updateTLReadout(t) {
 }
 
 /* ---- Feature 3: flow-intuition pseudo-sim ---- */
-let flowSim = null;
-function openFlowSim() {
-  if (!flowSim) {
+let flowSim = null, flowLoading = false;
+async function openFlowSim() {
+  if (!flowSim && !flowLoading) {
+    flowLoading = true;
+    const { createFlowSim } = await import("./simulation/flow-sim.js");
     flowSim = createFlowSim($("#flowCanvas"));
     const wire = (id, key) => {
       const s = $(id);
@@ -302,14 +304,16 @@ function openFlowSim() {
     wire("#flowV", "velocity");
     wire("#flowRho", "densityRatio");
     wire("#flowDT", "deltaT");
+    flowLoading = false;
   }
-  flowSim.start();
+  if (flowSim) flowSim.start();
 }
 
 /* =====================================================================
  * Feature 5 — 3D model viewer (lazy Three.js)
  * ===================================================================== */
 async function openModel3D() {
+  closeAllPanels();                 // avoid running the flow panel's WebGL behind the modal
   const modal = $("#model3d");
   modal.classList.remove("hidden");
   if (STATE.viewer3d) return;
