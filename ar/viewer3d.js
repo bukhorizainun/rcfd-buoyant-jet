@@ -62,12 +62,14 @@ export async function createViewer(host, opts = {}) {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  /* ---- model: GLB if present, else procedural ---- */
+  /* ---- model: GLB if present, else the real CFD field in 3D, else procedural ---- */
   const root = new THREE.Group();
   scene.add(root);
-  let plume = null; // procedural particle system, animated each frame
+  let plume = null;       // procedural particle system, animated each frame
+  let fieldVideo = null;  // <video> driving the real-CFD field texture
 
   const haveGLB = opts.glb ? await fileExists(opts.glb) : false;
+  let built = false;
   if (haveGLB) {
     try {
       const gltf = await new GLTFLoader().loadAsync(opts.glb);
@@ -75,17 +77,21 @@ export async function createViewer(host, opts = {}) {
       frameObject(gltf.scene, root);
       root.add(gltf.scene);
       onMode("Loaded model · buoyant_jet.glb");
-    } catch (e) {
+      built = true;
+    } catch (e) { /* fall through to the procedural / field scene */ }
+  }
+  if (!built) {
+    if (opts.cfdVideo) {
+      fieldVideo = buildFieldScene(root, opts.cfdVideo);
+      onMode("Real CFD temperature field (2D solve) extruded into 3D");
+    } else {
       plume = buildProcedural(root);
       onMode("Procedural buoyant-jet visualisation");
     }
-  } else {
-    plume = buildProcedural(root);
-    onMode("Procedural buoyant-jet visualisation · drop a GLB in assets/models to replace");
   }
 
   /* ---- resize + auto-fit (handles tall portrait canvases) ---- */
-  const FIT_RADIUS = 1.65;              // bounding sphere of tank + plume
+  const FIT_RADIUS = 1.85;              // bounding sphere of tank + pipes + plume
   function fitCamera() {
     const vFOV = THREE.MathUtils.degToRad(camera.fov);
     const hFOV = 2 * Math.atan(Math.tan(vFOV / 2) * camera.aspect);
@@ -122,6 +128,7 @@ export async function createViewer(host, opts = {}) {
   return {
     dispose() {
       running = false;
+      if (fieldVideo) { try { fieldVideo.pause(); fieldVideo.removeAttribute("src"); fieldVideo.load(); } catch (_) {} }
       cancelAnimationFrame(raf);
       ro.disconnect();
       controls.dispose();
@@ -149,6 +156,77 @@ function frameObject(obj, root) {
   const scale = 2 / (Math.max(size.x, size.y, size.z) || 1);
   obj.scale.setScalar(scale);
   obj.position.sub(center.multiplyScalar(scale));
+}
+
+/* ---------------------------------------------------------------------
+ * Real CFD field in 3D: glass tank + inlet/outlet pipes (the test-case
+ * geometry) + the ACTUAL 2D temperature field from cfd_reference.mp4,
+ * cropped to the tank panel and mapped onto stacked planes so the 2D solve
+ * reads as a 3D volume you can orbit. Returns the <video> element so the
+ * caller can pause it on dispose.
+ * ------------------------------------------------------------------- */
+function buildFieldScene(root, videoUrl) {
+  const TANK = { w: 1.6, h: 1.6, d: 1.0 };
+
+  // faint glass tank so the field reads clearly through it
+  const tankMat = new THREE.MeshStandardMaterial({
+    color: 0x123a6e, transparent: true, opacity: 0.06, roughness: 0.2,
+    metalness: 0, side: THREE.DoubleSide, depthWrite: false,
+  });
+  root.add(new THREE.Mesh(new THREE.BoxGeometry(TANK.w, TANK.h, TANK.d), tankMat));
+
+  // glowing cyan edges
+  root.add(new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(TANK.w, TANK.h, TANK.d)),
+    new THREE.LineBasicMaterial({ color: 0x36d1ff, transparent: true, opacity: 0.7 })
+  ));
+
+  // inlet (left) + outlet (right): a horizontal pipe through the tank at
+  // mid-height, matching the real geometry in the CFD recording.
+  const pipeMat = new THREE.MeshStandardMaterial({ color: 0xaebfd8, metalness: 0.6, roughness: 0.35 });
+  for (const sx of [-1, 1]) {
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.55, 24), pipeMat);
+    pipe.rotation.z = Math.PI / 2;
+    pipe.position.set(sx * (TANK.w / 2 + 0.22), 0, 0);
+    pipe.castShadow = true;
+    root.add(pipe);
+  }
+
+  // real CFD temperature field: crop the left (temperature) panel of the
+  // Fluent recording via texture offset/repeat (THREE origin = bottom-left;
+  // values measured from the video, see notes in the thesis AR docs).
+  const video = document.createElement("video");
+  video.src = videoUrl;
+  video.loop = true; video.muted = true; video.playsInline = true;
+  video.setAttribute("webkit-playsinline", ""); video.setAttribute("playsinline", "");
+  video.crossOrigin = "anonymous";
+  video.play().catch(() => {});
+
+  const tex = new THREE.VideoTexture(video);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.repeat.set(0.272, 0.506);
+  tex.offset.set(0.197, 0.225);
+
+  // central crisp plane + faint ghost copies through the depth → volume feel
+  const fw = TANK.w * 0.98, fh = TANK.h * 0.98;
+  const slabs = [
+    { z: 0.00, o: 1.00 },
+    { z: 0.18, o: 0.45 }, { z: -0.18, o: 0.45 },
+    { z: 0.38, o: 0.18 }, { z: -0.38, o: 0.18 },
+  ];
+  for (const s of slabs) {
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex, transparent: s.o < 1, opacity: s.o,
+      side: THREE.DoubleSide, depthWrite: s.o >= 1,
+    });
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(fw, fh), mat);
+    pl.position.z = s.z;
+    root.add(pl);
+  }
+
+  return video;
 }
 
 /* ---------------------------------------------------------------------

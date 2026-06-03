@@ -316,7 +316,8 @@ async function openModel3D() {
   try {
     const mod = await import("./viewer3d.js");
     STATE.viewer3d = await mod.createViewer($("#model3dCanvas"), {
-      glb: PATHS.glb, onMode: (label) => { $("#model3dFoot").textContent = label; },
+      glb: PATHS.glb, cfdVideo: PATHS.cfdVideo,
+      onMode: (label) => { $("#model3dFoot").textContent = label; },
     });
   } catch (err) {
     console.error(err);

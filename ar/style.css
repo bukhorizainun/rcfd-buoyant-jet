@@ -273,7 +273,7 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ---------- timeline (Feature 7) ---------- */
 .tl-video-wrap { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 12px; }
-.tl-video { width: 100%; display: block; background: #000; aspect-ratio: 16/9; object-fit: cover; }
+.tl-video { width: 100%; display: block; background: #000; aspect-ratio: 15 / 8; object-fit: contain; }
 .tl-readout { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 8px; }
 .tl-readout span:first-child { font-family: var(--mono); color: var(--cyan); font-weight: 600; }
 .tl-readout span:last-child { font-size: 12px; color: var(--ink-soft); text-align: right; }
@@ -492,9 +492,9 @@ body.research-mode .hotspot { filter: drop-shadow(0 0 6px var(--violet)); }
 .ins-group li { font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); margin-bottom: 5px; }
 
 /* ---------- scenario comparison ---------- */
-.cmp-media { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 16/9;
-  background: #000; margin-bottom: 12px; cursor: ew-resize; touch-action: none; }
-.cmp-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cmp-media { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 15 / 8;
+  max-height: 38vh; background: #000; margin: 0 auto 12px; cursor: ew-resize; touch-action: none; }
+.cmp-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .cmp-top { clip-path: inset(0 0 0 50%); }
 .cmp-divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--cyan);
   box-shadow: 0 0 10px var(--cyan); transform: translateX(-1px); }

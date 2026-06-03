@@ -104,18 +104,40 @@ export const DIAGRAMS = {
     </svg>`;
   },
   boundary(col) {
-    return `<svg viewBox="0 0 320 200" role="img" aria-label="Boundary conditions schematic">
-      <defs><marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-        <path d="M0 0 L6 3 L0 6 z" fill="${col}"/></marker></defs>
-      <rect x="70" y="35" width="180" height="130" rx="4" fill="#0a1f44" stroke="#9fb0d0" stroke-width="2"/>
-      <text x="160" y="26" fill="#9fb0d0" font-size="10" text-anchor="middle" font-family="JetBrains Mono">no-slip walls · laminar</text>
-      <rect x="40" y="93" width="30" height="14" fill="${col}"/>
-      <path d="M70 100 H150" stroke="${col}" stroke-width="3" marker-end="url(#arr2)"/>
-      <text x="20" y="126" fill="${col}" font-size="10" font-family="JetBrains Mono">U=0.02 m/s</text>
-      <text x="20" y="138" fill="#ff8a8a" font-size="10" font-family="JetBrains Mono">T=333 K</text>
-      <path d="M250 130 H285" stroke="#9fb0d0" stroke-width="2" marker-end="url(#arr2)"/>
-      <text x="252" y="152" fill="#9fb0d0" font-size="10" font-family="JetBrains Mono">outlet</text>
-      <text x="160" y="180" fill="${col}" font-size="11" text-anchor="middle" font-family="JetBrains Mono">Re = U·D/ν ≈ 100</text>
+    return `<svg viewBox="0 0 320 200" role="img" aria-label="Boundary conditions: inlet and outlet pipes">
+      <defs>
+        <marker id="bcIn" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 z" fill="${col}"/></marker>
+        <marker id="bcOut" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto">
+          <path d="M0 0 L6 3 L0 6 z" fill="#9fb0d0"/></marker>
+        <linearGradient id="bcPipe" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#c7d4ea"/><stop offset="0.5" stop-color="#7f93b4"/>
+          <stop offset="1" stop-color="#54657f"/></linearGradient>
+      </defs>
+
+      <!-- closed tank -->
+      <rect x="96" y="46" width="128" height="108" rx="3" fill="#0a1f44" stroke="#9fb0d0" stroke-width="2"/>
+      <text x="160" y="38" fill="#9fb0d0" font-size="10" text-anchor="middle" font-family="JetBrains Mono">no-slip walls · laminar</text>
+
+      <!-- inlet pipe (left, through the wall at mid-height) -->
+      <rect x="18" y="93" width="82" height="16" rx="3" fill="url(#bcPipe)" stroke="#34425a" stroke-width="1"/>
+      <line x1="20" y1="96.5" x2="98" y2="96.5" stroke="#eef4ff" stroke-width="1" opacity="0.65"/>
+      <path d="M30 101 H88" stroke="${col}" stroke-width="3" marker-end="url(#bcIn)"/>
+      <text x="14" y="84" fill="${col}" font-size="10" font-family="JetBrains Mono">inlet</text>
+      <text x="12" y="130" fill="${col}" font-size="9.5" font-family="JetBrains Mono">U = 0.02 m/s</text>
+      <text x="12" y="142" fill="#ff8a8a" font-size="9.5" font-family="JetBrains Mono">T = 333 K</text>
+
+      <!-- warm jet through the tank -->
+      <path d="M100 101 H220" stroke="${col}" stroke-width="2.5" opacity="0.5"/>
+
+      <!-- outlet pipe (right, through the wall at mid-height) -->
+      <rect x="220" y="93" width="82" height="16" rx="3" fill="url(#bcPipe)" stroke="#34425a" stroke-width="1"/>
+      <line x1="222" y1="96.5" x2="300" y2="96.5" stroke="#eef4ff" stroke-width="1" opacity="0.65"/>
+      <path d="M236 101 H296" stroke="#9fb0d0" stroke-width="3" marker-end="url(#bcOut)"/>
+      <text x="306" y="84" fill="#9fb0d0" font-size="10" text-anchor="end" font-family="JetBrains Mono">outlet</text>
+      <text x="306" y="130" fill="#9fb0d0" font-size="9.5" text-anchor="end" font-family="JetBrains Mono">pressure outlet</text>
+
+      <text x="160" y="176" fill="${col}" font-size="11" text-anchor="middle" font-family="JetBrains Mono">Re = U·D/ν ≈ 100</text>
     </svg>`;
   },
 };
