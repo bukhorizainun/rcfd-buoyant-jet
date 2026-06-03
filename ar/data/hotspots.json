@@ -17,6 +17,12 @@
         { "k": "Tank height", "v": "7.5 cm" },
         { "k": "Inlet", "v": "5 × 5 mm" },
         { "k": "Base temp", "v": "293 K" }
+      ],
+      "topic": "geometry",
+      "subs": [
+        { "label": "Why this shape?", "id": "geometry" },
+        { "label": "What if the diameter changes?", "id": "diameter" },
+        { "label": "What is the buoyancy effect?", "id": "buoyancy" }
       ]
     },
     {
@@ -30,6 +36,11 @@
       "stats": [
         { "k": "Cell size", "v": "1 mm" },
         { "k": "Type", "v": "structured cubic" }
+      ],
+      "topic": "mesh",
+      "subs": [
+        { "label": "Explain mesh quality", "id": "mesh" },
+        { "label": "How does it affect rCFD?", "id": "rcfd" }
       ]
     },
     {
@@ -44,6 +55,12 @@
         { "k": "U inlet", "v": "0.02 m/s" },
         { "k": "T warm", "v": "333 K" },
         { "k": "Re", "v": "≈ 100" }
+      ],
+      "topic": "reynolds",
+      "subs": [
+        { "label": "Is the flow laminar or turbulent?", "id": "reynolds" },
+        { "label": "Why is rCFD a good fit here?", "id": "rcfd" },
+        { "label": "What is entrainment?", "id": "entrainment" }
       ]
     },
     {
@@ -56,7 +73,13 @@
       "image": "assets/images/results.png",
       "stats": [
         { "k": "Best f_sd", "v": "0.500" },
-        { "k": "Speed-up", "v": ">100×" }
+        { "k": "Speed-up", "v": "~263×" }
+      ],
+      "topic": "findings",
+      "subs": [
+        { "label": "Why are the vortices asymmetric?", "id": "vortex_asymmetry" },
+        { "label": "Why is the best f_sd metric-dependent?", "id": "fsd_metric" },
+        { "label": "How much faster is rCFD?", "id": "speedup" }
       ]
     }
   ]

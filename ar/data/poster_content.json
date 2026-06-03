@@ -55,6 +55,61 @@
     ]
   },
 
+  "insights": {
+    "title": "Research Insights",
+    "subtitle": "Step 1 · adiabatic buoyant jet",
+    "groups": [
+      {
+        "heading": "Key findings",
+        "icon": "star",
+        "items": [
+          "rCFD reproduces the 600 s buoyant-jet temperature transport from one short CFD run.",
+          "Best mixing strength is metric-dependent: f_sd = 0.000 for mean temperature, f_sd = 0.500 for thermal centre of gravity (CoG RMSE 0.069 mm).",
+          "The CoG optimum is broad (0.375–0.750), not knife-edge."
+        ]
+      },
+      {
+        "heading": "Physical interpretation",
+        "icon": "wave",
+        "items": [
+          "A warm laminar jet (Re ≈ 100) rises by buoyancy and builds a stable warm layer under the ceiling.",
+          "Two counter-rotating vortices form from entrainment; buoyancy tilts them upward.",
+          "Mixing beyond what the shift map carries is supplied by the face-swap operator."
+        ]
+      },
+      {
+        "heading": "Numerical stability",
+        "icon": "grid",
+        "items": [
+          "Structured 1 mm cubic cells (~85,625) keep the C2C shift maps exact.",
+          "Face-swap diffusion is mass- and energy-conservative; above the 1/8 cap it splits into inner sweeps.",
+          "Laminar solver matches the regime, avoiding spurious turbulent mixing."
+        ]
+      },
+      {
+        "heading": "AI / data-driven contribution",
+        "icon": "ai",
+        "items": [
+          "rCFD is data-based: recurring flow patterns are learned once and replayed, the same spirit as ML surrogates.",
+          "Average speed-up ~263× (120–701× across the sweep), compute-only.",
+          "The single knob f_sd is the tunable parameter a future learned model could optimise."
+        ]
+      }
+    ]
+  },
+
+  "comparison": {
+    "title": "CFD vs AI-assisted rCFD",
+    "subtitle": "Drag the divider to compare",
+    "left": { "label": "Full CFD", "video": "assets/videos/cfd_reference.mp4" },
+    "right": { "label": "AI-assisted rCFD", "video": "assets/videos/rcfd_replay.mp4" },
+    "metrics": [
+      { "label": "Compute time", "cfd": "569 min", "rcfd": "2.2 min", "win": "~263× faster" },
+      { "label": "CoG accuracy", "cfd": "reference", "rcfd": "0.069 mm RMSE", "win": "matched" },
+      { "label": "Re-run a new case", "cfd": "hours", "rcfd": "minutes", "win": "near-free" }
+    ]
+  },
+
   "references": [
     { "id": "lichtenegger2016", "text": "Lichtenegger, T. & Pirker, S. (2016). Recurrence CFD — a novel approach to simulate multiphase flows with strongly separated time scales. Chemical Engineering Science, 153, 394–410." },
     { "id": "pirker2018", "text": "Pirker, S. & Lichtenegger, T. (2018). Efficient time-extrapolation of single- and multiphase simulations by transport-based recurrence CFD. Chemical Engineering Science, 188, 65–83." }

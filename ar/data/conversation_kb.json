@@ -1,0 +1,267 @@
+{
+  "meta": {
+    "comment": "Conversational knowledge base for the offline research assistant. Each intent answers in layers (short -> physical -> cfd) and exposes 'ask more' branches (deeper / math / analogy). Grounded in the real laminar buoyant-jet rCFD study (Re~100). No external API.",
+    "version": 2
+  },
+
+  "greeting": "I'm the poster's research assistant. Ask me about the buoyant jet, rCFD, face-swap diffusion, or the results, and I'll explain it in layers. You can always tap “Ask more” for the maths, an analogy, or a deeper take.",
+  "fallback": "I don't have that in my local knowledge base yet. Try: buoyancy, vortex formation, the Reynolds number, rCFD, face-swap diffusion (f_sd), mesh, or the speed-up. A cloud LLM can be plugged into the same box later (see ai/llm-hooks.js).",
+  "suggestions": [
+    "Why does a vortex form?",
+    "What is the buoyancy effect?",
+    "Why is rCFD used?",
+    "Explain mesh quality",
+    "What is face-swap diffusion?",
+    "Why is the best f_sd metric-dependent?"
+  ],
+
+  "followupLabels": {
+    "deeper": "Deeper explanation",
+    "math": "Math intuition",
+    "cfd": "CFD interpretation",
+    "analogy": "Real-world analogy"
+  },
+
+  "intents": [
+    {
+      "id": "vortex",
+      "title": "Vortex formation",
+      "keywords": ["vortex", "vortices", "recirculation", "eddy", "swirl", "rotation", "why vortex", "vortex form"],
+      "short": "Two counter-rotating recirculation vortices form around the jet because the moving jet drags still fluid with it and that fluid has to loop back.",
+      "physical": "The jet entrains (pulls along) the surrounding water. To conserve mass, the fluid pushed forward must return somewhere, so it curls into a vortex above and below the jet axis — like the rolls you see beside a stream of smoke.",
+      "cfd": "In the CFD field these appear as closed streamline loops on either side of the inlet. rCFD never re-solves them; it stores the velocity pattern that contains these loops once and replays it, so the vortices are reproduced by the saved cell-to-cell shift map.",
+      "more": {
+        "deeper": "The pairing is set by the shear layer between the fast jet and the still tank. At Re~100 the layer is stable, so the vortices are steady and laminar rather than shedding chaotically; that steadiness is exactly why a recorded pattern can be replayed faithfully.",
+        "math": "Vorticity ω = ∇×u is generated in the shear layer where ∂u/∂y is large. With no turbulence model, the laminar Navier–Stokes solve produces a smooth, bounded ω field that the C2C database captures.",
+        "analogy": "Stir a spoon slowly through tea and two little whirlpools trail each edge. Move slowly (low Re) and they stay tidy; stir hard (high Re) and they break up."
+      },
+      "followup": { "text": "Why are the two vortices not perfectly symmetric?", "id": "vortex_asymmetry" },
+      "related": ["entrainment", "reynolds", "buoyancy"]
+    },
+    {
+      "id": "vortex_asymmetry",
+      "title": "Why the vortices are asymmetric",
+      "keywords": ["asymmetric", "asymmetry", "not symmetric", "uneven vortex", "vortex asymmetric"],
+      "short": "Buoyancy breaks the up–down symmetry: the warm jet is lighter, so it bends upward and the upper vortex is favoured.",
+      "physical": "If the jet had the same density as the tank, the two vortices would mirror each other. Because the jet is warm and rises, more fluid is lifted upward, so the top recirculation grows and the bottom one weakens.",
+      "cfd": "In the snapshots the warm (red) plume leans toward the ceiling and the upper streamline loop is larger. This asymmetry is part of the recorded pattern, so rCFD reproduces it without extra cost.",
+      "more": {
+        "deeper": "The strength of the asymmetry scales with the Richardson number (buoyancy vs inertia). Here buoyancy is significant, so the tilt is clearly visible well before the warm layer forms at the top.",
+        "math": "Add the buoyancy body force ρ g β (T−T0) to the momentum equation; its vertical sign biases the vorticity budget upward, breaking the symmetric solution.",
+        "analogy": "A candle flame is a hot jet too — it never spreads evenly, it always reaches upward because the hot gas is lighter."
+      },
+      "followup": { "text": "How does the warm layer at the top build up?", "id": "stratification" },
+      "related": ["buoyancy", "stratification"]
+    },
+    {
+      "id": "buoyancy",
+      "title": "The buoyancy effect",
+      "keywords": ["buoyancy", "buoyant", "float", "rise", "lighter", "density", "warm rises", "buoyancy effect"],
+      "short": "The jet water is warm (333 K) and therefore lighter than the 293 K tank, so it rises — buoyancy is the engine of the whole flow.",
+      "physical": "Warmer water expands and becomes less dense. Gravity pulls the denser cold water down and the lighter warm water up, so the jet is lifted and a warm layer collects under the ceiling.",
+      "cfd": "Buoyancy enters the solver as a temperature-dependent body force. It is what makes the temperature transport interesting and what the face-swap diffusion parameter f_sd has to reproduce during replay.",
+      "more": {
+        "deeper": "Because the flow is buoyancy-driven and laminar, the temperature field and the velocity field are tightly coupled but the velocity pattern still repeats — the precondition that makes rCFD applicable here.",
+        "math": "The Boussinesq force per unit volume is −ρ₀ g β (T − T₀), with thermal expansion β. A 40 K rise gives a small but persistent upward push that integrates into the rising plume.",
+        "analogy": "A hot-air balloon: heat the air, it gets lighter than the surrounding air, and up it goes."
+      },
+      "followup": { "text": "How big is the jet — is it turbulent?", "id": "reynolds" },
+      "related": ["stratification", "reynolds"]
+    },
+    {
+      "id": "reynolds",
+      "title": "Reynolds number & laminar regime",
+      "keywords": ["reynolds", "re number", "laminar", "turbulent", "turbulence", "regime", "100", "is it turbulent"],
+      "short": "The jet Reynolds number is only about 100, so the flow is laminar — smooth and orderly, not turbulent.",
+      "physical": "Reynolds number compares inertia to viscosity. A small, slow water jet through a 5 mm opening at 0.02 m/s is dominated by viscosity, so disturbances damp out instead of breaking into turbulence.",
+      "cfd": "Re = U·D/ν = 0.02×0.005/1×10⁻⁶ ≈ 100, about 20× below the ~2000 transition for a water jet. That is why a laminar solver is used here rather than a turbulence model — a turbulence model would invent mixing that is not physically there.",
+      "more": {
+        "deeper": "This was checked against the Fluent setup. The laminar choice also matters for rCFD: a laminar field is steady and recurrent, so its pattern database replays cleanly; a turbulent field would be far harder to recur.",
+        "math": "Re = U D / ν. With U=0.02 m/s, D=0.005 m, ν=1×10⁻⁶ m²/s → Re ≈ 100. Transition for a free water jet is near Re ≈ 2000.",
+        "analogy": "Honey poured slowly runs in a clean ribbon (low Re); water from a tap splashes everywhere (high Re). This jet is much closer to the honey."
+      },
+      "followup": { "text": "Why does that make rCFD a good fit?", "id": "rcfd" },
+      "related": ["rcfd", "mesh"]
+    },
+    {
+      "id": "rcfd",
+      "title": "Why rCFD is used",
+      "keywords": ["rcfd", "recurrence", "reduced cfd", "why rcfd", "replay", "recurrence cfd", "method", "why is rcfd used"],
+      "short": "rCFD reuses the flow's repeating patterns: run CFD once, record the velocity field, then replay it to move temperature cheaply.",
+      "physical": "Many flows do the same thing over and over. Instead of solving the physics every timestep, rCFD records that repeating motion once and then just pushes heat around with the saved pattern — hundreds of times cheaper.",
+      "cfd": "Preparation: a short CFD run saves a database of cell-to-cell (C2C) shift maps. Replay: each step picks a pattern, shifts the temperature field along it, and adds a little face-swap diffusion. No Navier–Stokes solve happens during replay.",
+      "more": {
+        "deeper": "rCFD pays off when the velocity field has a much shorter recurrence time than the scalar you want to track. Here the laminar buoyant jet settles into a repeatable circulation while the temperature keeps evolving for 600 s — the ideal separation of time scales.",
+        "math": "Replay cost scales with cells × steps for a shift + diffuse operation, O(N), versus the implicit Navier–Stokes solve per step in full CFD. That is the source of the ~263× average speed-up.",
+        "analogy": "Like looping a short clip of stirring instead of re-filming the whole stir every time you want to see where the milk goes in the coffee."
+      },
+      "followup": { "text": "What exactly is face-swap diffusion?", "id": "facecswap" },
+      "related": ["facecswap", "speedup", "reynolds"]
+    },
+    {
+      "id": "facecswap",
+      "title": "Face-swap diffusion (f_sd)",
+      "keywords": ["face-swap", "face swap", "diffusion", "f_sd", "fsd", "mixing", "operator", "parameter", "single knob"],
+      "short": "After the shift moves heat around, face-swap diffusion mixes neighbouring cells; the single parameter f_sd sets how strongly.",
+      "physical": "The pure shift relocates warm and cold pockets but never blends them, leaving sharp jumps. Face-swap diffusion gently exchanges heat across each cell face to restore the smoothing that real advection would have produced.",
+      "cfd": "Across every internal face it moves S = ½·(T₁−T₀)·V·f_sd from the hotter cell to the cooler one. The receiving cell gains exactly what the sender loses, so it is mass- and energy-conservative; f_sd is the one knob that tunes the mixing.",
+      "more": {
+        "deeper": "f_sd compensates for the sub-grid mixing the shift map cannot carry. Too little and the field stays artificially sharp; too much and it over-mixes and overshoots the mean temperature.",
+        "math": "Per face: S = ½ (T₁ − T₀) V f_sd, accumulated on both cells then divided by each cell's phase volume. Above the 1/8 stability cap the work is split into several inner sweeps.",
+        "analogy": "Like nudging adjacent cups of hot and cold water toward each other a fraction at a time — f_sd is how big each nudge is."
+      },
+      "followup": { "text": "Why is the best f_sd different for different results?", "id": "fsd_metric" },
+      "related": ["fsd_metric", "rcfd"]
+    },
+    {
+      "id": "fsd_metric",
+      "title": "Why the best f_sd is metric-dependent",
+      "keywords": ["best", "optimal", "metric-dependent", "which f_sd", "0.5", "0.000", "tmean", "cog", "best fsd"],
+      "short": "The best f_sd depends on what you measure: 0.000 is best for mean temperature, 0.500 is best for the thermal centre of gravity.",
+      "physical": "Mixing spreads heat faster than real advection, so any mixing overshoots the mean temperature — hence f_sd=0 wins there. But some mixing is needed to put the heat at the right height, so the centre of gravity is best at a middle value.",
+      "cfd": "The T_mean error shrinks monotonically as f_sd→0, while the CoG_y error has a genuine minimum at f_sd=0.500 (RMSE 0.069 mm), slightly better than 0.375 and 0.750. The optimum is broad, not knife-edge.",
+      "more": {
+        "deeper": "The two optima move in opposite directions on the f_sd axis, so there is no single best value — the choice is a deliberate trade-off, which is exactly the kind of judgement Step 2 will need to make under heat loss.",
+        "math": "T_mean error ∝ overshoot, monotone in f_sd. CoG_y error is U-shaped: under-mixing sits the heat too high, over-mixing too low; the minimum is near f_sd ≈ 0.5.",
+        "analogy": "Seasoning a soup: no salt keeps the 'average' truest to the recipe, but a pinch is needed to get the flavour distributed right. The best amount depends on which you care about."
+      },
+      "followup": { "text": "How much faster is rCFD overall?", "id": "speedup" },
+      "related": ["facecswap", "speedup"]
+    },
+    {
+      "id": "speedup",
+      "title": "Speed-up",
+      "keywords": ["speed", "faster", "speedup", "speed-up", "cost", "wall clock", "wallclock", "cheaper", "how fast", "263"],
+      "short": "Replay is about 263× faster than the reference CFD on average, and between 120× and 701× across the parameter sweep.",
+      "physical": "Because replay never solves the flow equations again, almost all the original cost disappears. The one expensive CFD run is done once; every replay after that is nearly free.",
+      "cfd": "Counting compute only (excluding image writing on both sides): CFD reference ≈ 569 min vs rCFD replay 0.8–4.7 min (2.2 min average). The earlier 37× figure included image-saving and understated the method.",
+      "more": {
+        "deeper": "Replay time grows with f_sd because larger mixing needs more inner face-swap sweeps, which is why the sweep spans 120–701× rather than a single number.",
+        "math": "Speed-up ≈ t_CFD / t_rCFD ≈ 569 / 2.16 ≈ 263. Range 569/4.73 ≈ 120 to 569/0.81 ≈ 701.",
+        "analogy": "Filming a movie once (CFD) versus streaming it many times (rCFD): the expensive part happens a single time."
+      },
+      "followup": { "text": "How is the mesh built?", "id": "mesh" },
+      "related": ["rcfd", "fsd_metric"]
+    },
+    {
+      "id": "mesh",
+      "title": "Mesh quality",
+      "keywords": ["mesh", "grid", "cell", "resolution", "mesh quality", "explain mesh", "hex", "structured"],
+      "short": "A structured mesh of 1 mm cubic cells fills the tank — regular, orthogonal cells that keep the scheme stable.",
+      "physical": "Uniform cubic cells avoid skew and stretching, so numerical errors stay small and the cell-to-cell shift maps of rCFD are clean and well defined on every face.",
+      "cfd": "About 85,625 hex cells resolve the 7.5 cm tank at 1 mm. Good orthogonality and aspect ratio near 1 are what let the C2C database be built without distortion.",
+      "more": {
+        "deeper": "Mesh quality matters doubly for rCFD: the shift operator moves temperature between face-neighbours, so any irregular cell would smear the recorded pattern. A structured grid keeps that mapping exact.",
+        "math": "With Δx = 1 mm uniform, the face-swap stability cap f_sd ≤ 1/8 follows directly from the explicit diffusion CFL-type limit on a regular grid.",
+        "analogy": "Graph paper versus a crumpled sheet — it is far easier to track where something moves cell by cell on the neat grid."
+      },
+      "followup": { "text": "What happens if the inlet diameter changes?", "id": "diameter" },
+      "related": ["reynolds", "rcfd"]
+    },
+    {
+      "id": "diameter",
+      "title": "What if the inlet diameter changes",
+      "keywords": ["diameter", "inlet size", "opening", "what if diameter", "bigger inlet", "smaller inlet", "shape change"],
+      "short": "A wider inlet raises the Reynolds number and the buoyant momentum; a narrower one lowers them — both shift where the flow sits between laminar and transitional.",
+      "physical": "Re scales with the opening size D. Doubling D roughly doubles Re toward ~200, still laminar but with a stronger, longer jet; halving D weakens it. The vortices and the stratification respond accordingly.",
+      "cfd": "Changing D means a new CFD reference and a fresh C2C database — the recorded pattern is geometry-specific. The Flow Intuition sliders on this poster let you feel these trends without re-running CFD.",
+      "more": {
+        "deeper": "Push D far enough and Re crosses ~2000; the laminar assumption breaks and a turbulence model would be needed, which would also make the flow much harder to recur for rCFD.",
+        "math": "Re = U D / ν is linear in D. Holding U fixed, Re ∝ D, so the regime boundary is reached near D ≈ 0.1 m for this U.",
+        "analogy": "A garden hose: thumb over the end (small D) gives a thin gentle stream; full bore (large D) gives a powerful one."
+      },
+      "followup": { "text": "Show me the key findings", "id": "findings" },
+      "related": ["reynolds", "geometry"]
+    },
+    {
+      "id": "stratification",
+      "title": "Thermal stratification",
+      "keywords": ["stratification", "thermal layer", "warm layer", "stratified", "top wall", "ceiling", "layering"],
+      "short": "Warm buoyant fluid collects under the ceiling and forms a stable warm layer over the cooler water — thermal stratification.",
+      "physical": "Because warm water floats, it accumulates at the top and refuses to mix down, building a layered structure: warm above, cold below.",
+      "cfd": "The thermal centre of gravity CoG_y(t) climbs as the layer thickens while the inlet is warm (until t = 315 s). Reproducing this layering correctly is what makes f_sd = 0.500 the best choice for CoG.",
+      "more": {
+        "deeper": "Stratification suppresses vertical mixing (a stable density gradient resists overturning), so once the warm layer forms it persists and slowly grows rather than diffusing away.",
+        "math": "A stable gradient ∂ρ/∂y < 0 (lighter on top) gives a positive Brunt–Väisälä frequency N² = −(g/ρ)∂ρ/∂y, i.e. the layer is restoring, not unstable.",
+        "analogy": "Warm air trapped near a room's ceiling while the floor stays cold — same physics, same layering."
+      },
+      "followup": { "text": "What are T_mean and CoG?", "id": "diagnostics" },
+      "related": ["buoyancy", "diagnostics"]
+    },
+    {
+      "id": "diagnostics",
+      "title": "T_mean and CoG",
+      "keywords": ["t_mean", "tmean", "cog", "centre of gravity", "center of gravity", "diagnostic", "metric", "what is tmean"],
+      "short": "Two scalars track the field: T_mean (how much heat is in the tank) and CoG_y (how high the heat sits).",
+      "physical": "T_mean is the volume-averaged temperature; CoG_y is the height of the 'centre of mass' of the heat. Together they say how much heat there is and where it is.",
+      "cfd": "Both are written every step for the CFD reference and each rCFD case, so accuracy is judged directly: f_sd=0 best for T_mean, f_sd=0.5 best for CoG_y.",
+      "more": {
+        "deeper": "Using two complementary metrics is deliberate: a method can get the total heat right while placing it at the wrong height, or vice versa. Step 2's heat loss makes CoG even more central.",
+        "math": "T_mean = (1/V)∫T dV; CoG_y = ∫ y·(T−T₀) dV / ∫(T−T₀) dV.",
+        "analogy": "Marks on a thermometer (how hot overall) versus a water-level gauge (how high it reaches)."
+      },
+      "followup": { "text": "What comes next — Step 2?", "id": "step2" },
+      "related": ["stratification", "fsd_metric"]
+    },
+    {
+      "id": "geometry",
+      "title": "Why this geometry",
+      "keywords": ["geometry", "shape", "why this shape", "domain", "tank shape", "rectangular"],
+      "short": "A closed rectangular tank with a small side inlet is the simplest geometry that still produces buoyancy, vortices and stratification together.",
+      "physical": "It isolates the physics we care about — a warm jet rising in still water — without walls or curves that would complicate the recurrence pattern.",
+      "cfd": "The closed box gives clean wall boundaries and a steady recurrent circulation, which is exactly what the rCFD database needs to be reusable.",
+      "more": {
+        "deeper": "A canonical, well-posed test case is chosen on purpose: it lets the rCFD workflow be validated before Step 2 adds the complication of heat loss through the walls.",
+        "math": "Simple Cartesian walls map perfectly onto the structured 1 mm grid, keeping the discrete operators exact.",
+        "analogy": "A wind-tunnel model: deliberately plain so the effect you study is not hidden by extra detail."
+      },
+      "followup": { "text": "What happens if the inlet diameter changes?", "id": "diameter" },
+      "related": ["mesh", "diameter"]
+    },
+    {
+      "id": "findings",
+      "title": "Key findings",
+      "keywords": ["findings", "key findings", "results", "summary", "conclusion", "what did you find"],
+      "short": "rCFD reproduces the buoyant-jet temperature transport across 600 s at ~263× lower cost, and the best mixing strength depends on the metric.",
+      "physical": "The method captures the rising warm plume, the recirculation vortices, and the growing warm layer — the whole story of the flow — from one short CFD run.",
+      "cfd": "Quantitatively: T_mean best at f_sd=0.000, CoG_y best at f_sd=0.500 (RMSE 0.069 mm), replay 120–701× faster. The optimum for CoG is broad around 0.375–0.750.",
+      "more": {
+        "deeper": "The headline is not a single magic number but a trade-off surface: accuracy vs cost vs which metric matters. That framing is what Step 2 carries forward.",
+        "math": "See the f_sd sweep table: CoG RMSE 0.116, 0.097, 0.074, 0.069, 0.072, 0.137, 0.280 for f_sd = 0, 0.125, 0.375, 0.5, 0.75, 1.5, 3.",
+        "analogy": "A good photocopy of the flow at a fraction of the ink — faithful where it matters most."
+      },
+      "followup": { "text": "What comes next — Step 2?", "id": "step2" },
+      "related": ["fsd_metric", "speedup"]
+    },
+    {
+      "id": "step2",
+      "title": "Next step — heat loss",
+      "keywords": ["step 2", "next", "outlook", "future", "heat loss", "heatloss", "extension", "what next", "adiabatic"],
+      "short": "Step 1 (this poster) is adiabatic — no heat escapes. Step 2 makes the walls lose heat to the surroundings and tests whether rCFD still holds.",
+      "physical": "Real tanks leak heat through their walls. Adding wall heat loss couples the temperature field to where the warm fluid actually touches the wall, making the centre-of-gravity metric even more important.",
+      "cfd": "Step 2 introduces a wall flux q = h·(T_wall − T∞) and likely a multi-database approach so replay can pick from several recorded regimes. The suggested starting point is f_sd = 0.500 with a small confirming sweep around 0.375–0.750.",
+      "more": {
+        "deeper": "Because heat loss responds to where warm fluid sits, CoG_y becomes the key diagnostic, and the single-database assumption may need to become several recorded regimes blended during replay.",
+        "math": "Energy balance gains a sink term: dE/dt = −∫ h(T_wall−T∞) dA. The face-swap operator stays mass/energy-consistent; the wall term is added on top.",
+        "analogy": "Step 1 is a perfectly insulated thermos; Step 2 is an ordinary cup that slowly cools the drink through its sides."
+      },
+      "followup": { "text": "Why is CoG the key metric for Step 2?", "id": "diagnostics" },
+      "related": ["diagnostics", "fsd_metric"]
+    },
+    {
+      "id": "entrainment",
+      "title": "Entrainment",
+      "keywords": ["entrainment", "entrain", "drag fluid", "pull in", "spreading"],
+      "short": "Entrainment is the jet pulling surrounding still fluid into itself as it moves, which makes it spread and slow.",
+      "physical": "Fast-moving jet fluid shears against the still water and drags some along; that borrowed fluid has to be replaced, which feeds the recirculation vortices.",
+      "cfd": "Entrainment sets how quickly the jet widens in the CFD field; the recorded velocity pattern already contains it, so rCFD inherits the correct spreading for free.",
+      "more": {
+        "deeper": "Entrainment and the return flow are two sides of mass conservation; together they fix the vortex size and therefore the stirring the temperature field experiences.",
+        "math": "Classical jet theory gives an entrainment velocity v_e ≈ α U with α ~ 0.05–0.08; mass flux grows linearly with distance from the inlet.",
+        "analogy": "A crowd moving through a station drags hesitant bystanders along with it."
+      },
+      "followup": { "text": "How do the vortices form then?", "id": "vortex" },
+      "related": ["vortex", "buoyancy"]
+    }
+  ]
+}

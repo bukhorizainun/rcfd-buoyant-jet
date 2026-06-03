@@ -37,6 +37,9 @@
 
 <body>
 
+<!-- Fluid particle backdrop (Feature 9) -->
+<canvas id="bgCanvas" class="bg-canvas" aria-hidden="true"></canvas>
+
 <!-- ===================================================================== -->
 <!-- LOADING SCREEN (Feature 10)                                           -->
 <!-- ===================================================================== -->
@@ -119,16 +122,39 @@
       <small id="hudSub">Interactive Scientific Poster</small>
     </div>
   </div>
-  <button id="btnExit" class="hud-x" title="Back to start" aria-label="Back to start">✕</button>
+  <div class="hud-actions">
+    <button id="btnResearch" class="hud-toggle" type="button" aria-pressed="false"
+            title="Research Mode: turn hotspots into AI explainer nodes">
+      <svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>
+      <span>Research Mode</span>
+    </button>
+    <button id="btnExit" class="hud-x" title="Back to start" aria-label="Back to start">✕</button>
+  </div>
 </header>
 
 <!-- ===================================================================== -->
 <!-- BOTTOM TOOL DOCK                                                      -->
 <!-- ===================================================================== -->
 <nav id="dock" class="dock hidden" aria-label="Tools">
+  <button class="dock-btn dock-ai" data-panel="ai" title="Ask the AI assistant">
+    <svg viewBox="0 0 24 24" class="ic"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+    <span>Ask AI</span>
+  </button>
   <button class="dock-btn" data-panel="dashboard" title="Parameters dashboard">
     <svg viewBox="0 0 24 24" class="ic"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
     <span>Data</span>
+  </button>
+  <button class="dock-btn" data-panel="insights" title="Research insights">
+    <svg viewBox="0 0 24 24" class="ic"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c1 1 1 2 1 3h6c0-1 0-2 1-3a7 7 0 0 0-4-12z"/></svg>
+    <span>Insights</span>
+  </button>
+  <button class="dock-btn" data-panel="flow" title="Flow intuition (pseudo-simulation)">
+    <svg viewBox="0 0 24 24" class="ic"><path d="M3 8c3 0 3-3 6-3s3 3 6 3 3-3 6-3"/><path d="M3 14c3 0 3-3 6-3s3 3 6 3 3-3 6-3"/><path d="M3 20c3 0 3-3 6-3s3 3 6 3 3-3 6-3"/></svg>
+    <span>Flow</span>
+  </button>
+  <button class="dock-btn" data-panel="comparison" title="CFD vs AI-assisted rCFD">
+    <svg viewBox="0 0 24 24" class="ic"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M12 4v16"/></svg>
+    <span>Compare</span>
   </button>
   <button class="dock-btn" data-panel="timeline" title="Timeline explorer">
     <svg viewBox="0 0 24 24" class="ic"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h10"/></svg>
@@ -137,10 +163,6 @@
   <button class="dock-btn" data-panel="model3d" title="3D model">
     <svg viewBox="0 0 24 24" class="ic"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5"/></svg>
     <span>3D</span>
-  </button>
-  <button class="dock-btn dock-ai" data-panel="ai" title="Ask the AI assistant">
-    <svg viewBox="0 0 24 24" class="ic"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
-    <span>Ask AI</span>
   </button>
 </nav>
 
@@ -155,6 +177,9 @@
     <div class="popup-media" id="popupMedia"></div>
     <p class="popup-body" id="popupBody"></p>
     <div class="popup-stats" id="popupStats"></div>
+    <div class="popup-subs-label" id="popupSubsLabel"></div>
+    <div class="popup-subs" id="popupSubs"></div>
+    <div class="popup-explainer" id="popupExplainer"></div>
   </div>
 </div>
 
@@ -215,6 +240,67 @@
 </section>
 
 <!-- ===================================================================== -->
+<!-- FLOW INTUITION PANEL (Upgrade Feature 3 — pseudo-simulation)          -->
+<!-- ===================================================================== -->
+<section id="panel-flow" class="panel hidden" aria-labelledby="flowTitle">
+  <div class="panel-head">
+    <div>
+      <h2 id="flowTitle">Flow Intuition</h2>
+      <p class="panel-sub">Visual abstraction — not a real-time CFD solve</p>
+    </div>
+    <button class="panel-x" data-close="panel-flow" aria-label="Close">✕</button>
+  </div>
+  <div class="flow-wrap holo">
+    <canvas id="flowCanvas" class="flow-canvas"></canvas>
+    <div class="holo-corner tl"></div><div class="holo-corner tr"></div>
+    <div class="holo-corner bl"></div><div class="holo-corner br"></div>
+  </div>
+  <div class="flow-controls">
+    <label>Jet velocity <span id="flowVVal">50%</span>
+      <input id="flowV" type="range" min="0" max="100" value="50"></label>
+    <label>Density ratio (Δρ) <span id="flowRhoVal">50%</span>
+      <input id="flowRho" type="range" min="0" max="100" value="50"></label>
+    <label>Temperature difference (ΔT) <span id="flowDTVal">50%</span>
+      <input id="flowDT" type="range" min="0" max="100" value="50"></label>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- RESEARCH INSIGHTS PANEL (Upgrade Feature 6)                           -->
+<!-- ===================================================================== -->
+<section id="panel-insights" class="panel hidden" aria-labelledby="insTitle">
+  <div class="panel-head">
+    <div>
+      <h2 id="insTitle">Research Insights</h2>
+      <p class="panel-sub" id="insSub"></p>
+    </div>
+    <button class="panel-x" data-close="panel-insights" aria-label="Close">✕</button>
+  </div>
+  <div class="ins-groups" id="insGroups"></div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- SCENARIO COMPARISON PANEL (Upgrade Feature 7)                         -->
+<!-- ===================================================================== -->
+<section id="panel-comparison" class="panel hidden" aria-labelledby="cmpTitle">
+  <div class="panel-head">
+    <div>
+      <h2 id="cmpTitle">Scenario Comparison</h2>
+      <p class="panel-sub" id="cmpSub"></p>
+    </div>
+    <button class="panel-x" data-close="panel-comparison" aria-label="Close">✕</button>
+  </div>
+  <div class="cmp-media holo" id="cmpMedia">
+    <video id="cmpLeft" class="cmp-video" muted playsinline loop preload="metadata"></video>
+    <video id="cmpRight" class="cmp-video cmp-top" muted playsinline loop preload="metadata"></video>
+    <div class="cmp-divider" id="cmpDivider"></div>
+    <span class="cmp-tag cmp-tag-l" id="cmpLeftLabel">Full CFD</span>
+    <span class="cmp-tag cmp-tag-r" id="cmpRightLabel">AI-assisted rCFD</span>
+  </div>
+  <div class="cmp-metrics" id="cmpMetrics"></div>
+</section>
+
+<!-- ===================================================================== -->
 <!-- 3D MODEL VIEWER MODAL (Feature 5)                                     -->
 <!-- ===================================================================== -->
 <div id="model3d" class="model3d hidden" role="dialog" aria-modal="true" aria-label="3D buoyant jet model">
@@ -244,7 +330,7 @@
   </div>
 </div>
 
-<!-- App logic (classic script; lazy-loads A-Frame/MindAR and the 3D viewer) -->
-<script src="app.js"></script>
+<!-- App logic (ES module; lazy-loads A-Frame/MindAR and the 3D viewer) -->
+<script type="module" src="app.js"></script>
 </body>
 </html>

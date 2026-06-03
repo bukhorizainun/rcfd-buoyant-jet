@@ -406,3 +406,103 @@ button { font-family: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ======================================================================
+   UPGRADE: Conversational Research System styles
+   ====================================================================== */
+
+/* fluid particle backdrop (Feature 9) */
+.bg-canvas { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%;
+  pointer-events: none; opacity: 0.9; }
+.loader, .start, .ar-stage, .demo-stage, .hud, .dock, .panel, .popup, .model3d,
+#infoLayer, .banner, .scan-hint, .toast, .error-screen { z-index: 2; }
+.loader { z-index: 100; } .start { z-index: 90; } .error-screen { z-index: 95; }
+.hud { z-index: 30; } .dock { z-index: 30; } .banner { z-index: 40; }
+#infoLayer { z-index: 45; } .panel { z-index: 50; } .popup { z-index: 60; }
+.model3d { z-index: 70; } .toast { z-index: 80; }
+
+/* HUD research-mode toggle */
+.hud-actions { display: flex; align-items: center; gap: 8px; }
+.hud-toggle { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--glass); color: var(--ink-soft);
+  font-size: 12px; font-weight: 600; }
+.hud-toggle .ic { width: 16px; height: 16px; }
+.hud-toggle.on { color: #03060f; background: linear-gradient(135deg, var(--cyan), var(--violet));
+  border-color: transparent; box-shadow: var(--glow-cyan); }
+@media (max-width: 480px) { .hud-toggle span { display: none; } .hud-toggle { padding: 0 10px; } }
+
+/* research mode accent on the whole app */
+body.research-mode { --line: rgba(124,77,255,0.30); }
+body.research-mode .hud-dot { background: var(--violet); box-shadow: 0 0 10px var(--violet); }
+body.research-mode .hotspot { filter: drop-shadow(0 0 6px var(--violet)); }
+
+/* dock: scroll horizontally if many tools */
+.dock { max-width: calc(100vw - 20px); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.dock::-webkit-scrollbar { display: none; }
+.dock-btn { flex: 0 0 auto; }
+
+/* ---------- conversational answer (chat + hotspot explainer) ---------- */
+.answer { display: flex; flex-direction: column; gap: 8px; }
+.ans-title { font-size: 15px; font-weight: 700; color: var(--cyan); }
+.ans-lead { margin: 0; font-size: 14px; line-height: 1.55; }
+.ans-block { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-soft); }
+.ans-label { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--violet); margin-bottom: 2px; }
+.ans-more { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.ans-btn { background: rgba(124,77,255,0.12); border: 1px solid rgba(124,77,255,0.4); color: var(--ink);
+  font-size: 11.5px; padding: 5px 10px; border-radius: 999px; }
+.ans-followup { align-self: flex-start; background: rgba(54,209,255,0.1);
+  border: 1px solid rgba(54,209,255,0.35); color: var(--ink); font-size: 12.5px; font-weight: 600;
+  padding: 7px 12px; border-radius: 10px; text-align: left; }
+.ans-src { font-family: var(--mono); font-size: 9.5px; color: var(--ink-faint); margin-top: 2px; }
+
+/* ---------- hotspot popup: Level-2 questions + explainer ---------- */
+.popup-subs-label { font-family: var(--mono); font-size: 10px; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--ink-faint); margin: 4px 0 6px; }
+.popup-subs:empty { display: none; }
+.popup-subs { display: flex; flex-direction: column; gap: 6px; }
+.sub-q { text-align: left; background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+  color: var(--ink); font-size: 13px; padding: 9px 12px; border-radius: 10px; }
+.sub-q.on { border-color: var(--cyan); color: var(--cyan); }
+.popup-explainer:empty { display: none; }
+.popup-explainer { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.popup-card.research { box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,77,255,0.4); }
+.popup-card.research .popup-eyebrow { color: var(--violet); }
+
+/* ---------- flow intuition (pseudo-sim) ---------- */
+.flow-wrap { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 14px;
+  aspect-ratio: 16/9; background: #05080f; }
+.flow-canvas { width: 100%; height: 100%; display: block; }
+.flow-controls { display: flex; flex-direction: column; gap: 12px; }
+.flow-controls label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--ink-soft); }
+.flow-controls label span { font-family: var(--mono); color: var(--cyan); }
+.flow-controls input[type=range] { width: 100%; accent-color: var(--cyan); }
+
+/* ---------- insights ---------- */
+.ins-groups { display: grid; gap: 12px; }
+@media (min-width: 720px) { .ins-groups { grid-template-columns: 1fr 1fr; } }
+.ins-group { background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.ins-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; }
+.ins-group h3 .ic { width: 18px; height: 18px; stroke: var(--cyan); flex: none; }
+.ins-group ul { margin: 0; padding-left: 16px; }
+.ins-group li { font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); margin-bottom: 5px; }
+
+/* ---------- scenario comparison ---------- */
+.cmp-media { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 16/9;
+  background: #000; margin-bottom: 12px; cursor: ew-resize; touch-action: none; }
+.cmp-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cmp-top { clip-path: inset(0 0 0 50%); }
+.cmp-divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan); transform: translateX(-1px); }
+.cmp-divider::after { content: "⇆"; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 30px; height: 30px; border-radius: 50%; background: var(--cyan); color: #03060f;
+  display: grid; place-items: center; font-size: 14px; }
+.cmp-tag { position: absolute; bottom: 8px; font-family: var(--mono); font-size: 11px; color: #fff;
+  background: rgba(5,7,15,0.7); padding: 3px 8px; border-radius: 6px; }
+.cmp-tag-l { left: 8px; } .cmp-tag-r { right: 8px; }
+.cmp-metrics { display: grid; gap: 8px; }
+.cmp-metric { display: flex; flex-direction: column; gap: 2px; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.cmp-m-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; color: var(--ink-faint); }
+.cmp-m-row { font-size: 14px; } .cmp-m-row .rcfd { color: var(--cyan); }
+.cmp-m-win { font-size: 11.5px; color: var(--green); font-weight: 600; }

@@ -1,13 +1,18 @@
-# Interactive AR Scientific Poster — *Data-based Numerical Simulation of Buoyant Jet Flow*
+# Conversational Scientific Poster System — *Data-based Numerical Simulation of Buoyant Jet Flow*
 
-A browser-only **WebAR** experience for the master's-thesis poster
-*Data-based Numerical Simulation of Buoyant Jet Flow* (Step 1: CFD reference,
-recurrence-CFD workflow, and a face-swap-diffusion parameter sweep).
+A browser-only **WebAR + conversational research** experience for the
+master's-thesis poster *Data-based Numerical Simulation of Buoyant Jet Flow*
+(Step 1: CFD reference, recurrence-CFD workflow, face-swap-diffusion sweep).
 
-Scan the printed poster with a phone → the camera locks onto it → CFD
-animations, a 3D buoyant-jet model, a live parameter dashboard, a timeline
-explorer, glowing hotspots and an **offline AI assistant** appear on top of it.
-No backend, no build step, no framework — it deploys straight to GitHub Pages.
+It is more than an interactive poster — it behaves like an **AI research
+companion embedded in the poster**: visitors can talk to it, get layered
+explanations (intuition → CFD → maths), explore "what-if" flow scenarios, and
+dig into hierarchical hotspots. No backend, no build step, no framework; it
+deploys straight to GitHub Pages and everything runs client-side.
+
+Scan the printed poster → the camera locks on → CFD animations, a 3D
+buoyant-jet model, a parameter dashboard, a timeline, glowing hotspots and the
+**offline conversational assistant** appear on top of it.
 
 > Author: **Mochamad Bukhori Zainun** (k12438440) · Supervisor: **Prof. Stefan Pirker**
 > Department of Particulate Flow Modelling, JKU Linz.
@@ -55,7 +60,23 @@ report, copied into `assets/`.
 | 9 | Responsive design | `style.css` media queries |
 | 10| Loading / permissions / fallback / errors | loader, `#scanHint`, `#errorScreen` |
 | 11| Performance (lazy loading of AR + 3D libs) | `loadScript`, dynamic `import()` |
-| 12| Future AI extension hook | see *Plugging in a real LLM* below |
+| 12| Future AI extension hook | `ai/llm-hooks.js` → `callLLM()` |
+
+### Conversational upgrade
+
+| Feature | What it does | Where |
+|---------|--------------|-------|
+| Conversational layer | Layered answers (short → physical intuition → CFD interpretation) | `ai/conversation.js`, `data/conversation_kb.json` |
+| Context-aware Research Mode | Hotspots become AI explainer nodes; lab accent UI | `ui/research-mode.js` |
+| Flow Intuition (pseudo-sim) | Velocity / density-ratio / ΔT sliders drive a visual flow abstraction | `simulation/flow-sim.js` |
+| Hierarchical hotspots | Level-2 follow-up questions inside each hotspot | `data/hotspots.json` → `subs`, `ui/hotspots.js` |
+| Ask-follow-up | "Deeper / Math intuition / Analogy" branches on every answer | `ui/chat.js`, KB `more` |
+| Research Insight panel | Findings · physical interpretation · stability · AI contribution | `ui/insights.js` |
+| Scenario comparison | Draggable CFD ↔ AI-rCFD video wipe + metric read-out | `ui/comparison.js` |
+| Session memory | Tracks asked topics / hotspots and deepens explanations | `ai/memory.js` |
+| Scientific UI | Glassmorphism, glow accents, fluid particle backdrop | `ui/background.js`, `style.css` |
+| Modular, event-driven | `core/ ai/ ui/ simulation/` + a small event bus | `core/bus.js` |
+| LLM hooks | One `getAnswer()` swap to go from offline KB to a real model | `ai/llm-hooks.js` |
 
 ---
 
@@ -63,39 +84,49 @@ report, copied into `assets/`.
 
 ```text
 ar/
-├── index.html              # app shell (loader, start, AR/demo stages, panels)
+├── index.html              # app shell (loader, start, AR/demo, all panels)
+├── app.js                  # orchestrator (ES module): boot, modes, panels, wiring
 ├── style.css               # dark "mission-control" theme
-├── app.js                  # controller: modes, hotspots, panels, AI, dashboard, timeline
-├── viewer3d.js             # ES module: Three.js 3D buoyant-jet viewer (lazy)
-├── README.md               # this file
+├── viewer3d.js             # Three.js 3D buoyant-jet viewer (lazy)
+│
+├── core/                   # shared plumbing
+│   ├── config.js           #   CDN URLs + asset paths
+│   ├── state.js            #   single shared STATE object
+│   ├── bus.js              #   tiny event bus (event-driven)
+│   └── utils.js            #   DOM/string/fetch/script helpers
+│
+├── ai/                     # the "brain"
+│   ├── conversation.js     #   offline engine: retrieval + layered answers
+│   ├── memory.js           #   session memory → auto-deepening
+│   └── llm-hooks.js        #   getAnswer()/callLLM() — future real LLM
+│
+├── ui/                     # views
+│   ├── chat.js             #   assistant panel + shared answer renderer
+│   ├── hotspots.js         #   hotspots, hierarchical popup, SVG diagrams
+│   ├── research-mode.js    #   context-aware Research Mode toggle
+│   ├── insights.js         #   research insight panel
+│   ├── comparison.js       #   CFD ↔ rCFD video wipe
+│   ├── background.js       #   fluid particle backdrop
+│   └── ar-scene.js         #   MindAR + A-Frame scene builder
+│
+├── simulation/
+│   └── flow-sim.js         #   Flow Intuition pseudo-simulation (canvas)
 │
 ├── data/
-│   ├── poster_content.json # title, author, dashboard metrics, timeline marks
-│   ├── hotspots.json       # hotspot positions (u,v) + text + diagrams
-│   └── faq.json            # offline AI knowledge base
+│   ├── poster_content.json # title, dashboard, timeline, insights, comparison
+│   ├── hotspots.json       # hotspot (u,v) + text + diagrams + Level-2 subs
+│   ├── conversation_kb.json# conversational knowledge base (intents/layers)
+│   └── faq.json            # legacy flat FAQ (superseded by conversation_kb)
 │
-├── assets/
-│   ├── poster/
-│   │   ├── poster.jpg      # marker image (rendered from poster_thesis_v4.pdf)
-│   │   └── target.mind     # MindAR tracking file — YOU generate this (see below)
-│   ├── videos/
-│   │   ├── cfd_reference.mp4  # CFD temperature-field evolution (Feature 4 & 7)
-│   │   └── rcfd_replay.mp4    # best-case rCFD replay (f_sd = 0.5)
-│   ├── images/
-│   │   ├── contour.png     # CFD vs rCFD temperature snapshots
-│   │   ├── results.png     # CFD vs rCFD visual proof across time
-│   │   ├── cost.png        # wall-clock comparison
-│   │   ├── overlay.png     # f_sd sweep overlay
-│   │   └── flowfield.jpg   # streamlines: jet + recirculation vortices
-│   └── models/
-│       └── README.md       # drop buoyant_jet.glb here (optional)
-│
-└── tools/
-    └── compile-target.html # in-browser MindAR compiler → target.mind
+├── assets/                 # poster.jpg + target.mind, videos, figures, models/
+├── tools/                  # in-browser MindAR target.mind compiler
+└── docs/
+    └── STEP2_HEATLOSS.md   # roadmap for Step 2 (wall heat loss)
 ```
 
-> The data lives in `data/*.json`; the app is fully data-driven, so you can
-> re-theme the poster for a different study by editing JSON only.
+> Data lives in `data/*.json`; the app is fully data-driven, so a new study can
+> be skinned by editing JSON only. Logic is split into `core/ ai/ ui/
+> simulation/` ES modules that talk through `core/bus.js`.
 
 ---
 
@@ -192,32 +223,45 @@ Encode that URL into the QR code printed on the poster.
 
 ---
 
+## How the conversational system works
+
+1. **Knowledge base** — `data/conversation_kb.json` holds *intents*. Each intent
+   has keywords, a layered answer (`short` → `physical` → `cfd`), an optional
+   `more` block (`deeper` / `math` / `analogy`), a `followup` pointer and
+   `related` topics.
+2. **Retrieval** — `ai/conversation.js` tokenises the question and scores it
+   against each intent's keywords + title (phrase hits weigh most). Above a
+   threshold it returns that intent; otherwise a graceful fallback.
+3. **Layered rendering** — `ui/chat.js` renders short → physical intuition →
+   CFD interpretation, then shows "Ask more" buttons (deeper / math / analogy)
+   and a follow-up chip that asks the next intent.
+4. **Memory** — `ai/memory.js` counts how often each topic is engaged and
+   **escalates the depth** automatically (intro → intermediate → advanced), so
+   repeat questions get richer answers.
+5. **Hotspots reuse the same engine** — Level-2 questions and Research Mode call
+   `renderAnswer()` straight into the hotspot popup.
+
 ## Plugging in a real LLM later (Feature 12)
 
-The assistant is intentionally isolated. `submitChat(q)` calls `searchFAQ(q)`
-(local, offline). To upgrade to a cloud or local model **without changing the
-UI**, swap that one call:
+Everything routes through **one** function, so going online needs no UI change.
+In `ai/llm-hooks.js`:
 
 ```js
-// inside submitChat(q) in app.js
-const answer = await askBackend(q);   // ← replace searchFAQ(q) with this
+export const LLM = { enabled: false, provider: null, endpoint: null };
 
-async function askBackend(q) {
-  // OpenAI / Gemini / local LLM / RAG endpoint.
-  // For RAG, embed data/faq.json + the progress report and retrieve top-k
-  // chunks, then send them as context. Keep searchFAQ() as the offline
-  // fallback when the network/key is unavailable.
-  const res = await fetch(MY_ENDPOINT, {
+export async function callLLM(question, context = {}) {
+  const res = await fetch(LLM.endpoint, {           // your serverless proxy
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question: q })
+    body: JSON.stringify({ question, context })      // context can carry KB chunks for RAG
   });
   return (await res.json()).answer;
 }
 ```
 
-Because retrieval is decoupled from rendering, none of the AR/poster code
-changes. The same `data/faq.json` doubles as a ready-made RAG corpus.
+Set `LLM.enabled = true` and `getAnswer()` will use the model, falling back to
+the offline engine if the call fails. `data/conversation_kb.json` doubles as a
+ready-made RAG corpus. Keep API keys on the proxy, never in the client.
 
 ---
 
