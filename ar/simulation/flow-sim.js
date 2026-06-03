@@ -32,13 +32,14 @@ export function createFlowSim(canvas) {
     new THREE.EdgesGeometry(new THREE.BoxGeometry(TANK.w, TANK.h, TANK.d)),
     new THREE.LineBasicMaterial({ color: 0x36d1ff, transparent: true, opacity: 0.4 })
   ));
-  const nozzle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.05, 0.05, 0.4, 18),
-    new THREE.MeshBasicMaterial({ color: 0x9fb8d6 })
-  );
-  nozzle.rotation.z = Math.PI / 2;
-  nozzle.position.set(-TANK.w / 2 - 0.18, 0, 0);
-  root.add(nozzle);
+  // inlet (left) + outlet (right) pipes through the tank at mid-height
+  const pipeMat = new THREE.MeshBasicMaterial({ color: 0x9fb8d6 });
+  for (const sx of [-1, 1]) {
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.42, 18), pipeMat);
+    pipe.rotation.z = Math.PI / 2;
+    pipe.position.set(sx * (TANK.w / 2 + 0.18), 0, 0);
+    root.add(pipe);
+  }
 
   const jet = createJetField({ tank: TANK, count: 4200, size: 24 });
   root.add(jet.object);

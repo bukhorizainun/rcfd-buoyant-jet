@@ -73,6 +73,7 @@ const VERT = /* glsl */ `
 attribute float aSeed;   // identity / phase offset
 attribute float aSeed2;  // radius / depth / size variation
 attribute float aLane;   // -1.0 lower vortex, +1.0 upper vortex
+attribute float aKind;   // 1.0 = through-flow jet core (exits outlet), 0.0 = recirculation
 
 uniform float uTime;
 uniform float uVelocity;  // 0..1 jet velocity
@@ -92,60 +93,69 @@ void main() {
   float halfH = uTank.y * 0.5;
   float halfD = uTank.z * 0.5;
 
-  // looping lifetime phase (faster jet → faster turnover)
   float rate = 0.05 + uVelocity * 0.10;
-  float ph = fract(uTime * rate + aSeed);
 
   // Richardson/Froude-style buoyancy vs momentum balance
   float Ri = (0.25 + uDensity * 0.9) * (0.30 + uDeltaT * 0.9) / (0.18 + uVelocity * 1.2);
   float buoy = clamp(Ri, 0.0, 1.6);
 
-  // momentum reach: how far the jet penetrates before feeding the vortices
-  float reach = mix(0.30, 0.94, uVelocity);
-  float feedX = -halfW + reach * uTank.x;          // vortex-centre x
-  float pJet  = mix(0.20, 0.48, uVelocity);        // straight-jet fraction
-
   vec3 P;
-  if (ph < pJet) {
-    // --- jet core: nozzle → vortex feed, slight buoyant rise downstream ---
-    float u = ph / pJet;
-    P.x = -halfW + u * (feedX + halfW);
-    P.y = buoy * 0.14 * u * u * halfH;             // bends up sooner if buoyant
-    P.z = (aSeed2 - 0.5) * uTank.z * 0.10;         // thin laminar core
-  } else {
-    // --- entrained into one of the two recirculation vortices ---
-    float u = (ph - pJet) / (1.0 - pJet);
-    float s = aLane;                                // -1 lower / +1 upper
-    float cyBase = (0.30 + 0.10 * uVelocity) * halfH;
-    float cy = (s > 0.0) ? cyBase * (1.0 + 0.6 * buoy) : -cyBase * (1.0 - 0.4 * buoy);
-    vec2  c = vec2(feedX, cy);
-    float rad = (0.16 + 0.18 * aSeed2) * halfH;
-    float ang = u * 6.2831853 * (s > 0.0 ? 1.0 : -1.0) + aSeed * 6.2831853;
-    P.x = c.x + cos(ang) * rad * 1.2;
-    P.y = c.y + sin(ang) * rad;
-    P.y += buoy * 0.10 * halfH * u;                // overall upward drift
-    P.z = (aSeed2 - 0.5) * uTank.z * 0.72;         // fills depth → reads 3D
-  }
+  float temp, dens;
 
-  // keep inside the tank
-  P.x = clamp(P.x, -halfW * 0.99, halfW * 0.99);
-  P.y = clamp(P.y, -halfH * 0.99, halfH * 0.99);
-  P.z = clamp(P.z, -halfD * 0.99, halfD * 0.99);
+  if (aKind > 0.5) {
+    // ===== through-flow jet core: inlet → outlet (mass leaves the tank) =====
+    float p = fract(uTime * rate * 1.7 + aSeed);
+    float xext = uTank.x + 0.55;                   // travel out through the outlet
+    P.x = -halfW + p * xext;
+    float bow = buoy * 0.12 * sin(p * 3.14159);    // slight upward bow if buoyant
+    P.y = (bow + (aSeed2 - 0.5) * 0.05) * halfH;
+    P.z = (aSeed2 - 0.5) * uTank.z * 0.14;         // thin laminar core
+    P.x = min(P.x, halfW + 0.5);
+    P.y = clamp(P.y, -halfH * 0.99, halfH * 0.99);
+    P.z = clamp(P.z, -halfD * 0.99, halfD * 0.99);
+    temp = clamp((1.0 - p * 0.5) * (0.6 + 0.4 * uDeltaT) + 0.15, 0.0, 1.0);  // hot, cools a bit
+    dens = smoothstep(0.0, 0.05, p) * smoothstep(1.0, 0.78, p);
+  } else {
+    // ===== entrained recirculation: jet feed → one of the two vortices =====
+    float ph = fract(uTime * rate + aSeed);
+    float reach = mix(0.30, 0.94, uVelocity);
+    float feedX = -halfW + reach * uTank.x;
+    float pJet  = mix(0.20, 0.48, uVelocity);
+    if (ph < pJet) {
+      float u = ph / pJet;
+      P.x = -halfW + u * (feedX + halfW);
+      P.y = buoy * 0.14 * u * u * halfH;
+      P.z = (aSeed2 - 0.5) * uTank.z * 0.10;
+    } else {
+      float u = (ph - pJet) / (1.0 - pJet);
+      float s = aLane;
+      float cyBase = (0.30 + 0.10 * uVelocity) * halfH;
+      float cy = (s > 0.0) ? cyBase * (1.0 + 0.6 * buoy) : -cyBase * (1.0 - 0.4 * buoy);
+      vec2  c = vec2(feedX, cy);
+      float rad = (0.16 + 0.18 * aSeed2) * halfH;
+      float ang = u * 6.2831853 * (s > 0.0 ? 1.0 : -1.0) + aSeed * 6.2831853;
+      P.x = c.x + cos(ang) * rad * 1.2;
+      P.y = c.y + sin(ang) * rad;
+      P.y += buoy * 0.10 * halfH * u;
+      P.z = (aSeed2 - 0.5) * uTank.z * 0.72;
+    }
+    P.x = clamp(P.x, -halfW * 0.99, halfW * 0.99);
+    P.y = clamp(P.y, -halfH * 0.99, halfH * 0.99);
+    P.z = clamp(P.z, -halfD * 0.99, halfD * 0.99);
+    float heightT = clamp(P.y / halfH * 0.5 + 0.5, 0.0, 1.0);
+    float coreT = (ph < pJet) ? (1.0 - (ph / pJet) * 0.4) : 0.0;
+    temp = clamp(mix(heightT, 1.0, coreT * 0.7) * (0.55 + 0.45 * uDeltaT) + 0.10 * uDeltaT, 0.0, 1.0);
+    dens = smoothstep(0.0, 0.06, ph) * smoothstep(1.0, 0.85, ph);
+  }
 
   // small laminar wobble (grows mildly downstream, capped — NOT turbulence)
   float dStream = clamp((P.x + halfW) / uTank.x, 0.0, 1.0);
-  float amp = (0.010 + 0.028 * dStream) * halfH;
+  float amp = (0.010 + 0.026 * dStream) * halfH;
   vec3 np = P * 2.2 + vec3(0.0, 0.0, uTime * 0.22);
-  vec3 wob = vec3(snoise(np), snoise(np + 17.3), snoise(np + 41.7));
-  P += wob * amp;
+  P += vec3(snoise(np), snoise(np + 17.3), snoise(np + 41.7)) * amp;
 
-  // temperature: stratification (height) + hot jet core; ΔT sets contrast
-  float heightT = clamp(P.y / halfH * 0.5 + 0.5, 0.0, 1.0);
-  float coreT = (ph < pJet) ? (1.0 - (ph / pJet) * 0.4) : 0.0;
-  vTemp = clamp(mix(heightT, 1.0, coreT * 0.7) * (0.55 + 0.45 * uDeltaT) + 0.10 * uDeltaT, 0.0, 1.0);
-
-  // density / life fade (fade in at birth, out at death)
-  vDensity = smoothstep(0.0, 0.06, ph) * smoothstep(1.0, 0.85, ph);
+  vTemp = temp;
+  vDensity = dens;
 
   vec4 mv = modelViewMatrix * vec4(P, 1.0);
   gl_Position = projectionMatrix * mv;
@@ -193,11 +203,13 @@ export function createJetField(opts = {}) {
   const seed = new Float32Array(MAX);
   const seed2 = new Float32Array(MAX);
   const lane = new Float32Array(MAX);
+  const kind = new Float32Array(MAX);   // ~30% through-flow jet core, rest recirculate
   const pos = new Float32Array(MAX * 3); // dummy (positions come from the shader)
   for (let i = 0; i < MAX; i++) {
     seed[i] = Math.random();
     seed2[i] = Math.random();
     lane[i] = Math.random() < 0.5 ? -1 : 1;
+    kind[i] = Math.random() < 0.3 ? 1 : 0;
   }
 
   const geo = new THREE.BufferGeometry();
@@ -205,6 +217,7 @@ export function createJetField(opts = {}) {
   geo.setAttribute("aSeed", new THREE.BufferAttribute(seed, 1));
   geo.setAttribute("aSeed2", new THREE.BufferAttribute(seed2, 1));
   geo.setAttribute("aLane", new THREE.BufferAttribute(lane, 1));
+  geo.setAttribute("aKind", new THREE.BufferAttribute(kind, 1));
   geo.setDrawRange(0, MAX);
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 4);
 
