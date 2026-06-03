@@ -181,11 +181,13 @@
     });
   }
 
-  function enterStage() {
+  function enterStage(showInfo = true) {
     $("#start").classList.add("hidden");
     $("#hud").classList.remove("hidden");
     $("#dock").classList.remove("hidden");
-    showInfoLayer();           // Feature 2 — digital information layer
+    // In AR we wait until the poster is actually found before revealing the
+    // information layer; on screen we can show it right away.
+    if (showInfo) showInfoLayer();   // Feature 2 — digital information layer
   }
 
   function exitToStart() {
@@ -272,7 +274,7 @@
     }
 
     STATE.mode = "ar";
-    enterStage();
+    enterStage(false);   // info layer is revealed on targetFound, not before
     $("#scanHint").classList.remove("hidden");
 
     try {
@@ -321,40 +323,67 @@
 
     // the tracked-image anchor
     const anchor = el("a-entity", { "mindar-image-target": "targetIndex: 0", id: "arAnchor" });
+    const top = aspect / 2;   // poster top edge in plane units
 
-    // CFD video plane (Feature 4) — placed over the right-centre of the poster
-    const vidW = 0.42, vidH = vidW * 0.5;
-    const vx = 0.18, vy = -0.02;  // poster-plane coords (centre origin)
+    // anchored title bar just above the poster's top edge (Feature 2)
+    const titleY = top + 0.07;
+    anchor.appendChild(el("a-plane", {
+      width: "0.96", height: "0.11", position: `0 ${titleY} 0.005`,
+      material: "color: #05070f; opacity: 0.78; shader: flat",
+    }));
+    anchor.appendChild(el("a-text", {
+      value: "Buoyant Jet Flow - rCFD", align: "center", color: "#36d1ff",
+      width: "1.7", position: `0 ${titleY + 0.018} 0.01`, "baseline": "center",
+    }));
+    anchor.appendChild(el("a-text", {
+      value: "Interactive Scientific Poster - tap the glowing points",
+      align: "center", color: "#cdd7ee", width: "1.25",
+      position: `0 ${titleY - 0.028} 0.01`, "baseline": "center",
+    }));
+
+    // CFD video (Feature 4) — small "live monitor" in the top-right corner so
+    // it never covers the poster content or the hotspots.
+    const vidW = 0.34, vidH = vidW * 0.5;
+    const vx = 0.5 - vidW / 2 - 0.03, vy = top - vidH / 2 - 0.03;
+    anchor.appendChild(el("a-plane", {     // holographic cyan frame
+      width: String(vidW + 0.025), height: String(vidH + 0.06),
+      position: `${vx} ${vy} 0.008`,
+      material: "color: #0a1530; opacity: 0.7; shader: flat",
+    }));
+    anchor.appendChild(el("a-text", {
+      value: "LIVE CFD", color: "#36d1ff", width: "0.9", align: "center",
+      position: `${vx} ${vy + vidH / 2 + 0.018} 0.012`,
+    }));
     const videoPlane = el("a-video", {
       src: "#arCfdVideo", width: String(vidW), height: String(vidH),
-      position: `${vx} ${vy} 0.01`,
+      position: `${vx} ${vy} 0.012`,
     });
-    // holographic cyan frame behind the video
-    const frame = el("a-plane", {
-      width: String(vidW + 0.03), height: String(vidH + 0.03),
-      position: `${vx} ${vy} 0.005`,
-      material: "color: #36d1ff; opacity: 0.9; wireframe: true; shader: flat",
-    });
-    anchor.appendChild(frame);
     anchor.appendChild(videoPlane);
 
-    // hotspot entities (Feature 3)
+    // hotspot entities (Feature 3) — bigger, pulsing, labelled, tappable
     STATE.hotspots.hotspots.forEach((h) => {
       const x = (h.u - 0.5) * 1.0;
       const y = (0.5 - h.v) * aspect;
       const color = h.color || "#36d1ff";
       const hs = el("a-entity", { position: `${x} ${y} 0.02`, class: "clickable", "data-id": h.id });
-      // glowing core
-      hs.appendChild(el("a-circle", { radius: "0.018",
-        material: `color: ${color}; emissive: ${color}; emissiveIntensity: 0.9; shader: flat; opacity: 0.95` }));
+      // glowing core (a thin disc so the whole thing is an easy tap target)
+      hs.appendChild(el("a-circle", { radius: "0.03",
+        material: `color: ${color}; shader: flat; opacity: 0.95; side: double` }));
+      hs.appendChild(el("a-circle", { radius: "0.013",
+        material: "color: #ffffff; shader: flat; opacity: 0.95; side: double", position: "0 0 0.001" }));
       // pulsing ring
-      const ring = el("a-ring", { "radius-inner": "0.022", "radius-outer": "0.028",
-        material: `color: ${color}; shader: flat; opacity: 0.8; side: double` });
+      const ring = el("a-ring", { "radius-inner": "0.034", "radius-outer": "0.044",
+        material: `color: ${color}; shader: flat; opacity: 0.85; side: double` });
       ring.setAttribute("animation__pulse",
-        "property: scale; from: 1 1 1; to: 2.2 2.2 2.2; dir: alternate; loop: true; dur: 1100; easing: easeOutQuad");
+        "property: scale; from: 1 1 1; to: 2 2 2; dir: alternate; loop: true; dur: 1100; easing: easeOutQuad");
       ring.setAttribute("animation__fade",
-        "property: material.opacity; from: 0.8; to: 0; dir: alternate; loop: true; dur: 1100");
+        "property: material.opacity; from: 0.85; to: 0; dir: alternate; loop: true; dur: 1100");
       hs.appendChild(ring);
+      // label chip below the dot
+      hs.appendChild(el("a-plane", { width: "0.26", height: "0.05", position: "0 -0.075 0",
+        material: `color: #05070f; opacity: 0.82; shader: flat` }));
+      hs.appendChild(el("a-text", { value: h.label, align: "center", color: "#ffffff",
+        width: "0.95", position: "0 -0.075 0.002", "baseline": "center" }));
       hs.addEventListener("click", () => openPopup(h));
       anchor.appendChild(hs);
     });
@@ -371,12 +400,18 @@
     scene.addEventListener("loaded", () => { STATE.arReady = true; });
   }
 
+  let infoShownOnce = false;
   function onTargetFound() {
     $("#scanHint").classList.add("hidden");
     // play the anchored CFD video (autoplay/muted/loop)
     const v = document.getElementById("arCfdVideo");
     if (v) { v.muted = true; v.play().catch(() => {}); }
     showBanner();
+    // reveal the title/author card the first time the poster is recognised
+    if (!infoShownOnce) {
+      infoShownOnce = true;
+      setTimeout(() => { showInfoLayer(); toast("Tap the glowing points on the poster to explore", 3500); }, 2400);
+    }
   }
   function onTargetLost() {
     $("#scanHint").classList.remove("hidden");

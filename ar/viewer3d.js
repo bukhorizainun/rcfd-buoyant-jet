@@ -185,24 +185,35 @@ function buildProcedural(root) {
   inlet.castShadow = true;
   root.add(inlet);
 
+  // faint vertical temperature tint inside the tank: cold (blue) at the
+  // bottom, warm (red) at the top — the stratification the jet builds.
+  root.add(makeStratificationVolume(TANK));
+
   // particle plume ----------------------------------------------------
-  const N = 900;
+  // The jet enters at mid-height and rises by buoyancy. Particles are
+  // coloured by HEIGHT through a CFD-style thermal map, so the warm fluid
+  // reads red at the top and the cool fluid blue at the bottom — the same
+  // convention as the CFD temperature snapshots on the poster. Particles
+  // that reach the ceiling spread sideways and form the warm layer.
+  const N = 950;
   const positions = new Float32Array(N * 3);
   const colors = new Float32Array(N * 3);
-  const life = new Float32Array(N);   // 0..1 "age" → cools + rises
-  const vy = new Float32Array(N);     // buoyant vertical speed
+  const life = new Float32Array(N);   // 0..1 lifetime → recycled at 1
+  const vy = new Float32Array(N);     // buoyant rise speed
+  const capped = new Uint8Array(N);   // 1 once it joins the top warm layer
+  const drift = new Float32Array(N);  // sideways speed while capped
 
-  const cold = new THREE.Color(0x2b6cff);
-  const warm = new THREE.Color(0xff4020);
-  const mid = new THREE.Color(0xffc24d);
+  const topY = TANK.h / 2 - 0.10;
 
   function seed(i) {
     const o = i * 3;
-    positions[o] = -TANK.w / 2 + Math.random() * 0.05;          // start at inlet
-    positions[o + 1] = (Math.random() - 0.5) * 0.06;
-    positions[o + 2] = (Math.random() - 0.5) * 0.12;
+    positions[o] = -TANK.w / 2 + Math.random() * 0.04;   // at the inlet
+    positions[o + 1] = (Math.random() - 0.5) * 0.05;     // mid-height
+    positions[o + 2] = (Math.random() - 0.5) * 0.10;
     life[i] = 0;
-    vy[i] = 0.15 + Math.random() * 0.1;
+    vy[i] = 0.16 + Math.random() * 0.10;
+    capped[i] = 0;
+    drift[i] = (Math.random() - 0.5) * 0.35;
   }
   for (let i = 0; i < N; i++) { seed(i); life[i] = Math.random(); }
 
@@ -212,38 +223,87 @@ function buildProcedural(root) {
 
   const sprite = makeSprite();
   const mat = new THREE.PointsMaterial({
-    size: 0.1, map: sprite, vertexColors: true, transparent: true,
+    size: 0.085, map: sprite, vertexColors: true, transparent: true,
     depthWrite: false, blending: THREE.AdditiveBlending, opacity: 1.0,
   });
   const points = new THREE.Points(geo, mat);
   root.add(points);
 
-  const c = new THREE.Color();
+  const c = [0, 0, 0];
   return {
     update(dt) {
       for (let i = 0; i < N; i++) {
         const o = i * 3;
-        // horizontal jet momentum, decaying with age
-        const jet = 0.9 * (1 - life[i]);
-        positions[o] += jet * dt;
-        // buoyancy lifts particles as they "warm/age"
-        positions[o + 1] += vy[i] * dt * (0.4 + life[i]);
-        // slight swirl into recirculation
-        positions[o + 2] += Math.sin(life[i] * 6.28 + i) * 0.04 * dt;
-        life[i] += dt * 0.35;
+        if (!capped[i]) {
+          const jet = 0.85 * Math.max(0, 1 - life[i]);   // horizontal momentum decays
+          positions[o] += jet * dt;
+          positions[o + 1] += vy[i] * dt * (0.5 + life[i]);   // buoyant rise
+          positions[o + 2] += Math.sin(life[i] * 6.28 + i) * 0.05 * dt;
+          life[i] += dt * 0.28;
+          if (positions[o + 1] >= topY) { positions[o + 1] = topY; capped[i] = 1; }
+        } else {
+          // spread along the ceiling → builds the warm stratified layer
+          positions[o] += drift[i] * dt;
+          positions[o + 1] += (topY - positions[o + 1]) * 3 * dt;
+          life[i] += dt * 0.07;
+          if (Math.abs(positions[o]) > TANK.w / 2 - 0.04) drift[i] *= -1;
+        }
+        // colour strictly by height → warm rises to the top
+        thermalColor((positions[o + 1] + TANK.h / 2) / TANK.h, c);
+        colors[o] = c[0]; colors[o + 1] = c[1]; colors[o + 2] = c[2];
 
-        // colour by temperature: warm → mid → cold as it ages/cools
-        if (life[i] < 0.5) c.copy(warm).lerp(mid, life[i] / 0.5);
-        else c.copy(mid).lerp(cold, (life[i] - 0.5) / 0.5);
-        colors[o] = c.r; colors[o + 1] = c.g; colors[o + 2] = c.b;
-
-        // recycle when out of the tank or fully cooled
-        if (life[i] >= 1 || positions[o] > TANK.w / 2 || positions[o + 1] > TANK.h / 2) seed(i);
+        if (life[i] >= 1 || positions[o] > TANK.w / 2 + 0.05) seed(i);
       }
       geo.attributes.position.needsUpdate = true;
       geo.attributes.color.needsUpdate = true;
     },
   };
+}
+
+/* CFD-style thermal colormap (cold blue → cyan → green → yellow → hot red). */
+const THERMAL_STOPS = [
+  [0.00, 0.10, 0.22, 0.62],
+  [0.25, 0.00, 0.60, 0.90],
+  [0.50, 0.12, 0.80, 0.36],
+  [0.72, 1.00, 0.85, 0.12],
+  [1.00, 0.92, 0.16, 0.12],
+];
+function thermalColor(t, out) {
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  for (let k = 0; k < THERMAL_STOPS.length - 1; k++) {
+    const a = THERMAL_STOPS[k], b = THERMAL_STOPS[k + 1];
+    if (t <= b[0]) {
+      const f = (t - a[0]) / (b[0] - a[0]);
+      out[0] = a[1] + (b[1] - a[1]) * f;
+      out[1] = a[2] + (b[2] - a[2]) * f;
+      out[2] = a[3] + (b[3] - a[3]) * f;
+      return;
+    }
+  }
+  out[0] = THERMAL_STOPS[4][1]; out[1] = THERMAL_STOPS[4][2]; out[2] = THERMAL_STOPS[4][3];
+}
+
+/* A thin stack of translucent slabs giving the tank a cold-bottom →
+ * warm-top temperature gradient, so it never looks like an empty box. */
+function makeStratificationVolume(TANK) {
+  const group = new THREE.Group();
+  const layers = 14;
+  const c = [0, 0, 0];
+  for (let j = 0; j < layers; j++) {
+    const t = j / (layers - 1);
+    thermalColor(t, c);
+    const slab = new THREE.Mesh(
+      new THREE.BoxGeometry(TANK.w * 0.985, TANK.h / layers, TANK.d * 0.985),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(c[0], c[1], c[2]),
+        transparent: true, opacity: 0.06 + 0.06 * t,   // warmer layers a touch denser
+        depthWrite: false, side: THREE.DoubleSide,
+      })
+    );
+    slab.position.y = -TANK.h / 2 + (j + 0.5) * (TANK.h / layers);
+    group.add(slab);
+  }
+  return group;
 }
 
 /* round soft particle sprite (canvas texture) */
@@ -252,9 +312,11 @@ function makeSprite() {
   const cv = document.createElement("canvas");
   cv.width = cv.height = s;
   const g = cv.getContext("2d");
+  // soft, low-peak falloff so the per-particle colour (not a white-hot core)
+  // dominates once many sprites overlap under additive blending
   const grad = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-  grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(0.35, "rgba(255,255,255,0.7)");
+  grad.addColorStop(0, "rgba(255,255,255,0.5)");
+  grad.addColorStop(0.5, "rgba(255,255,255,0.22)");
   grad.addColorStop(1, "rgba(255,255,255,0)");
   g.fillStyle = grad;
   g.fillRect(0, 0, s, s);
