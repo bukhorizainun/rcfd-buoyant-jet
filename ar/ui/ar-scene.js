@@ -12,6 +12,20 @@ let infoShownOnce = false;
 let onFirstFoundCb = null;
 let onErrorCb = null;
 
+/* Where a hotspot's label box + transparent tap target sit relative to the dot.
+ * Lets neighbouring hotspots push their labels to different sides so the text
+ * never overlaps. Returns local offsets: lab = [x, y, z], hit = [x, y, w, h]. */
+function labelGeom(dir, labelW) {
+  const W = Math.max(0.2, labelW);
+  switch ((dir || "down").toLowerCase()) {
+    case "up":    return { lab: [0, 0.08, 0.002],  hit: [0, 0.04, W, 0.17] };
+    case "left":  return { lab: [-(W / 2 + 0.05), 0, 0.002], hit: [-(W / 2 + 0.02), 0, W + 0.1, 0.12] };
+    case "right": return { lab: [ (W / 2 + 0.05), 0, 0.002], hit: [ (W / 2 + 0.02), 0, W + 0.1, 0.12] };
+    case "down":
+    default:      return { lab: [0, -0.08, 0.002], hit: [0, -0.04, W, 0.17] };
+  }
+}
+
 export async function startARScene(opts = {}) {
   onFirstFoundCb = opts.onFirstFound || null;
   onErrorCb = opts.onError || null;
@@ -51,14 +65,14 @@ function buildARScene() {
   const anchor = el("a-entity", { "mindar-image-target": "targetIndex: 0", id: "arAnchor" });
   const top = aspect / 2;
 
-  // anchored title bar
-  const titleY = top + 0.07;
-  anchor.appendChild(el("a-plane", { width: "0.96", height: "0.11", position: `0 ${titleY} 0.005`,
-    material: "color: #05070f; opacity: 0.78; shader: flat" }));
-  anchor.appendChild(el("a-text", { value: "Buoyant Jet Flow - rCFD", align: "center", color: "#36d1ff",
-    width: "1.7", position: `0 ${titleY + 0.018} 0.01`, baseline: "center" }));
-  anchor.appendChild(el("a-text", { value: "Interactive Scientific Poster - tap the glowing points",
-    align: "center", color: "#cdd7ee", width: "1.25", position: `0 ${titleY - 0.028} 0.01`, baseline: "center" }));
+  // anchored title chip — floats clear above the poster's own printed title
+  const titleY = top + 0.085;
+  anchor.appendChild(el("a-plane", { width: "0.74", height: "0.092", position: `0 ${titleY} 0.005`,
+    material: "color: #05070f; opacity: 0.82; shader: flat" }));
+  anchor.appendChild(el("a-text", { value: "Buoyant Jet Flow · rCFD", align: "center", color: "#36d1ff",
+    width: "1.15", position: `0 ${titleY + 0.015} 0.01`, baseline: "center" }));
+  anchor.appendChild(el("a-text", { value: "tap the glowing points to explore",
+    align: "center", color: "#cdd7ee", width: "0.9", position: `0 ${titleY - 0.024} 0.01`, baseline: "center" }));
 
   // small "LIVE CFD" monitor top-right
   const vidW = 0.34, vidH = vidW * 0.5;
@@ -75,7 +89,19 @@ function buildARScene() {
     const x = (h.u - 0.5) * 1.0;
     const y = (0.5 - h.v) * aspect;
     const color = h.color || "#36d1ff";
+    const labelW = Math.min(0.46, Math.max(0.18, 0.06 + 0.028 * (h.label || "").length));
+    const g = labelGeom(h.labelDir, labelW);
+
     const hs = el("a-entity", { position: `${x} ${y} 0.02`, class: "clickable", "data-id": h.id });
+
+    // generous, near-invisible tap target so the whole dot+label area is clickable
+    // (a small dot is hard to hit on a phone). Sits just behind the visuals.
+    hs.appendChild(el("a-plane", {
+      width: String(g.hit[2]), height: String(g.hit[3]),
+      position: `${g.hit[0]} ${g.hit[1]} -0.001`,
+      material: "color: #000; opacity: 0.001; transparent: true; shader: flat; side: double",
+    }));
+
     hs.appendChild(el("a-circle", { radius: "0.03",
       material: `color: ${color}; shader: flat; opacity: 0.95; side: double` }));
     hs.appendChild(el("a-circle", { radius: "0.013",
@@ -87,10 +113,12 @@ function buildARScene() {
     ring.setAttribute("animation__fade",
       "property: material.opacity; from: 0.85; to: 0; dir: alternate; loop: true; dur: 1100");
     hs.appendChild(ring);
-    hs.appendChild(el("a-plane", { width: "0.26", height: "0.05", position: "0 -0.075 0",
-      material: "color: #05070f; opacity: 0.82; shader: flat" }));
+
+    hs.appendChild(el("a-plane", { width: String(labelW), height: "0.05",
+      position: `${g.lab[0]} ${g.lab[1]} 0`, material: "color: #05070f; opacity: 0.85; shader: flat" }));
     hs.appendChild(el("a-text", { value: h.label, align: "center", color: "#ffffff",
-      width: "0.95", position: "0 -0.075 0.002", baseline: "center" }));
+      width: "0.95", position: `${g.lab[0]} ${g.lab[1]} ${g.lab[2]}`, baseline: "center" }));
+
     hs.addEventListener("click", () => openPopup(h));
     anchor.appendChild(hs);
   });

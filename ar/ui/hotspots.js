@@ -12,7 +12,7 @@ export function renderDemoHotspots() {
   wrap.innerHTML = "";
   STATE.hotspots.hotspots.forEach((h) => {
     const dot = el("button", {
-      class: "hotspot",
+      class: "hotspot" + (h.labelDir ? " lbl-" + h.labelDir : ""),
       style: `left:${h.u * 100}%; top:${h.v * 100}%; --c:${h.color || "#36d1ff"}`,
       "aria-label": h.label,
     }, `<span class="dot"></span><span class="tag">${esc(h.label)}</span>`);

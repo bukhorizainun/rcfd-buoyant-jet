@@ -1,6 +1,6 @@
 {
   "meta": {
-    "comment": "Interactive hotspots. (u,v) are NORMALISED poster coordinates: 0..1 from the TOP-LEFT corner of poster.jpg. They drive both the AR anchors (mapped onto the tracked image plane) and the on-screen Demo Mode. Tweak (u,v) to line each dot up with your printed poster.",
+    "comment": "Interactive hotspots. (u,v) are NORMALISED poster coordinates: 0..1 from the TOP-LEFT corner of poster.jpg. They drive both the AR anchors (mapped onto the tracked image plane) and the on-screen Demo Mode. Tweak (u,v) to line each dot up with your printed poster. Optional 'labelDir' (down|up|left|right, default down) sets which side the text label sits so neighbouring labels do not overlap.",
     "posterAspect": 0.707
   },
 
@@ -8,8 +8,9 @@
     {
       "id": "geometry",
       "label": "Geometry",
-      "u": 0.135,
-      "v": 0.470,
+      "u": 0.120,
+      "v": 0.500,
+      "labelDir": "down",
       "color": "#36d1ff",
       "body": "The computational domain is a closed rectangular water tank, about 7.5 cm tall, filled with water at 293 K. A small horizontal jet enters at mid-height. The warm jet is lighter than the surrounding water, so it rises and builds a vertical thermal layer.",
       "diagram": "geometry",
@@ -28,8 +29,9 @@
     {
       "id": "mesh",
       "label": "Mesh",
-      "u": 0.255,
-      "v": 0.430,
+      "u": 0.205,
+      "v": 0.720,
+      "labelDir": "down",
       "color": "#7c4dff",
       "body": "A structured mesh of small cubic cells (1 mm each) fills the tank. Regular cells keep the numerical scheme stable and let the cell-to-cell (C2C) shift maps of rCFD be defined cleanly on neighbouring faces.",
       "diagram": "mesh",
@@ -46,8 +48,9 @@
     {
       "id": "boundary",
       "label": "Boundary Conditions",
-      "u": 0.430,
-      "v": 0.300,
+      "u": 0.455,
+      "v": 0.430,
+      "labelDir": "up",
       "color": "#ffb02e",
       "body": "Inlet velocity (U = 0.02 m/s), inlet temperature (333 K warm until t = 315 s, then cold), and the laminar flow assumption define the scenario. With Re = U·D/ν ≈ 100 the jet stays laminar, so a laminar model fits better than turbulence closure.",
       "diagram": "boundary",
@@ -66,8 +69,9 @@
     {
       "id": "results",
       "label": "Results",
-      "u": 0.625,
-      "v": 0.600,
+      "u": 0.560,
+      "v": 0.660,
+      "labelDir": "down",
       "color": "#ff4d6d",
       "body": "rCFD reproduces the CFD temperature field across the full 600 s at a small fraction of the cost. Buoyancy-driven recirculation vortices and the rising thermal layer are captured; the face-swap diffusion strength f_sd = 0.500 gives the lowest centre-of-gravity error.",
       "image": "assets/images/results.png",
