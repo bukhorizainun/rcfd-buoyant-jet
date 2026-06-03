@@ -9,6 +9,7 @@ import { openPopup } from "./hotspots.js";
 
 let bannerShown = false;
 let infoShownOnce = false;
+let targetVisible = false;
 let onFirstFoundCb = null;
 let onErrorCb = null;
 
@@ -57,9 +58,10 @@ function buildARScene() {
   assets.appendChild(vid);
   scene.appendChild(assets);
 
+  // No A-Frame cursor/raycaster here: inside a MindAR scene its click events
+  // are unreliable on phones. Taps are handled manually in enableTapToExplore().
   scene.appendChild(el("a-camera", {
     position: "0 0 0", "look-controls": "enabled: false",
-    cursor: "fuse: false; rayOrigin: mouse", raycaster: "objects: .clickable",
   }));
 
   const anchor = el("a-entity", { "mindar-image-target": "targetIndex: 0", id: "arAnchor" });
@@ -119,7 +121,6 @@ function buildARScene() {
     hs.appendChild(el("a-text", { value: h.label, align: "center", color: "#ffffff",
       width: "0.95", position: `${g.lab[0]} ${g.lab[1]} ${g.lab[2]}`, baseline: "center" }));
 
-    hs.addEventListener("click", () => openPopup(h));
     anchor.appendChild(hs);
   });
 
@@ -129,10 +130,73 @@ function buildARScene() {
   stage.appendChild(scene);
 
   scene.addEventListener("arError", () => { if (onErrorCb) onErrorCb(); });
-  scene.addEventListener("loaded", () => { STATE.arReady = true; });
+  scene.addEventListener("loaded", () => {
+    STATE.arReady = true;
+    enableTapToExplore(scene, anchor);
+  });
+}
+
+/* Manual tap handling. A-Frame's built-in cursor/raycaster does not fire
+ * reliably for entities anchored inside a MindAR image target on mobile, so we
+ * listen for taps on the WebGL canvas, raycast against the hotspot groups
+ * ourselves, and open the matching popup. */
+function enableTapToExplore(scene, anchor) {
+  const THREE = window.AFRAME && window.AFRAME.THREE;
+  const canvas = scene.canvas || (scene.renderer && scene.renderer.domElement);
+  if (!THREE || !canvas) return;
+
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  let lastTouch = 0;
+
+  const handleTap = (clientX, clientY) => {
+    // Don't hijack taps meant for an open panel/popup or while untracked.
+    if (STATE.activePanel) return;
+    if (!$("#popup").classList.contains("hidden")) return;
+    if (!targetVisible) return;
+    const cam = scene.camera;
+    if (!cam) return;
+
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    // Make sure the camera and the MindAR-anchored hotspots have fresh world
+    // matrices, in case the render loop was throttled at tap time.
+    cam.updateMatrixWorld();
+    anchor.object3D.updateWorldMatrix(true, true);
+    raycaster.setFromCamera(pointer, cam);
+
+    const groups = Array.from(anchor.querySelectorAll(".clickable")).map((e) => e.object3D);
+    const hits = raycaster.intersectObjects(groups, true);
+    if (!hits.length) return;
+
+    // Climb from the hit mesh to the owning ".clickable" entity and its data-id.
+    let node = hits[0].object;
+    while (node && !node.el) node = node.parent;
+    let elc = node && node.el;
+    while (elc && !(elc.classList && elc.classList.contains("clickable"))) elc = elc.parentElement;
+    const id = elc && elc.dataset && elc.dataset.id;
+    if (!id) return;
+    const h = STATE.hotspots.hotspots.find((x) => x.id === id);
+    if (h) openPopup(h);
+  };
+
+  canvas.addEventListener("touchend", (e) => {
+    if (!e.changedTouches || !e.changedTouches.length) return;
+    lastTouch = Date.now();
+    const t = e.changedTouches[0];
+    handleTap(t.clientX, t.clientY);
+  }, { passive: true });
+
+  // Desktop / fallback; ignore the synthetic click that follows a touch.
+  canvas.addEventListener("click", (e) => {
+    if (Date.now() - lastTouch < 700) return;
+    handleTap(e.clientX, e.clientY);
+  });
 }
 
 function onTargetFound() {
+  targetVisible = true;
   $("#scanHint").classList.add("hidden");
   const v = document.getElementById("arCfdVideo");
   if (v) { v.muted = true; v.play().catch(() => {}); }
@@ -146,6 +210,7 @@ function onTargetFound() {
   }
 }
 function onTargetLost() {
+  targetVisible = false;
   $("#scanHint").classList.remove("hidden");
   const v = document.getElementById("arCfdVideo");
   if (v) v.pause();
@@ -163,6 +228,7 @@ function showBanner() {
 export function resetARScene() {
   bannerShown = false;
   infoShownOnce = false;
+  targetVisible = false;
   const stage = $("#arStage");
   if (stage) { stage.classList.add("hidden"); stage.innerHTML = ""; }
 }
