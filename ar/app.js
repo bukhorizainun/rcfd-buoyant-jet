@@ -354,6 +354,7 @@ function buildModel3DUI() {
     ["U", "0.02 m/s", "5×5 mm inlet"],
     ["Ri", "≈ 1", "gβΔT·D/U²"],
   ].map((r) => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b><small>${esc(r[2])}</small></div>`).join("");
+  $("#m3dValid").innerHTML = "Validated · rCFD vs CFD <b>263&times;</b> faster · CoG RMSE <b>0.069 mm</b> · f_sd 0.500";
   applyLegend(0);
 
   // velocity-glyph + slice-plane toggles

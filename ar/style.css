@@ -421,6 +421,13 @@ button { font-family: inherit; cursor: pointer; }
   backdrop-filter: blur(6px); white-space: nowrap; }
 .m3d-slice-read b { color: var(--cyan); }
 
+/* validation caption — ties the view to the real, validated result */
+.m3d-valid { position: absolute; left: 14px; bottom: 14px; z-index: 2; pointer-events: none;
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-soft);
+  background: rgba(5,9,18,0.55); border: 1px solid var(--line); border-radius: 10px;
+  padding: 6px 10px; backdrop-filter: blur(6px); max-width: 62vw; }
+.m3d-valid b { color: var(--green); }
+
 /* ======================================================================
    TOAST + ERROR
    ====================================================================== */
