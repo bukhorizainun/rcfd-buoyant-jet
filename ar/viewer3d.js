@@ -135,7 +135,8 @@ export async function createViewer(host, opts = {}) {
     if (!running) return;
     raf = requestAnimationFrame(tick);
     const dt = Math.min((now - t0) / 1000, 0.05); t0 = now;
-    root.rotation.y += dt * 0.05;          // slow auto-rotate (keeps vortices readable)
+    // No auto-rotate: the recirculation vortices live in the x-y symmetry plane,
+    // so we keep facing it (drag to orbit). Spinning would turn them edge-on.
     if (jet) { jet.update(dt); lod(dt); }
     if (streams) streams.update(dt);
     controls.update();
@@ -289,7 +290,7 @@ function buildLiveScene(root, videoUrl, realField) {
   // the live GPU jet — parcels advect along the REAL velocity field when we
   // have it (so even the "decorative" layer is data-driven), else the model
   const jet = createJetField({
-    tank: TANK, count: 5200, size: 27,
+    tank: TANK, count: 7200, size: 32,
     fieldTex: realField ? buildFieldTexture(realField.data) : null,
     fieldUmax: realField ? realField.umax : 0.03,
   });

@@ -91,7 +91,7 @@ varying float vTemp;
 varying float vDensity;
 varying float vSpeed;
 
-#define ADV_STEPS 40
+#define ADV_STEPS 52
 ${SNOISE}
 
 void main() {
@@ -124,9 +124,8 @@ void main() {
     }
     P = vec3(p, zc);
     temp = Tn;
-    // fade parcels sitting in near-stagnant fluid so the moving flow reads,
-    // not a uniform scatter of dots
-    dens = smoothstep(0.0, 0.06, ph) * smoothstep(1.0, 0.85, ph) * smoothstep(0.03, 0.32, spd);
+    // keep the slow recirculating parcels bright — they ARE the vortices
+    dens = smoothstep(0.0, 0.05, ph) * smoothstep(1.0, 0.88, ph);
   } else {
     // ===== analytic laminar model (Flow panel, slider-driven) =====
     float rate = 0.05 + uVelocity * 0.10;

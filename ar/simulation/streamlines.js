@@ -31,8 +31,8 @@ uniform float uTime; uniform float uMode;
 void main(){
   float s = (uMode < 0.5) ? vT : (uMode < 1.5) ? vS : (uMode < 2.5) ? (1.0 - vT) : vT;
   vec3 col = cfdColor(uMode, s);
-  float wave = 0.55 + 0.65 * pow(0.5 + 0.5 * sin((vArc * 7.0 - uTime * 1.1) * 6.2831853), 2.0);
-  gl_FragColor = vec4(col * wave * 1.15, 0.95);
+  float wave = 0.35 + 0.5 * pow(0.5 + 0.5 * sin((vArc * 7.0 - uTime * 1.1) * 6.2831853), 2.0);
+  gl_FragColor = vec4(col * wave, 0.55);   // a subtle structure guide; the glowing parcels are the star
 }`;
 
 export function createStreamlines(opts = {}) {
