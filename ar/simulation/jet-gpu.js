@@ -124,7 +124,9 @@ void main() {
     }
     P = vec3(p, zc);
     temp = Tn;
-    dens = smoothstep(0.0, 0.06, ph) * smoothstep(1.0, 0.85, ph);
+    // fade parcels sitting in near-stagnant fluid so the moving flow reads,
+    // not a uniform scatter of dots
+    dens = smoothstep(0.0, 0.06, ph) * smoothstep(1.0, 0.85, ph) * smoothstep(0.03, 0.32, spd);
   } else {
     // ===== analytic laminar model (Flow panel, slider-driven) =====
     float rate = 0.05 + uVelocity * 0.10;

@@ -31,17 +31,17 @@ uniform float uTime; uniform float uMode;
 void main(){
   float s = (uMode < 0.5) ? vT : (uMode < 1.5) ? vS : (uMode < 2.5) ? (1.0 - vT) : vT;
   vec3 col = cfdColor(uMode, s);
-  float wave = 0.4 + 0.6 * pow(0.5 + 0.5 * sin((vArc * 7.0 - uTime * 1.1) * 6.2831853), 2.0);
-  gl_FragColor = vec4(col * wave, 0.9);
+  float wave = 0.55 + 0.65 * pow(0.5 + 0.5 * sin((vArc * 7.0 - uTime * 1.1) * 6.2831853), 2.0);
+  gl_FragColor = vec4(col * wave * 1.15, 0.95);
 }`;
 
 export function createStreamlines(opts = {}) {
   const tank = opts.tank || { w: 1.6, h: 1.6, d: 1.0 };
   let params = Object.assign({ velocity: 0.5, densityRatio: 0.5, deltaT: 0.5 }, opts.params || {});
   let field = opts.field || null;     // real CFD sampler, or null → model
-  let nS = opts.seeds || 5;           // seed grid is nS × (nS-1)
-  let nZ = opts.nZ || 2;
-  const steps = opts.steps || 200;
+  let nS = opts.seeds || 7;           // seed grid is nS × (nS-1) — denser = clearer vortices
+  let nZ = opts.nZ || 3;
+  const steps = opts.steps || 220;
 
   const geo = new THREE.BufferGeometry();
   const material = new THREE.ShaderMaterial({
