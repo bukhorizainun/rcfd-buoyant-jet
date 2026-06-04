@@ -22,7 +22,7 @@ export async function createViewer(host, opts = {}) {
   const onMode = opts.onMode || (() => {});
 
   /* ---- renderer ---- */
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -74,6 +74,7 @@ export async function createViewer(host, opts = {}) {
   let streams = null;     // animated laminar streamlines
   let glyphs = null;      // velocity arrows (toggle)
   let slice = null;       // interactive cross-section plane (toggle)
+  let backdropMat = null; // real-CFD field backdrop material (time-scrub)
   let lod = null;         // frame-rate governor for the jet
 
   const haveGLB = opts.glb ? await fileExists(opts.glb) : false;
@@ -95,6 +96,7 @@ export async function createViewer(host, opts = {}) {
     streams = live.streams;
     glyphs = live.glyphs;
     slice = live.slice;
+    backdropMat = live.backdrop;
     lod = makeLOD(jet, { target: 52, min: 1600 });
     onMode(opts.cfdVideo
       ? "Streamlines + particles · field model reproducing the observed laminar topology"
@@ -151,6 +153,21 @@ export async function createViewer(host, opts = {}) {
     setSlice(on) { if (slice) slice.setVisible(on); },
     setSliceHeight(f) { if (slice) slice.setHeight(f); },
     getSliceReadout() { return slice ? slice.getReadout() : null; },
+    hasTime() { return !!fieldVideo; },
+    setTimeScrub(on) {
+      if (fieldVideo) { if (on) fieldVideo.pause(); else fieldVideo.play().catch(() => {}); }
+      if (backdropMat) backdropMat.opacity = on ? 0.95 : 0.32;
+      if (jet) jet.object.visible = !on;        // foreground the REAL field while scrubbing
+      if (streams) streams.object.visible = !on;
+    },
+    setTime(frac) {
+      if (fieldVideo && fieldVideo.duration && isFinite(fieldVideo.duration))
+        fieldVideo.currentTime = Math.min(0.999, Math.max(0, frac)) * fieldVideo.duration;
+    },
+    snapshot() {
+      try { renderer.render(scene, camera); return renderer.domElement.toDataURL("image/png"); }
+      catch (_) { return null; }
+    },
     dispose() {
       running = false;
       if (jet) jet.dispose();
@@ -221,7 +238,7 @@ function buildLiveScene(root, videoUrl) {
   // faint real-CFD temperature field on the back wall (real data backdrop):
   // crop the left (temperature) panel of the Fluent recording via texture
   // offset/repeat (THREE origin = bottom-left; values measured from the video).
-  let video = null;
+  let video = null, backdropMat = null;
   if (videoUrl) {
     video = document.createElement("video");
     video.src = videoUrl;
@@ -237,12 +254,10 @@ function buildLiveScene(root, videoUrl) {
     tex.repeat.set(0.272, 0.506);
     tex.offset.set(0.197, 0.225);
 
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(TANK.w * 0.98, TANK.h * 0.98),
-      new THREE.MeshBasicMaterial({
-        map: tex, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide,
-      })
-    );
+    backdropMat = new THREE.MeshBasicMaterial({
+      map: tex, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(TANK.w * 0.98, TANK.h * 0.98), backdropMat);
     plane.position.z = -TANK.d * 0.5 + 0.02;     // sit on the back wall
     root.add(plane);
   }
@@ -270,7 +285,7 @@ function buildLiveScene(root, videoUrl) {
   axes.position.set(-TANK.w / 2 - 0.12, -TANK.h / 2, -TANK.d / 2);
   root.add(axes);
 
-  return { video, jet, streams, glyphs, slice };
+  return { video, jet, streams, glyphs, slice, backdrop: backdropMat };
 }
 
 /* The buoyant-jet plume itself is the shared GPU engine in

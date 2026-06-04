@@ -91,10 +91,15 @@ export function legendGradient(name, stops = 12) {
   return `linear-gradient(to top, ${parts.join(", ")})`;
 }
 
-/* The four scientific field modes, with honest data provenance + units. */
+/* The four scientific field modes, with honest data provenance + units.
+ * `ticks` are colorbar labels from TOP (scalar = 1) to BOTTOM (scalar = 0). */
 export const FIELD_MODES = [
-  { id: "temperature", label: "Temperature", cmap: "inferno", lo: "293 K", hi: "333 K", prov: "CFD data" },
-  { id: "velocity",    label: "Velocity",    cmap: "viridis", lo: "0",     hi: "~0.02 m/s", prov: "modelled" },
-  { id: "density",     label: "Density",     cmap: "magma",   lo: "low",   hi: "high",   prov: "derived (Boussinesq)" },
-  { id: "buoyancy",    label: "Buoyancy",    cmap: "plasma",  lo: "0",     hi: "max",    prov: "derived from ΔT" },
+  { id: "temperature", label: "Temperature", cmap: "inferno", prov: "CFD data",
+    ticks: ["333 K", "323", "313", "303", "293 K"] },
+  { id: "velocity",    label: "Velocity",    cmap: "viridis", prov: "modelled",
+    ticks: ["~0.020", "0.015", "0.010", "0.005", "0 m/s"] },
+  { id: "density",     label: "Density",     cmap: "magma",   prov: "derived · Boussinesq",
+    ticks: ["dense", "", "", "", "light"] },
+  { id: "buoyancy",    label: "Buoyancy",    cmap: "plasma",  prov: "derived from ΔT",
+    ticks: ["max", "", "", "", "0"] },
 ];

@@ -26,7 +26,7 @@ import { renderInsights } from "./ui/insights.js";
 import { initComparison, pauseComparison } from "./ui/comparison.js";
 import { startBackground } from "./ui/background.js";
 import { startARScene, resetARScene } from "./ui/ar-scene.js";
-import { FIELD_MODES, legendGradient } from "./simulation/colormaps.js";
+import { FIELD_MODES, legendGradient, sampleCmap } from "./simulation/colormaps.js";
 // flow-sim.js (and its Three.js dependency) is imported lazily in openFlowSim()
 
 /* ---------- boot ---------- */
@@ -331,6 +331,9 @@ async function openModel3D() {
     STATE.viewer3d.setSlice($("#m3dSliceBtn").classList.contains("on"));
     STATE.viewer3d.setSliceHeight(Number($("#m3dSliceRange").value) / 100);
     updateSliceRead();
+    const tOn = $("#m3dTimeBtn").classList.contains("on");
+    if (STATE.viewer3d.setTimeScrub) STATE.viewer3d.setTimeScrub(tOn);
+    if (tOn) applyTime();
   } catch (err) {
     console.error(err);
     $("#model3dFoot").textContent = "3D viewer failed to load (needs internet for Three.js).";
@@ -375,6 +378,20 @@ function buildModel3DUI() {
     if (STATE.viewer3d && STATE.viewer3d.setSliceHeight) STATE.viewer3d.setSliceHeight(Number(sRange.value) / 100);
     updateSliceRead();
   });
+
+  // time-scrub (replays the real temperature field over 0..600 s)
+  const tBtn = $("#m3dTimeBtn"), tWrap = $("#m3dTime"), tRange = $("#m3dTimeRange");
+  tBtn.addEventListener("click", () => {
+    const on = !tBtn.classList.contains("on");
+    tBtn.classList.toggle("on", on); tBtn.setAttribute("aria-pressed", String(on));
+    tWrap.classList.toggle("hidden", !on);
+    if (STATE.viewer3d && STATE.viewer3d.setTimeScrub) STATE.viewer3d.setTimeScrub(on);
+    if (on) applyTime();
+  });
+  tRange.addEventListener("input", applyTime);
+
+  // export a clean figure for the printed poster / paper
+  $("#m3dExport").addEventListener("click", exportFigure);
 }
 function updateSliceRead() {
   if (!STATE.viewer3d || !STATE.viewer3d.getSliceReadout) return;
@@ -390,9 +407,52 @@ function setFieldMode(i) {
 function applyLegend(i) {
   const m = FIELD_MODES[i];
   $("#m3dCbar").style.background = legendGradient(m.cmap);
-  $("#m3dLegHi").textContent = m.hi;
-  $("#m3dLegLo").textContent = m.lo;
+  $("#m3dTicks").innerHTML = (m.ticks || []).map((t) => `<span>${esc(t)}</span>`).join("");
   $("#m3dLegName").innerHTML = esc(m.label) + ` <em>· ${esc(m.prov)}</em>`;
+}
+
+function applyTime() {
+  const v = Number($("#m3dTimeRange").value) / 100;
+  $("#m3dTimeLabel").textContent = `t = ${Math.round(v * 600)} s`;
+  if (STATE.viewer3d && STATE.viewer3d.setTime) STATE.viewer3d.setTime(v);
+}
+
+/* export a clean publication figure: the 3D render + a colorbar + caption */
+function exportFigure() {
+  if (!STATE.viewer3d || !STATE.viewer3d.snapshot) return;
+  const url = STATE.viewer3d.snapshot();
+  if (!url) return toast("Could not capture the view.");
+  const img = new Image();
+  img.onload = () => {
+    const c = el("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const x = c.getContext("2d");
+    x.fillStyle = "#05070f"; x.fillRect(0, 0, c.width, c.height);
+    x.drawImage(img, 0, 0);
+    drawColorbar(x, c.width, c.height, m3dMode);
+    x.fillStyle = "#cdd7ee"; x.textAlign = "left";
+    x.font = `600 ${Math.round(c.height * 0.026)}px monospace`;
+    x.fillText(`Buoyant jet · rCFD · Re~100 laminar · ${FIELD_MODES[m3dMode].label}`, 18, c.height - 20);
+    const a = el("a", { href: c.toDataURL("image/png"), download: `buoyant-jet-${FIELD_MODES[m3dMode].id}.png` });
+    document.body.appendChild(a); a.click(); a.remove();
+    toast("Figure saved");
+  };
+  img.src = url;
+}
+function drawColorbar(x, W, H, mode) {
+  const m = FIELD_MODES[mode];
+  const bw = Math.max(16, W * 0.016), bh = H * 0.42, bx = W - bw - 82, by = (H - bh) / 2;
+  for (let i = 0; i < bh; i++) {
+    const t = 1 - i / bh; const [r, g, b] = sampleCmap(m.cmap, t);
+    x.fillStyle = `rgb(${r},${g},${b})`; x.fillRect(bx, by + i, bw, 1);
+  }
+  x.strokeStyle = "rgba(255,255,255,0.45)"; x.lineWidth = 1; x.strokeRect(bx, by, bw, bh);
+  x.fillStyle = "#cdd7ee"; x.font = `${Math.round(H * 0.02)}px monospace`; x.textAlign = "left";
+  (m.ticks || []).forEach((t, k) => {
+    if (!t) return; const ty = by + (k / (m.ticks.length - 1)) * bh;
+    x.fillText(t, bx + bw + 8, ty + 4);
+  });
+  x.save(); x.translate(bx - 10, by + bh / 2); x.rotate(-Math.PI / 2); x.textAlign = "center";
+  x.fillText(m.label, 0, 0); x.restore();
 }
 function closeModel3D() {
   $("#model3d").classList.add("hidden");

@@ -314,18 +314,27 @@
       <svg viewBox="0 0 24 24" class="ic"><path d="M5 12h12"/><path d="M13 8l4 4-4 4"/></svg>Velocity glyphs</button>
     <button class="m3d-toggle" id="m3dSliceBtn" type="button" aria-pressed="false">
       <svg viewBox="0 0 24 24" class="ic"><path d="M3 9h18"/><path d="M3 9l4-4h10l4 4"/><path d="M3 9v8l4 4h10l4-4V9"/></svg>Slice plane</button>
+    <button class="m3d-toggle" id="m3dTimeBtn" type="button" aria-pressed="false">
+      <svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Time</button>
+    <button class="m3d-toggle" id="m3dExport" type="button">
+      <svg viewBox="0 0 24 24" class="ic"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M5 21h14"/></svg>Save figure</button>
   </div>
   <div id="model3dCanvas" class="model3d-canvas">
     <div class="model3d-legend" id="m3dLegend" aria-hidden="true">
-      <span id="m3dLegHi">333 K</span>
-      <div class="cbar" id="m3dCbar"></div>
-      <span id="m3dLegLo">293 K</span>
+      <div class="m3d-legbar">
+        <div class="cbar" id="m3dCbar"></div>
+        <div class="m3d-ticks" id="m3dTicks"></div>
+      </div>
       <small id="m3dLegName">Temperature</small>
     </div>
     <div class="m3d-params" id="m3dParams" aria-hidden="true"></div>
     <div class="m3d-slice hidden" id="m3dSlice">
       <input id="m3dSliceRange" class="m3d-slice-range" type="range" min="0" max="100" value="50" aria-label="Slice height">
       <div class="m3d-slice-read" id="m3dSliceRead"></div>
+    </div>
+    <div class="m3d-time hidden" id="m3dTime">
+      <span id="m3dTimeLabel">t = 0 s</span>
+      <input id="m3dTimeRange" type="range" min="0" max="100" value="0" aria-label="Simulation time">
     </div>
     <div class="m3d-valid" id="m3dValid" aria-hidden="true"></div>
   </div>

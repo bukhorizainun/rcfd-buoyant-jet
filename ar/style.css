@@ -376,6 +376,9 @@ button { font-family: inherit; cursor: pointer; }
   width: 12px; height: 150px; border-radius: 6px; border: 1px solid var(--line);
   background: linear-gradient(to top, #1a38a0, #0099e6, #1fcc5c, #ffd91f, #eb2920);
 }
+.m3d-legbar { display: flex; align-items: stretch; gap: 6px; }
+.m3d-ticks { display: flex; flex-direction: column; justify-content: space-between;
+  height: 150px; font-size: 9px; line-height: 1; color: var(--ink-soft); text-align: left; }
 .model3d-legend small { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 1px; opacity: 0.7; max-height: 130px; }
 .model3d-legend small em { font-style: normal; opacity: 0.65; }
 .model3d-foot { justify-content: center; padding: 12px; color: var(--ink-faint); font-family: var(--mono); font-size: 11px; }
@@ -427,6 +430,15 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(5,9,18,0.55); border: 1px solid var(--line); border-radius: 10px;
   padding: 6px 10px; backdrop-filter: blur(6px); max-width: 62vw; }
 .m3d-valid b { color: var(--green); }
+
+/* time-scrub control — replays the REAL temperature field over 0..600 s */
+.m3d-time { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 3;
+  display: flex; align-items: center; gap: 10px; width: min(420px, 78vw);
+  background: rgba(5,9,18,0.6); border: 1px solid var(--line); border-radius: 999px;
+  padding: 8px 16px; backdrop-filter: blur(8px); }
+.m3d-time.hidden { display: none; }
+.m3d-time span { font-family: var(--mono); font-size: 11px; color: var(--cyan); white-space: nowrap; }
+.m3d-time input { flex: 1; accent-color: var(--cyan); }
 
 /* ======================================================================
    TOAST + ERROR
