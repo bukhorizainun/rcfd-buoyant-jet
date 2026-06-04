@@ -41,7 +41,7 @@ In **AR** (scan the printed poster) a floating **CASE PARAMETERS** plate appears
 | Layer | Status |
 |---|---|
 | Temperature field | **Real CFD data** (Fluent solve; field coloring, slice and back-wall contour) |
-| **Velocity field · streamlines · glyphs** | **Real CFD data** — extracted from the Fluent solve `BouyantJet_END_CFD_RUN` (85,625 cells), sampled on the symmetry plane to a 64×64 grid (`data/cfd_field.json`). Streamlines are grid-seeded and integrated forward+backward through this real field; glyphs and the slice sample it directly. |
+| **Velocity field · streamlines · glyphs** | **Real simulation data** — extracted from the Fluent **rCFD result** `BouyantJet_END_rCFD_RUN` (85,625 cells), sampled on the symmetry plane to a 64×64 grid (`data/cfd_field.json`). This snapshot shows the clear recirculation *and* the warm stratification. Streamlines are grid-seeded and integrated forward+backward through it; glyphs and the slice sample it directly. |
 | Geometry (tank, pipes, 5×5 mm inlet, 1 mm cells, 7.5 cm tank) | **Real** |
 | Scalar parameters (Re ≈ 100, ΔT = 40 K, U = 0.02 m/s, 600 s) | **Real / verified in Fluent** |
 | Particle plume | **Real CFD data** — the parcels advect along the real velocity field (sampled from the same texture) in the vertex shader, coloured by the real temperature |
@@ -64,7 +64,8 @@ Every layer except the two derived fields is the real solve; the field-mode lege
 ## 5. Anticipated questions + honest answers
 
 - **"Is the flow turbulent?"** → No. Re ≈ 100, laminar, confirmed in Fluent. The visualisation avoids turbulence on purpose.
-- **"Are these your real CFD fields?"** → **Yes — every dynamic layer is the real Fluent solve** (`BouyantJet_END_CFD_RUN`, 85,625 cells): streamlines are integrated through the real velocity field; glyphs, the slice and even the particle plume sample/advect it; **density / buoyancy** are derived from the real temperature (Boussinesq). Nothing here is faked.
+- **"Are these your real fields?"** → **Yes — every dynamic layer is the real Fluent simulation** (`BouyantJet_END_rCFD_RUN`, the rCFD replay result, 85,625 cells): streamlines are integrated through the real velocity field; glyphs, the slice and even the particle plume sample/advect it; **density / buoyancy** are derived from the real temperature (Boussinesq). Nothing here is faked.
+- **"Why the rCFD snapshot and not the pure CFD end-state?"** → The pure-CFD end-state is strongly stratified, which *suppresses* the recirculation (mostly horizontal layers). The rCFD-replay snapshot is also warm but keeps the clear two-vortex circulation, and it is the actual output of your method — so it both reads better and is on-topic.
 - **"How did you get the field into the browser?"** → Exported the cell-centre velocity (u, v) and temperature from the Fluent `.cas.h5/.dat.h5`, sampled the symmetry plane onto a 64×64 grid, and the viewer bilinearly interpolates it.
 - **"What does rCFD actually buy you?"** → ~263× less compute for the same temperature transport, CoG RMSE 0.069 mm — so new cases (e.g. heat loss, Step 2) become minutes instead of hours.
 
@@ -103,7 +104,7 @@ Every layer except the two derived fields is the real solve; the field-mode lege
 
 **Data pipeline — from the solver to the browser**
 
-1. **Source:** the Fluent solve `ansys_fluent/BouyantJet_END_CFD_RUN.{cas,dat}.h5` (the real reference CFD, 85,625 cells). `.dat.h5` holds the per-cell fields `SV_U, SV_V, SV_W, SV_T`; `.cas.h5` holds the mesh (nodes + face→cell connectivity).
+1. **Source:** the Fluent files in `ansys_fluent/` (85,625 cells). The exported field is `BouyantJet_END_rCFD_RUN.dat.h5` (the rCFD replay result — clear vortices + warm) with the shared mesh `BouyantJet_END_CFD_RUN.cas.h5`. `.dat.h5` holds the per-cell fields `SV_U, SV_V, SV_W, SV_T`; `.cas.h5` holds the mesh (nodes + face→cell connectivity).
 2. **Extract (Python + h5py, offline):** cell centroids are reconstructed from the `.cas.h5` faces/nodes (cell ≈ mean of its face centroids), then paired index-for-index with the `.dat.h5` velocity/temperature. The quasi-2D symmetry plane is binned to a **64×64 grid** and written to `ar/data/cfd_field.json` (~90 KB: `u, v` in m/s and `T` in K, plus `umax`, `Tlo/Thi`). *Why:* the raw `.h5` is 15 MB and unstructured; a small regular grid is all the browser needs and loads instantly on a phone.
 3. **Load (browser):** `simulation/cfd-field.js` fetches that JSON and exposes a bilinear sampler in the viewer's coordinates — the same interface as the analytic model, so every consumer is field-agnostic.
 4. **Consume:** the sampler drives the streamlines, glyphs and slice; the same grid is also packed into an **RGBA texture** that the particle plume's vertex shader advects through on the GPU.

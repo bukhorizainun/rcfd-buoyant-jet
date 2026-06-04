@@ -40,7 +40,7 @@ export function createStreamlines(opts = {}) {
   let params = Object.assign({ velocity: 0.5, densityRatio: 0.5, deltaT: 0.5 }, opts.params || {});
   let field = opts.field || null;     // real CFD sampler, or null → model
   let nS = opts.seeds || 7;           // seed grid is nS × (nS-1) — denser = clearer vortices
-  let nZ = opts.nZ || 3;
+  let nZ = opts.nZ || 2;
   const steps = opts.steps || 220;
 
   const geo = new THREE.BufferGeometry();
@@ -74,7 +74,7 @@ export function createStreamlines(opts = {}) {
     const pos = [], arc = [], tmp = [], spd = [];
 
     for (let iz = 0; iz < nZ; iz++) {
-      const z = nZ > 1 ? ((iz / (nZ - 1)) - 0.5) * tank.d * 0.6 : 0;
+      const z = nZ > 1 ? ((iz / (nZ - 1)) - 0.5) * tank.d * 0.4 : 0;
       for (let sy = 0; sy < nS - 1; sy++) {
         const y0 = ((sy + 0.5) / (nS - 1) - 0.5) * tank.h * 0.82;
         for (let sx = 0; sx < nS; sx++) {

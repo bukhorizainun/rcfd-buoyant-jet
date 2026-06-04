@@ -34,7 +34,9 @@ export async function createViewer(host, opts = {}) {
   const scene = new THREE.Scene();
   scene.background = null; // CSS gradient shows through
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
-  camera.position.set(3.6, 2.3, 5.0);
+  // start nearly face-on to the symmetry (x-y) plane so the two recirculation
+  // vortices read clearly; a small offset keeps a sense of depth
+  camera.position.set(0.9, 0.5, 5.0);
 
   /* ---- controls (touch: rotate / zoom / pan) ---- */
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -102,7 +104,7 @@ export async function createViewer(host, opts = {}) {
     backdropMat = live.backdrop;
     lod = makeLOD(jet, { target: 52, min: 1600 });
     onMode(realField
-      ? "Streamlines · glyphs · slice · particles — all from the REAL CFD field (Fluent, 85k cells)"
+      ? "Streamlines · glyphs · slice · particles — all from the real rCFD field (Fluent replay, 85k cells)"
       : "Buoyant jet · live laminar flow (model)");
   }
 
@@ -133,7 +135,7 @@ export async function createViewer(host, opts = {}) {
     if (!running) return;
     raf = requestAnimationFrame(tick);
     const dt = Math.min((now - t0) / 1000, 0.05); t0 = now;
-    root.rotation.y += dt * 0.15;          // gentle auto-rotate
+    root.rotation.y += dt * 0.05;          // slow auto-rotate (keeps vortices readable)
     if (jet) { jet.update(dt); lod(dt); }
     if (streams) streams.update(dt);
     controls.update();

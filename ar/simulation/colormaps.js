@@ -94,9 +94,9 @@ export function legendGradient(name, stops = 12) {
 /* The four scientific field modes, with honest data provenance + units.
  * `ticks` are colorbar labels from TOP (scalar = 1) to BOTTOM (scalar = 0). */
 export const FIELD_MODES = [
-  { id: "temperature", label: "Temperature", cmap: "inferno", prov: "CFD data",
+  { id: "temperature", label: "Temperature", cmap: "inferno", prov: "rCFD field",
     ticks: ["333 K", "323", "313", "303", "293 K"] },
-  { id: "velocity",    label: "Velocity",    cmap: "viridis", prov: "CFD data",
+  { id: "velocity",    label: "Velocity",    cmap: "viridis", prov: "rCFD field",
     ticks: ["0.029", "0.022", "0.014", "0.007", "0 m/s"] },
   { id: "density",     label: "Density",     cmap: "magma",   prov: "derived · Boussinesq",
     ticks: ["dense", "", "", "", "light"] },
