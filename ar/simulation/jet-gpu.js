@@ -142,6 +142,10 @@ void main() {
       P.y += buoy * 0.10 * halfH * u;
       P.z = (aSeed2 - 0.5) * uTank.z * 0.72;
     }
+    // entrainment: the rising plume widens through the depth (laminar spreading),
+    // while the jet core (aKind=1, handled above) stays narrow → core vs mixing.
+    float hN = clamp(P.y / halfH * 0.5 + 0.5, 0.0, 1.0);
+    P.z *= (1.0 + 1.1 * hN);
     P.x = clamp(P.x, -halfW * 0.99, halfW * 0.99);
     P.y = clamp(P.y, -halfH * 0.99, halfH * 0.99);
     P.z = clamp(P.z, -halfD * 0.99, halfD * 0.99);

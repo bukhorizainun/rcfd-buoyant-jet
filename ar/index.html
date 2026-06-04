@@ -309,6 +309,12 @@
     <button class="panel-x" data-close="model3d" aria-label="Close">✕</button>
   </div>
   <div class="m3d-modes" id="m3dModes" role="tablist" aria-label="Scientific field"></div>
+  <div class="m3d-tools" id="m3dTools">
+    <button class="m3d-toggle" id="m3dGlyphs" type="button" aria-pressed="false">
+      <svg viewBox="0 0 24 24" class="ic"><path d="M5 12h12"/><path d="M13 8l4 4-4 4"/></svg>Velocity glyphs</button>
+    <button class="m3d-toggle" id="m3dSliceBtn" type="button" aria-pressed="false">
+      <svg viewBox="0 0 24 24" class="ic"><path d="M3 9h18"/><path d="M3 9l4-4h10l4 4"/><path d="M3 9v8l4 4h10l4-4V9"/></svg>Slice plane</button>
+  </div>
   <div id="model3dCanvas" class="model3d-canvas">
     <div class="model3d-legend" id="m3dLegend" aria-hidden="true">
       <span id="m3dLegHi">333 K</span>
@@ -317,6 +323,10 @@
       <small id="m3dLegName">Temperature</small>
     </div>
     <div class="m3d-params" id="m3dParams" aria-hidden="true"></div>
+    <div class="m3d-slice hidden" id="m3dSlice">
+      <input id="m3dSliceRange" class="m3d-slice-range" type="range" min="0" max="100" value="50" aria-label="Slice height">
+      <div class="m3d-slice-read" id="m3dSliceRead"></div>
+    </div>
   </div>
   <div class="model3d-foot" id="model3dFoot">Procedural buoyant-jet visualisation</div>
 </div>

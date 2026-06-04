@@ -15,6 +15,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { createJetField, makeLOD } from "./simulation/jet-gpu.js";
 import { createStreamlines } from "./simulation/streamlines.js";
+import { createGlyphs } from "./simulation/glyphs.js";
+import { createSlice } from "./simulation/slice.js";
 
 export async function createViewer(host, opts = {}) {
   const onMode = opts.onMode || (() => {});
@@ -70,6 +72,8 @@ export async function createViewer(host, opts = {}) {
   let fieldVideo = null;  // <video> driving the real-CFD field backdrop
   let jet = null;         // shared GPU laminar-jet engine
   let streams = null;     // animated laminar streamlines
+  let glyphs = null;      // velocity arrows (toggle)
+  let slice = null;       // interactive cross-section plane (toggle)
   let lod = null;         // frame-rate governor for the jet
 
   const haveGLB = opts.glb ? await fileExists(opts.glb) : false;
@@ -89,6 +93,8 @@ export async function createViewer(host, opts = {}) {
     fieldVideo = live.video;
     jet = live.jet;
     streams = live.streams;
+    glyphs = live.glyphs;
+    slice = live.slice;
     lod = makeLOD(jet, { target: 52, min: 1600 });
     onMode(opts.cfdVideo
       ? "Streamlines + particles · field model reproducing the observed laminar topology"
@@ -134,15 +140,23 @@ export async function createViewer(host, opts = {}) {
   function setFieldMode(m) {
     if (jet) jet.setMode(m);
     if (streams) streams.setMode(m);
+    if (glyphs) glyphs.setMode(m);
+    if (slice) slice.setMode(m);
   }
 
   /* ---- disposer ---- */
   return {
     setFieldMode,
+    setGlyphs(on) { if (glyphs) glyphs.setVisible(on); },
+    setSlice(on) { if (slice) slice.setVisible(on); },
+    setSliceHeight(f) { if (slice) slice.setHeight(f); },
+    getSliceReadout() { return slice ? slice.getReadout() : null; },
     dispose() {
       running = false;
       if (jet) jet.dispose();
       if (streams) streams.dispose();
+      if (glyphs) glyphs.dispose();
+      if (slice) slice.dispose();
       if (fieldVideo) { try { fieldVideo.pause(); fieldVideo.removeAttribute("src"); fieldVideo.load(); } catch (_) {} }
       cancelAnimationFrame(raf);
       ro.disconnect();
@@ -241,6 +255,12 @@ function buildLiveScene(root, videoUrl) {
   const streams = createStreamlines({ tank: TANK });
   root.add(streams.object);
 
+  // velocity glyphs + interactive slice plane (both off by default)
+  const glyphs = createGlyphs({ tank: TANK });
+  root.add(glyphs.object);
+  const slice = createSlice({ tank: TANK });
+  root.add(slice.object);
+
   // CFD-style reference frame: faint ground grid + axis triad
   const grid = new THREE.GridHelper(TANK.w * 2.4, 12, 0x2a4a6a, 0x14283e);
   grid.position.y = -TANK.h / 2 - 0.02;
@@ -250,7 +270,7 @@ function buildLiveScene(root, videoUrl) {
   axes.position.set(-TANK.w / 2 - 0.12, -TANK.h / 2, -TANK.d / 2);
   root.add(axes);
 
-  return { video, jet, streams };
+  return { video, jet, streams, glyphs, slice };
 }
 
 /* The buoyant-jet plume itself is the shared GPU engine in

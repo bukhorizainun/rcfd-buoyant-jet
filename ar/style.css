@@ -401,6 +401,26 @@ button { font-family: inherit; cursor: pointer; }
 .m3d-params b { font-size: 15px; color: var(--cyan); }
 .m3d-params small { display: block; font-size: 9.5px; color: var(--ink-faint); }
 
+/* glyph / slice toggles */
+.m3d-tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 0 12px 10px; }
+.m3d-toggle {
+  display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px;
+  color: var(--ink-soft); background: rgba(255,255,255,0.03); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 12px; cursor: pointer;
+}
+.m3d-toggle .ic { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
+.m3d-toggle.on { color: var(--cyan); border-color: rgba(54,209,255,0.5); background: rgba(54,209,255,0.10); }
+
+/* slice-height control (vertical), shown only with the slice plane */
+.m3d-slice { position: absolute; right: 44px; top: 50%; transform: translateY(-50%);
+  z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.m3d-slice.hidden { display: none; }
+.m3d-slice-range { writing-mode: vertical-lr; direction: rtl; width: 28px; height: 160px; accent-color: var(--cyan); }
+.m3d-slice-read { font-family: var(--mono); font-size: 10px; color: var(--ink-soft); text-align: center;
+  background: rgba(5,9,18,0.55); border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px;
+  backdrop-filter: blur(6px); white-space: nowrap; }
+.m3d-slice-read b { color: var(--cyan); }
+
 /* ======================================================================
    TOAST + ERROR
    ====================================================================== */

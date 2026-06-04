@@ -326,6 +326,11 @@ async function openModel3D() {
       onMode: (label) => { $("#model3dFoot").textContent = label; },
     });
     if (STATE.viewer3d.setFieldMode) STATE.viewer3d.setFieldMode(m3dMode);
+    // re-apply any toggle state to the freshly created viewer
+    STATE.viewer3d.setGlyphs($("#m3dGlyphs").classList.contains("on"));
+    STATE.viewer3d.setSlice($("#m3dSliceBtn").classList.contains("on"));
+    STATE.viewer3d.setSliceHeight(Number($("#m3dSliceRange").value) / 100);
+    updateSliceRead();
   } catch (err) {
     console.error(err);
     $("#model3dFoot").textContent = "3D viewer failed to load (needs internet for Three.js).";
@@ -350,6 +355,30 @@ function buildModel3DUI() {
     ["Ri", "≈ 1", "gβΔT·D/U²"],
   ].map((r) => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b><small>${esc(r[2])}</small></div>`).join("");
   applyLegend(0);
+
+  // velocity-glyph + slice-plane toggles
+  const gBtn = $("#m3dGlyphs"), sBtn = $("#m3dSliceBtn"), sWrap = $("#m3dSlice"), sRange = $("#m3dSliceRange");
+  gBtn.addEventListener("click", () => {
+    const on = !gBtn.classList.contains("on");
+    gBtn.classList.toggle("on", on); gBtn.setAttribute("aria-pressed", String(on));
+    if (STATE.viewer3d && STATE.viewer3d.setGlyphs) STATE.viewer3d.setGlyphs(on);
+  });
+  sBtn.addEventListener("click", () => {
+    const on = !sBtn.classList.contains("on");
+    sBtn.classList.toggle("on", on); sBtn.setAttribute("aria-pressed", String(on));
+    sWrap.classList.toggle("hidden", !on);
+    if (STATE.viewer3d && STATE.viewer3d.setSlice) STATE.viewer3d.setSlice(on);
+    if (on) updateSliceRead();
+  });
+  sRange.addEventListener("input", () => {
+    if (STATE.viewer3d && STATE.viewer3d.setSliceHeight) STATE.viewer3d.setSliceHeight(Number(sRange.value) / 100);
+    updateSliceRead();
+  });
+}
+function updateSliceRead() {
+  if (!STATE.viewer3d || !STATE.viewer3d.getSliceReadout) return;
+  const r = STATE.viewer3d.getSliceReadout(); if (!r) return;
+  $("#m3dSliceRead").innerHTML = `y = <b>${r.mm} mm</b><br>T&#772; ≈ <b>${r.T} K</b><br>|u| <b>${Math.round(r.v * 100)}%</b>`;
 }
 function setFieldMode(i) {
   m3dMode = i;

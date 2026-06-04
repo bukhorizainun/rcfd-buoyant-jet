@@ -89,6 +89,18 @@ function buildARScene() {
   anchor.appendChild(el("a-video", { src: "#arCfdVideo", width: String(vidW), height: String(vidH),
     position: `${vx} ${vy} 0.012` }));
 
+  // floating scientific parameters (Feature 6) — anchored bottom-right
+  const px = 0.30, py = -0.20;
+  anchor.appendChild(el("a-plane", { width: "0.38", height: "0.18", position: `${px} ${py} 0.006`,
+    material: "color: #05070f; opacity: 0.8; shader: flat" }));
+  anchor.appendChild(el("a-text", { value: "CASE PARAMETERS", color: "#36d1ff", width: "0.62",
+    align: "center", position: `${px} ${py + 0.066} 0.01`, baseline: "center" }));
+  ["Re ~ 100   laminar", "Ri ~ 1   (g B dT D / U^2)", "dT = 40 K   (333 / 293 K)",
+    "U = 0.02 m/s   inlet 5x5 mm"].forEach((t, i) => {
+    anchor.appendChild(el("a-text", { value: t, color: "#cdd7ee", width: "0.66", align: "center",
+      position: `${px} ${py + 0.034 - i * 0.034} 0.01`, baseline: "center" }));
+  });
+
   // hotspots
   STATE.hotspots.hotspots.forEach((h) => {
     const x = (h.u - 0.5) * 1.0;
