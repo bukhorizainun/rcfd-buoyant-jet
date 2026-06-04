@@ -26,6 +26,7 @@ import { renderInsights } from "./ui/insights.js";
 import { initComparison, pauseComparison } from "./ui/comparison.js";
 import { startBackground } from "./ui/background.js";
 import { startARScene, resetARScene } from "./ui/ar-scene.js";
+import { FIELD_MODES, legendGradient } from "./simulation/colormaps.js";
 // flow-sim.js (and its Three.js dependency) is imported lazily in openFlowSim()
 
 /* ---------- boot ---------- */
@@ -316,6 +317,7 @@ async function openModel3D() {
   closeAllPanels();                 // avoid running the flow panel's WebGL behind the modal
   const modal = $("#model3d");
   modal.classList.remove("hidden");
+  buildModel3DUI();
   if (STATE.viewer3d) return;
   try {
     const mod = await import("./viewer3d.js");
@@ -323,10 +325,44 @@ async function openModel3D() {
       glb: PATHS.glb, cfdVideo: PATHS.cfdVideo,
       onMode: (label) => { $("#model3dFoot").textContent = label; },
     });
+    if (STATE.viewer3d.setFieldMode) STATE.viewer3d.setFieldMode(m3dMode);
   } catch (err) {
     console.error(err);
     $("#model3dFoot").textContent = "3D viewer failed to load (needs internet for Three.js).";
   }
+}
+
+/* ---- Feature 2: scientific field selector + legend + parameters ---- */
+let m3dMode = 0, m3dUIBuilt = false;
+function buildModel3DUI() {
+  if (m3dUIBuilt) return;
+  m3dUIBuilt = true;
+  const modes = $("#m3dModes");
+  FIELD_MODES.forEach((m, i) => {
+    const b = el("button", { class: "m3d-mode" + (i === 0 ? " on" : ""), type: "button", "data-mode": String(i) }, esc(m.label));
+    b.addEventListener("click", () => setFieldMode(i));
+    modes.appendChild(b);
+  });
+  $("#m3dParams").innerHTML = [
+    ["Re", "≈ 100", "laminar"],
+    ["ΔT", "40 K", "333→293 K"],
+    ["U", "0.02 m/s", "5×5 mm inlet"],
+    ["Ri", "≈ 1", "gβΔT·D/U²"],
+  ].map((r) => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b><small>${esc(r[2])}</small></div>`).join("");
+  applyLegend(0);
+}
+function setFieldMode(i) {
+  m3dMode = i;
+  $$("#m3dModes .m3d-mode").forEach((b) => b.classList.toggle("on", Number(b.dataset.mode) === i));
+  if (STATE.viewer3d && STATE.viewer3d.setFieldMode) STATE.viewer3d.setFieldMode(i);
+  applyLegend(i);
+}
+function applyLegend(i) {
+  const m = FIELD_MODES[i];
+  $("#m3dCbar").style.background = legendGradient(m.cmap);
+  $("#m3dLegHi").textContent = m.hi;
+  $("#m3dLegLo").textContent = m.lo;
+  $("#m3dLegName").innerHTML = esc(m.label) + ` <em>· ${esc(m.prov)}</em>`;
 }
 function closeModel3D() {
   $("#model3d").classList.add("hidden");

@@ -14,6 +14,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { createJetField, makeLOD } from "./simulation/jet-gpu.js";
+import { createStreamlines } from "./simulation/streamlines.js";
 
 export async function createViewer(host, opts = {}) {
   const onMode = opts.onMode || (() => {});
@@ -68,6 +69,7 @@ export async function createViewer(host, opts = {}) {
   scene.add(root);
   let fieldVideo = null;  // <video> driving the real-CFD field backdrop
   let jet = null;         // shared GPU laminar-jet engine
+  let streams = null;     // animated laminar streamlines
   let lod = null;         // frame-rate governor for the jet
 
   const haveGLB = opts.glb ? await fileExists(opts.glb) : false;
@@ -86,9 +88,10 @@ export async function createViewer(host, opts = {}) {
     const live = buildLiveScene(root, opts.cfdVideo || null);
     fieldVideo = live.video;
     jet = live.jet;
+    streams = live.streams;
     lod = makeLOD(jet, { target: 52, min: 1600 });
     onMode(opts.cfdVideo
-      ? "Buoyant jet · real CFD field backdrop + live laminar flow"
+      ? "Streamlines + particles · field model reproducing the observed laminar topology"
       : "Buoyant jet · live laminar flow (illustrative)");
   }
 
@@ -121,16 +124,25 @@ export async function createViewer(host, opts = {}) {
     const dt = Math.min((now - t0) / 1000, 0.05); t0 = now;
     root.rotation.y += dt * 0.15;          // gentle auto-rotate
     if (jet) { jet.update(dt); lod(dt); }
+    if (streams) streams.update(dt);
     controls.update();
     renderer.render(scene, camera);
   }
   raf = requestAnimationFrame(tick);
 
+  /* ---- public controls ---- */
+  function setFieldMode(m) {
+    if (jet) jet.setMode(m);
+    if (streams) streams.setMode(m);
+  }
+
   /* ---- disposer ---- */
   return {
+    setFieldMode,
     dispose() {
       running = false;
       if (jet) jet.dispose();
+      if (streams) streams.dispose();
       if (fieldVideo) { try { fieldVideo.pause(); fieldVideo.removeAttribute("src"); fieldVideo.load(); } catch (_) {} }
       cancelAnimationFrame(raf);
       ro.disconnect();
@@ -225,7 +237,20 @@ function buildLiveScene(root, videoUrl) {
   const jet = createJetField({ tank: TANK, count: 5200, size: 27 });
   root.add(jet.object);
 
-  return { video, jet };
+  // animated laminar streamlines (flow direction + the two vortices)
+  const streams = createStreamlines({ tank: TANK });
+  root.add(streams.object);
+
+  // CFD-style reference frame: faint ground grid + axis triad
+  const grid = new THREE.GridHelper(TANK.w * 2.4, 12, 0x2a4a6a, 0x14283e);
+  grid.position.y = -TANK.h / 2 - 0.02;
+  grid.material.transparent = true; grid.material.opacity = 0.45;
+  root.add(grid);
+  const axes = new THREE.AxesHelper(0.45);
+  axes.position.set(-TANK.w / 2 - 0.12, -TANK.h / 2, -TANK.d / 2);
+  root.add(axes);
+
+  return { video, jet, streams };
 }
 
 /* The buoyant-jet plume itself is the shared GPU engine in

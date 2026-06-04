@@ -376,8 +376,30 @@ button { font-family: inherit; cursor: pointer; }
   width: 12px; height: 150px; border-radius: 6px; border: 1px solid var(--line);
   background: linear-gradient(to top, #1a38a0, #0099e6, #1fcc5c, #ffd91f, #eb2920);
 }
-.model3d-legend small { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 1px; opacity: 0.7; }
+.model3d-legend small { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 1px; opacity: 0.7; max-height: 130px; }
+.model3d-legend small em { font-style: normal; opacity: 0.65; }
 .model3d-foot { justify-content: center; padding: 12px; color: var(--ink-faint); font-family: var(--mono); font-size: 11px; }
+
+/* field-mode selector (ParaView-style scalar picker) */
+.m3d-modes { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; padding: 0 12px 8px; }
+.m3d-mode {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .3px; color: var(--ink-soft);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 12px; cursor: pointer;
+}
+.m3d-mode.on { color: #03060f; background: linear-gradient(135deg, var(--cyan), var(--violet));
+  border-color: transparent; font-weight: 700; }
+
+/* parameter read-out (floating, lab-style) */
+.m3d-params {
+  position: absolute; left: 14px; top: 14px; z-index: 2; display: grid; gap: 6px;
+  pointer-events: none; font-family: var(--mono);
+}
+.m3d-params div { background: rgba(5,9,18,0.55); border: 1px solid var(--line); border-radius: 10px;
+  padding: 6px 10px; min-width: 92px; backdrop-filter: blur(6px); }
+.m3d-params span { display: block; font-size: 9.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-faint); }
+.m3d-params b { font-size: 15px; color: var(--cyan); }
+.m3d-params small { display: block; font-size: 9.5px; color: var(--ink-faint); }
 
 /* ======================================================================
    TOAST + ERROR

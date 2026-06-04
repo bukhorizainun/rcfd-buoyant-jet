@@ -303,18 +303,20 @@
 <!-- ===================================================================== -->
 <!-- 3D MODEL VIEWER MODAL (Feature 5)                                     -->
 <!-- ===================================================================== -->
-<div id="model3d" class="model3d hidden" role="dialog" aria-modal="true" aria-label="3D buoyant jet model">
+<div id="model3d" class="model3d hidden" role="dialog" aria-modal="true" aria-label="3D buoyant jet field viewer">
   <div class="model3d-head">
-    <div><strong>Buoyant Jet · 3D View</strong><small>drag to rotate · pinch to zoom · two-finger drag to pan</small></div>
+    <div><strong>Buoyant Jet · 3D Field Viewer</strong><small>drag to rotate · pinch to zoom · two-finger drag to pan</small></div>
     <button class="panel-x" data-close="model3d" aria-label="Close">✕</button>
   </div>
+  <div class="m3d-modes" id="m3dModes" role="tablist" aria-label="Scientific field"></div>
   <div id="model3dCanvas" class="model3d-canvas">
-    <div class="model3d-legend" aria-hidden="true">
-      <span>333 K</span>
-      <div class="cbar"></div>
-      <span>293 K</span>
-      <small>Temperature</small>
+    <div class="model3d-legend" id="m3dLegend" aria-hidden="true">
+      <span id="m3dLegHi">333 K</span>
+      <div class="cbar" id="m3dCbar"></div>
+      <span id="m3dLegLo">293 K</span>
+      <small id="m3dLegName">Temperature</small>
     </div>
+    <div class="m3d-params" id="m3dParams" aria-hidden="true"></div>
   </div>
   <div class="model3d-foot" id="model3dFoot">Procedural buoyant-jet visualisation</div>
 </div>

@@ -11,6 +11,7 @@
  */
 import * as THREE from "three";
 import { createJetField, makeLOD } from "./jet-gpu.js";
+import { createStreamlines } from "./streamlines.js";
 
 export function createFlowSim(canvas) {
   const TANK = { w: 1.7, h: 1.5, d: 1.0 };
@@ -45,6 +46,9 @@ export function createFlowSim(canvas) {
   root.add(jet.object);
   const lod = makeLOD(jet, { target: 50, min: 1200 });
 
+  const streams = createStreamlines({ tank: TANK, nY: 4, nZ: 3 });
+  root.add(streams.object);
+
   function resize() {
     const r = canvas.getBoundingClientRect();
     const w = Math.max(1, r.width), h = Math.max(1, r.height);
@@ -64,18 +68,20 @@ export function createFlowSim(canvas) {
     last = now;
     root.rotation.y = 0.32 + Math.sin(now * 0.00012) * 0.32; // gentle sway, stays front-ish
     jet.update(dt);
+    streams.update(dt);
     lod(dt);
     renderer.render(scene, camera);
   }
 
   return {
-    setParams(p) { jet.setParams(p); },
+    setParams(p) { jet.setParams(p); streams.setParams(p); },
     start() { if (!running) { running = true; last = performance.now(); raf = requestAnimationFrame(frame); } },
     stop() { running = false; cancelAnimationFrame(raf); },
     dispose() {
       this.stop();
       ro.disconnect();
       jet.dispose();
+      streams.dispose();
       scene.traverse((o) => {
         if (o.geometry) o.geometry.dispose();
         if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());

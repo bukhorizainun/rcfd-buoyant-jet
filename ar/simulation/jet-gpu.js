@@ -19,6 +19,7 @@
  * density-based opacity + additive blending give a soft volumetric glow.
  * ===================================================================== */
 import * as THREE from "three";
+import { CMAPS_GLSL } from "./colormaps.js";
 
 /* ---- GLSL: Ashima/Gustavson 3D simplex noise (snoise) ---------------- */
 const SNOISE = /* glsl */ `
@@ -85,6 +86,7 @@ uniform vec3  uTank;      // w,h,d
 
 varying float vTemp;
 varying float vDensity;
+varying float vSpeed;
 
 ${SNOISE}
 
@@ -100,7 +102,7 @@ void main() {
   float buoy = clamp(Ri, 0.0, 1.6);
 
   vec3 P;
-  float temp, dens;
+  float temp, dens, spd;
 
   if (aKind > 0.5) {
     // ===== through-flow jet core: inlet → outlet (mass leaves the tank) =====
@@ -115,6 +117,7 @@ void main() {
     P.z = clamp(P.z, -halfD * 0.99, halfD * 0.99);
     temp = clamp((1.0 - p * 0.5) * (0.6 + 0.4 * uDeltaT) + 0.15, 0.0, 1.0);  // hot, cools a bit
     dens = smoothstep(0.0, 0.05, p) * smoothstep(1.0, 0.78, p);
+    spd = 0.6 + 0.4 * (1.0 - p);                                            // fast jet core
   } else {
     // ===== entrained recirculation: jet feed → one of the two vortices =====
     float ph = fract(uTime * rate + aSeed);
@@ -146,6 +149,7 @@ void main() {
     float coreT = (ph < pJet) ? (1.0 - (ph / pJet) * 0.4) : 0.0;
     temp = clamp(mix(heightT, 1.0, coreT * 0.7) * (0.55 + 0.45 * uDeltaT) + 0.10 * uDeltaT, 0.0, 1.0);
     dens = smoothstep(0.0, 0.06, ph) * smoothstep(1.0, 0.85, ph);
+    spd = (ph < pJet) ? (0.75 - 0.3 * (ph / pJet)) : (0.22 + 0.12 * aSeed2);  // fast feed, slow vortex
   }
 
   // small laminar wobble (grows mildly downstream, capped — NOT turbulence)
@@ -156,6 +160,7 @@ void main() {
 
   vTemp = temp;
   vDensity = dens;
+  vSpeed = spd;
 
   vec4 mv = modelViewMatrix * vec4(P, 1.0);
   gl_Position = projectionMatrix * mv;
@@ -165,31 +170,24 @@ void main() {
 
 const FRAG = /* glsl */ `
 precision highp float;
+${CMAPS_GLSL}
 varying float vTemp;
 varying float vDensity;
-
-// perceptual Inferno colormap (polynomial fit, GPU-cheap, no texture)
-vec3 inferno(float t){
-  const vec3 c0 = vec3(0.0002189403691192265, 0.001651004631001012, -0.01948089843709184);
-  const vec3 c1 = vec3(0.1065134194856116, 0.5639564367884091, 3.932712388889277);
-  const vec3 c2 = vec3(11.60249308247187, -3.972853965665698, -15.9423941062914);
-  const vec3 c3 = vec3(-41.70399613139459, 17.43639888205313, 44.35414519872813);
-  const vec3 c4 = vec3(77.162935699427, -33.40235894210092, -81.80730925738993);
-  const vec3 c5 = vec3(-71.31942824499214, 32.62606426397723, 73.20951985803202);
-  const vec3 c6 = vec3(25.13112622477341, -12.24266895238567, -23.07032500287172);
-  return c0+t*(c1+t*(c2+t*(c3+t*(c4+t*(c5+t*c6)))));
-}
+varying float vSpeed;
+uniform float uMode;
 
 void main(){
   vec2 q = gl_PointCoord - 0.5;
   float r = dot(q, q) * 4.0;                 // 0 centre .. 1 edge
   float a = smoothstep(1.0, 0.0, r);
   a *= a;                                     // soft, diffuse edge
-  vec3 col = inferno(clamp(vTemp, 0.0, 1.0));
+  // scalar for the active field: 0 temp, 1 velocity, 2 density(=1-T), 3 buoyancy(=T)
+  float s = (uMode < 0.5) ? vTemp : (uMode < 1.5) ? vSpeed : (uMode < 2.5) ? (1.0 - vTemp) : vTemp;
+  vec3 col = cfdColor(uMode, s);
   float alpha = a * vDensity * 0.6;
   if (alpha < 0.003) discard;
-  // hotter fluid glows brighter (emissive feel under additive blending)
-  gl_FragColor = vec4(col * (0.75 + 0.7 * vTemp), alpha);
+  // brighter where the scalar is high (emissive feel under additive blending)
+  gl_FragColor = vec4(col * (0.7 + 0.6 * s), alpha);
 }`;
 
 /* ---------------------------------------------------------------------
@@ -229,6 +227,7 @@ export function createJetField(opts = {}) {
     uSize: { value: opts.size || 26 },
     uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, 2) },
     uTank: { value: new THREE.Vector3(tank.w, tank.h, tank.d) },
+    uMode: { value: 0 },   // 0 temp · 1 velocity · 2 density · 3 buoyancy
   };
 
   const material = new THREE.ShaderMaterial({
@@ -252,6 +251,7 @@ export function createJetField(opts = {}) {
       if (p.densityRatio != null) uniforms.uDensity.value = p.densityRatio;
       if (p.deltaT != null) uniforms.uDeltaT.value = p.deltaT;
     },
+    setMode(m) { uniforms.uMode.value = m; },
     setCount(n) { geo.setDrawRange(0, Math.max(400, Math.min(MAX, n | 0))); },
     dispose() { geo.dispose(); material.dispose(); },
   };
