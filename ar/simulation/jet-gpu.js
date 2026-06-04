@@ -83,11 +83,15 @@ uniform float uDeltaT;    // 0..1 temperature difference (ΔT)
 uniform float uSize;
 uniform float uPixelRatio;
 uniform vec3  uTank;      // w,h,d
+uniform float uHasField;  // 1 = advect the REAL CFD velocity texture
+uniform sampler2D uField; // RG = velocity (encoded 0..1), B = T(norm), A = speed(norm)
+uniform float uFieldUmax; // m/s scale for decoding the velocity
 
 varying float vTemp;
 varying float vDensity;
 varying float vSpeed;
 
+#define ADV_STEPS 40
 ${SNOISE}
 
 void main() {
@@ -95,72 +99,92 @@ void main() {
   float halfH = uTank.y * 0.5;
   float halfD = uTank.z * 0.5;
 
-  float rate = 0.05 + uVelocity * 0.10;
-
-  // Richardson/Froude-style buoyancy vs momentum balance
-  float Ri = (0.25 + uDensity * 0.9) * (0.30 + uDeltaT * 0.9) / (0.18 + uVelocity * 1.2);
-  float buoy = clamp(Ri, 0.0, 1.6);
-
   vec3 P;
   float temp, dens, spd;
 
-  if (aKind > 0.5) {
-    // ===== through-flow jet core: inlet → outlet (mass leaves the tank) =====
-    float p = fract(uTime * rate * 1.7 + aSeed);
-    float xext = uTank.x + 0.55;                   // travel out through the outlet
-    P.x = -halfW + p * xext;
-    float bow = buoy * 0.12 * sin(p * 3.14159);    // slight upward bow if buoyant
-    P.y = (bow + (aSeed2 - 0.5) * 0.05) * halfH;
-    P.z = (aSeed2 - 0.5) * uTank.z * 0.14;         // thin laminar core
-    P.x = min(P.x, halfW + 0.5);
-    P.y = clamp(P.y, -halfH * 0.99, halfH * 0.99);
-    P.z = clamp(P.z, -halfD * 0.99, halfD * 0.99);
-    temp = clamp((1.0 - p * 0.5) * (0.6 + 0.4 * uDeltaT) + 0.15, 0.0, 1.0);  // hot, cools a bit
-    dens = smoothstep(0.0, 0.05, p) * smoothstep(1.0, 0.78, p);
-    spd = 0.6 + 0.4 * (1.0 - p);                                            // fast jet core
-  } else {
-    // ===== entrained recirculation: jet feed → one of the two vortices =====
-    float ph = fract(uTime * rate + aSeed);
-    float reach = mix(0.30, 0.94, uVelocity);
-    float feedX = -halfW + reach * uTank.x;
-    float pJet  = mix(0.20, 0.48, uVelocity);
-    if (ph < pJet) {
-      float u = ph / pJet;
-      P.x = -halfW + u * (feedX + halfW);
-      P.y = buoy * 0.14 * u * u * halfH;
-      P.z = (aSeed2 - 0.5) * uTank.z * 0.10;
-    } else {
-      float u = (ph - pJet) / (1.0 - pJet);
-      float s = aLane;
-      float cyBase = (0.30 + 0.10 * uVelocity) * halfH;
-      float cy = (s > 0.0) ? cyBase * (1.0 + 0.6 * buoy) : -cyBase * (1.0 - 0.4 * buoy);
-      vec2  c = vec2(feedX, cy);
-      float rad = (0.16 + 0.18 * aSeed2) * halfH;
-      float ang = u * 6.2831853 * (s > 0.0 ? 1.0 : -1.0) + aSeed * 6.2831853;
-      P.x = c.x + cos(ang) * rad * 1.2;
-      P.y = c.y + sin(ang) * rad;
-      P.y += buoy * 0.10 * halfH * u;
-      P.z = (aSeed2 - 0.5) * uTank.z * 0.72;
+  if (uHasField > 0.5) {
+    // ===== advect each parcel along the REAL CFD velocity field (texture) =====
+    // Stateless: integrate from the parcel's seed for phase·STEPS steps each
+    // frame, so as the phase loops the parcel streams along its real pathline.
+    float ph = fract(uTime * 0.08 + aSeed * 1.7 + aSeed2 * 0.31);
+    vec2 p = vec2((aSeed - 0.5) * uTank.x * 0.82, (aSeed2 - 0.5) * uTank.y * 0.82);
+    float zc = (fract(aSeed * 13.0) - 0.5) * uTank.z * 0.6;
+    float ds = uTank.x / float(ADV_STEPS) * 1.25;
+    float Tn = 0.5; spd = 0.0;
+    for (int i = 0; i < ADV_STEPS; i++) {
+      if (float(i) > ph * float(ADV_STEPS)) break;
+      vec2 uv = clamp(vec2(p.x / uTank.x + 0.5, p.y / uTank.y + 0.5), 0.003, 0.997);
+      vec4 s = texture2D(uField, uv);
+      vec2 vel = (s.rg * 2.0 - 1.0) * uFieldUmax;
+      float sp = length(vel);
+      Tn = s.b; spd = min(1.0, sp / max(uFieldUmax, 1e-5));
+      if (sp < 1e-6) break;
+      p += (vel / sp) * ds;
+      if (abs(p.x) > halfW || abs(p.y) > halfH) break;
     }
-    // entrainment: the rising plume widens through the depth (laminar spreading),
-    // while the jet core (aKind=1, handled above) stays narrow → core vs mixing.
-    float hN = clamp(P.y / halfH * 0.5 + 0.5, 0.0, 1.0);
-    P.z *= (1.0 + 1.1 * hN);
-    P.x = clamp(P.x, -halfW * 0.99, halfW * 0.99);
-    P.y = clamp(P.y, -halfH * 0.99, halfH * 0.99);
-    P.z = clamp(P.z, -halfD * 0.99, halfD * 0.99);
-    float heightT = clamp(P.y / halfH * 0.5 + 0.5, 0.0, 1.0);
-    float coreT = (ph < pJet) ? (1.0 - (ph / pJet) * 0.4) : 0.0;
-    temp = clamp(mix(heightT, 1.0, coreT * 0.7) * (0.55 + 0.45 * uDeltaT) + 0.10 * uDeltaT, 0.0, 1.0);
+    P = vec3(p, zc);
+    temp = Tn;
     dens = smoothstep(0.0, 0.06, ph) * smoothstep(1.0, 0.85, ph);
-    spd = (ph < pJet) ? (0.75 - 0.3 * (ph / pJet)) : (0.22 + 0.12 * aSeed2);  // fast feed, slow vortex
+  } else {
+    // ===== analytic laminar model (Flow panel, slider-driven) =====
+    float rate = 0.05 + uVelocity * 0.10;
+    float Ri = (0.25 + uDensity * 0.9) * (0.30 + uDeltaT * 0.9) / (0.18 + uVelocity * 1.2);
+    float buoy = clamp(Ri, 0.0, 1.6);
+    if (aKind > 0.5) {
+      // through-flow jet core: inlet → outlet
+      float p = fract(uTime * rate * 1.7 + aSeed);
+      float xext = uTank.x + 0.55;
+      P.x = -halfW + p * xext;
+      float bow = buoy * 0.12 * sin(p * 3.14159);
+      P.y = (bow + (aSeed2 - 0.5) * 0.05) * halfH;
+      P.z = (aSeed2 - 0.5) * uTank.z * 0.14;
+      P.x = min(P.x, halfW + 0.5);
+      P.y = clamp(P.y, -halfH * 0.99, halfH * 0.99);
+      P.z = clamp(P.z, -halfD * 0.99, halfD * 0.99);
+      temp = clamp((1.0 - p * 0.5) * (0.6 + 0.4 * uDeltaT) + 0.15, 0.0, 1.0);
+      dens = smoothstep(0.0, 0.05, p) * smoothstep(1.0, 0.78, p);
+      spd = 0.6 + 0.4 * (1.0 - p);
+    } else {
+      // entrained recirculation → one of the two vortices
+      float ph = fract(uTime * rate + aSeed);
+      float reach = mix(0.30, 0.94, uVelocity);
+      float feedX = -halfW + reach * uTank.x;
+      float pJet  = mix(0.20, 0.48, uVelocity);
+      if (ph < pJet) {
+        float u = ph / pJet;
+        P.x = -halfW + u * (feedX + halfW);
+        P.y = buoy * 0.14 * u * u * halfH;
+        P.z = (aSeed2 - 0.5) * uTank.z * 0.10;
+      } else {
+        float u = (ph - pJet) / (1.0 - pJet);
+        float s = aLane;
+        float cyBase = (0.30 + 0.10 * uVelocity) * halfH;
+        float cy = (s > 0.0) ? cyBase * (1.0 + 0.6 * buoy) : -cyBase * (1.0 - 0.4 * buoy);
+        vec2  c = vec2(feedX, cy);
+        float rad = (0.16 + 0.18 * aSeed2) * halfH;
+        float ang = u * 6.2831853 * (s > 0.0 ? 1.0 : -1.0) + aSeed * 6.2831853;
+        P.x = c.x + cos(ang) * rad * 1.2;
+        P.y = c.y + sin(ang) * rad;
+        P.y += buoy * 0.10 * halfH * u;
+        P.z = (aSeed2 - 0.5) * uTank.z * 0.72;
+      }
+      float hN = clamp(P.y / halfH * 0.5 + 0.5, 0.0, 1.0);
+      P.z *= (1.0 + 1.1 * hN);
+      P.x = clamp(P.x, -halfW * 0.99, halfW * 0.99);
+      P.y = clamp(P.y, -halfH * 0.99, halfH * 0.99);
+      P.z = clamp(P.z, -halfD * 0.99, halfD * 0.99);
+      float heightT = clamp(P.y / halfH * 0.5 + 0.5, 0.0, 1.0);
+      float coreT = (ph < pJet) ? (1.0 - (ph / pJet) * 0.4) : 0.0;
+      temp = clamp(mix(heightT, 1.0, coreT * 0.7) * (0.55 + 0.45 * uDeltaT) + 0.10 * uDeltaT, 0.0, 1.0);
+      dens = smoothstep(0.0, 0.06, ph) * smoothstep(1.0, 0.85, ph);
+      spd = (ph < pJet) ? (0.75 - 0.3 * (ph / pJet)) : (0.22 + 0.12 * aSeed2);
+    }
+    // small laminar wobble (model only — the real-field path stays true to data)
+    float dStream = clamp((P.x + halfW) / uTank.x, 0.0, 1.0);
+    float amp = (0.010 + 0.026 * dStream) * halfH;
+    vec3 np = P * 2.2 + vec3(0.0, 0.0, uTime * 0.22);
+    P += vec3(snoise(np), snoise(np + 17.3), snoise(np + 41.7)) * amp;
   }
-
-  // small laminar wobble (grows mildly downstream, capped — NOT turbulence)
-  float dStream = clamp((P.x + halfW) / uTank.x, 0.0, 1.0);
-  float amp = (0.010 + 0.026 * dStream) * halfH;
-  vec3 np = P * 2.2 + vec3(0.0, 0.0, uTime * 0.22);
-  P += vec3(snoise(np), snoise(np + 17.3), snoise(np + 41.7)) * amp;
 
   vTemp = temp;
   vDensity = dens;
@@ -194,8 +218,19 @@ void main(){
   gl_FragColor = vec4(col * (0.7 + 0.6 * s), alpha);
 }`;
 
+let _dummyTex = null;
+function dummyTexture() {
+  if (!_dummyTex) {
+    _dummyTex = new THREE.DataTexture(new Uint8Array([128, 128, 128, 255]), 1, 1, THREE.RGBAFormat);
+    _dummyTex.needsUpdate = true;
+  }
+  return _dummyTex;
+}
+
 /* ---------------------------------------------------------------------
- * createJetField — build the GPU particle plume.
+ * createJetField — build the GPU particle plume. When opts.fieldTex (a
+ * velocity texture) is given, the parcels advect along the REAL CFD field;
+ * otherwise they follow the analytic laminar model (slider-driven).
  * Returns { object, update, setParams, setCount, maxCount, dispose }.
  * ------------------------------------------------------------------- */
 export function createJetField(opts = {}) {
@@ -232,6 +267,9 @@ export function createJetField(opts = {}) {
     uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, 2) },
     uTank: { value: new THREE.Vector3(tank.w, tank.h, tank.d) },
     uMode: { value: 0 },   // 0 temp · 1 velocity · 2 density · 3 buoyancy
+    uHasField: { value: opts.fieldTex ? 1 : 0 },
+    uField: { value: opts.fieldTex || dummyTexture() },
+    uFieldUmax: { value: opts.fieldUmax || 0.03 },
   };
 
   const material = new THREE.ShaderMaterial({

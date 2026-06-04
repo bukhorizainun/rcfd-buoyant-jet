@@ -22,7 +22,7 @@ Open it with the **3D** button in the dock. Talking points:
 | Feature | What to say |
 |---|---|
 | **Glass tank + inlet/outlet pipes** | The real test-case geometry: a horizontal pipe through the tank at mid-height (inlet left, outlet right). Mass enters and **leaves** through the outlet. |
-| **Particle plume (GPU)** | The buoyant jet. ~30 % of particles are the **jet core** that runs straight to the outlet (momentum); the rest are **entrained** into the two recirculation vortices and rise. The plume **widens with height** (entrainment) while the core stays narrow — *jet core vs. mixing region*. |
+| **Particle plume (GPU)** | Parcels that **advect along the real velocity field** (integrated in the vertex shader) and are coloured by the real temperature — so they stream where the actual fluid goes, warm near the top, cool below. (In the slider-driven Flow panel the same engine runs the analytic jet-core/recirculation model instead.) |
 | **Animated streamlines** | Flow direction and topology: the jet feeding the **two counter-rotating vortices**. The travelling bright pulse shows the flow moving. Smooth and steady = **laminar**. |
 | **Field modes** (Temperature / Velocity / Density / Buoyancy) | Switch the scalar. Each uses a **perceptually-uniform** colormap (Inferno / Viridis / Magma / Plasma — *no rainbow*) with a legend. In **Velocity**, note the fast bright jet core vs. the slow dark recirculation. |
 | **Velocity glyphs** (toggle) | Arrow field: direction + magnitude on a sparse grid, the way ParaView shows vectors. |
@@ -44,11 +44,11 @@ In **AR** (scan the printed poster) a floating **CASE PARAMETERS** plate appears
 | **Velocity field · streamlines · glyphs** | **Real CFD data** — extracted from the Fluent solve `BouyantJet_END_CFD_RUN` (85,625 cells), sampled on the symmetry plane to a 64×64 grid (`data/cfd_field.json`). Streamlines are grid-seeded and integrated forward+backward through this real field; glyphs and the slice sample it directly. |
 | Geometry (tank, pipes, 5×5 mm inlet, 1 mm cells, 7.5 cm tank) | **Real** |
 | Scalar parameters (Re ≈ 100, ΔT = 40 K, U = 0.02 m/s, 600 s) | **Real / verified in Fluent** |
+| Particle plume | **Real CFD data** — the parcels advect along the real velocity field (sampled from the same texture) in the vertex shader, coloured by the real temperature |
 | Density · Buoyancy fields | **Derived from the real temperature** via the Boussinesq approximation (ρ = ρ₀[1 − β(T − T₀)], f_b ∝ ρ₀ g β (T − T₀)) |
-| Glowing particle plume | **Illustrative** laminar model (the only non-data layer) — clearly the decorative element, not a measurement |
 | Richardson number Ri ≈ 1 | **Computed** as g β ΔT D / U² with assumed β ≈ 2.1×10⁻⁴ K⁻¹ and L = D — *verify β / length scale against the Fluent setup before quoting a precise value* |
 
-The honesty is built into the UI: every field-mode legend is tagged *CFD data / derived*.
+Every layer except the two derived fields is the real solve; the field-mode legend is tagged *CFD data / derived*.
 
 ---
 
@@ -64,7 +64,7 @@ The honesty is built into the UI: every field-mode legend is tagged *CFD data / 
 ## 5. Anticipated questions + honest answers
 
 - **"Is the flow turbulent?"** → No. Re ≈ 100, laminar, confirmed in Fluent. The visualisation avoids turbulence on purpose.
-- **"Are these your real CFD fields?"** → **Yes — both temperature and velocity are the real Fluent solve** (`BouyantJet_END_CFD_RUN`, 85,625 cells). The streamlines are integrated through the real velocity field; the glyphs and the slice sample it directly; **density / buoyancy** are derived from the real temperature (Boussinesq). The only illustrative layer is the glowing particle plume.
+- **"Are these your real CFD fields?"** → **Yes — every dynamic layer is the real Fluent solve** (`BouyantJet_END_CFD_RUN`, 85,625 cells): streamlines are integrated through the real velocity field; glyphs, the slice and even the particle plume sample/advect it; **density / buoyancy** are derived from the real temperature (Boussinesq). Nothing here is faked.
 - **"How did you get the field into the browser?"** → Exported the cell-centre velocity (u, v) and temperature from the Fluent `.cas.h5/.dat.h5`, sampled the symmetry plane onto a 64×64 grid, and the viewer bilinearly interpolates it.
 - **"What does rCFD actually buy you?"** → ~263× less compute for the same temperature transport, CoG RMSE 0.069 mm — so new cases (e.g. heat loss, Step 2) become minutes instead of hours.
 
@@ -72,10 +72,9 @@ The honesty is built into the UI: every field-mode legend is tagged *CFD data / 
 
 ## 6. Known limitations (own them — it reads as rigour)
 
-- The field is a single representative snapshot (end of the reference run) sampled on the symmetry plane; the case is quasi-2D so this captures the in-plane flow well.
+- The field is a single representative snapshot (end of the reference run, warm-stratified: 293 K floor → 333 K ceiling) sampled on the symmetry plane; the case is quasi-2D so this captures the in-plane flow well. A separate warm-*inlet*-phase snapshot was not saved, but the time-scrub shows the warm build-up from the real recording.
 - Density and buoyancy are derived from the real temperature (Boussinesq), not separate measurements.
 - Ri ≈ 1 depends on the assumed β and length scale.
-- The glowing particle plume is an illustrative laminar model, not data.
 - The faint back-wall contour uses Fluent's default rainbow (it is the raw recording); the interactive layers use perceptual maps.
 
 ---
@@ -92,7 +91,41 @@ The honesty is built into the UI: every field-mode legend is tagged *CFD data / 
 
 ## 8. Improvements status
 
-- ✅ **Velocity grounded in real data** — streamlines/glyphs/slice now run on the exported Fluent field.
+- ✅ **Velocity grounded in real data** — streamlines/glyphs/slice run on the exported Fluent field.
+- ✅ **Particle plume advects the real velocity field** — the decorative layer is now data too.
 - ✅ **Time evolution** — the Time toggle scrubs the real temperature field over 0–600 s.
 - ✅ **Export-figure button** + ✅ **numeric colorbar ticks**.
-- Remaining ideas for an international venue: (a) drive the glowing plume itself through the real velocity texture (so even the decorative layer is data); (b) a 3D rCFD-vs-CFD deviation overlay across the f_sd sweep; (c) several time snapshots of the *velocity* field, not just temperature.
+- Remaining ideas for an international venue: (a) a 3D rCFD-vs-CFD deviation overlay across the f_sd sweep; (b) several time snapshots of the *velocity* field (only one is exported now); (c) WebXR hand-controller probing of the slice.
+
+---
+
+## 9. How it's built (data pipeline + module map)
+
+**Data pipeline — from the solver to the browser**
+
+1. **Source:** the Fluent solve `ansys_fluent/BouyantJet_END_CFD_RUN.{cas,dat}.h5` (the real reference CFD, 85,625 cells). `.dat.h5` holds the per-cell fields `SV_U, SV_V, SV_W, SV_T`; `.cas.h5` holds the mesh (nodes + face→cell connectivity).
+2. **Extract (Python + h5py, offline):** cell centroids are reconstructed from the `.cas.h5` faces/nodes (cell ≈ mean of its face centroids), then paired index-for-index with the `.dat.h5` velocity/temperature. The quasi-2D symmetry plane is binned to a **64×64 grid** and written to `ar/data/cfd_field.json` (~90 KB: `u, v` in m/s and `T` in K, plus `umax`, `Tlo/Thi`). *Why:* the raw `.h5` is 15 MB and unstructured; a small regular grid is all the browser needs and loads instantly on a phone.
+3. **Load (browser):** `simulation/cfd-field.js` fetches that JSON and exposes a bilinear sampler in the viewer's coordinates — the same interface as the analytic model, so every consumer is field-agnostic.
+4. **Consume:** the sampler drives the streamlines, glyphs and slice; the same grid is also packed into an **RGBA texture** that the particle plume's vertex shader advects through on the GPU.
+
+**Module map — what, from where, why**
+
+| File | What it does | Why |
+|---|---|---|
+| `simulation/cfd-field.js` | loads `cfd_field.json`, bilinear sampler (real field) | grounds the visuals in solver data |
+| `simulation/jet-field.js` | analytic velocity+T model (jet + two vortices) | slider-driven *intuition* for the Flow panel (no real field there) |
+| `simulation/streamlines.js` | grid-seeds + integrates the field forward & backward | the CFD way to reveal the two recirculation vortices |
+| `simulation/glyphs.js` | InstancedMesh arrows sampling the field | direction + magnitude, ParaView-style |
+| `simulation/slice.js` | movable cross-section textured from the field | inspect a horizontal cut, with a T/|u| read-out |
+| `simulation/jet-gpu.js` | GPU particle plume; advects the **real velocity texture** when given one, else the model | the lively layer, now data-driven |
+| `simulation/colormaps.js` | perceptual Inferno/Viridis/Magma/Plasma + legends | scientific colour, no rainbow |
+| `viewer3d.js` | builds the scene, loads the field, wires field-mode / glyphs / slice / time / export | the 3D modal viewer |
+| `data/cfd_field.json` | the exported real field | the single source of truth for the dynamic layers |
+
+**Why these choices**
+
+- *Real field, not a fit* — a reviewer's first question is "is this your data?"; grounding the velocity flips the honest answer to yes.
+- *Symmetry-plane 64×64* — the case is quasi-2D and laminar, so an in-plane grid captures the physics with a tiny payload.
+- *Perceptual colormaps* — rainbow maps distort gradients; Inferno/Viridis are the scientific-publishing standard.
+- *Laminar by construction* — every layer is smooth/steady; no turbulence is injected, matching Re ≈ 100.
+- *GPU advection in the vertex shader* — keeps the CPU idle for a steady 60 FPS on a phone in WebAR.

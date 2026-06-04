@@ -41,6 +41,7 @@ export function makeRealField(data, tank) {
 
   return {
     real: true,
+    data,                       // raw grid, for building the GPU advection texture
     umax,                       // m/s, for velocity-magnitude normalisation
     velocity(x, y) {
       const g = toGrid(x, y);

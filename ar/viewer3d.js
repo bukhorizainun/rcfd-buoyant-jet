@@ -102,7 +102,7 @@ export async function createViewer(host, opts = {}) {
     backdropMat = live.backdrop;
     lod = makeLOD(jet, { target: 52, min: 1600 });
     onMode(realField
-      ? "Streamlines · glyphs · slice from the REAL CFD field (Fluent, 85k cells) · particles illustrative"
+      ? "Streamlines · glyphs · slice · particles — all from the REAL CFD field (Fluent, 85k cells)"
       : "Buoyant jet · live laminar flow (model)");
   }
 
@@ -213,6 +213,25 @@ function frameObject(obj, root) {
  * cfd_reference.mp4, kept as real data), and the shared GPU laminar-jet
  * engine as the dynamic, orbitable foreground. Returns { video, jet }.
  * ------------------------------------------------------------------- */
+/* Encode the real CFD field (u, v, T) into an RGBA texture the plume's vertex
+ * shader advects through: R,G = velocity (0..1, decoded with umax), B = T(norm),
+ * A = speed(norm). */
+function buildFieldTexture(d) {
+  const { nx, ny, u, v, T, Tlo, Thi, umax } = d;
+  const arr = new Uint8Array(nx * ny * 4);
+  const b = (val) => (val < 0 ? 0 : val > 255 ? 255 : Math.round(val));
+  for (let i = 0; i < nx * ny; i++) {
+    arr[i * 4]     = b((u[i] / (2 * umax) + 0.5) * 255);
+    arr[i * 4 + 1] = b((v[i] / (2 * umax) + 0.5) * 255);
+    arr[i * 4 + 2] = b(((T[i] - Tlo) / (Thi - Tlo)) * 255);
+    arr[i * 4 + 3] = b(Math.min(1, Math.hypot(u[i], v[i]) / umax) * 255);
+  }
+  const tex = new THREE.DataTexture(arr, nx, ny, THREE.RGBAFormat);
+  tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 function buildLiveScene(root, videoUrl, realField) {
   const TANK = { w: 1.6, h: 1.6, d: 1.0 };
 
@@ -265,8 +284,13 @@ function buildLiveScene(root, videoUrl, realField) {
     root.add(plane);
   }
 
-  // the live GPU laminar jet — the dynamic, 3D star of the view
-  const jet = createJetField({ tank: TANK, count: 5200, size: 27 });
+  // the live GPU jet — parcels advect along the REAL velocity field when we
+  // have it (so even the "decorative" layer is data-driven), else the model
+  const jet = createJetField({
+    tank: TANK, count: 5200, size: 27,
+    fieldTex: realField ? buildFieldTexture(realField.data) : null,
+    fieldUmax: realField ? realField.umax : 0.03,
+  });
   root.add(jet.object);
 
   // animated laminar streamlines (flow direction + the two vortices) — driven
