@@ -15,6 +15,7 @@ export function createGlyphs(opts = {}) {
   const tank = opts.tank || { w: 1.6, h: 1.6, d: 1.0 };
   let params = Object.assign({ velocity: 0.5, densityRatio: 0.5, deltaT: 0.5 }, opts.params || {});
   let mode = 0;
+  let realField = opts.field || null;     // real CFD sampler, or null → model
   const nx = opts.nx || 9, ny = opts.ny || 7, nz = opts.nz || 2;
 
   const geo = new THREE.ConeGeometry(0.02, 0.085, 8);
@@ -31,7 +32,7 @@ export function createGlyphs(opts = {}) {
   const col = new THREE.Color();
 
   function build() {
-    const field = makeField(params, tank);
+    const field = realField || makeField(params, tank);
     const cmap = FIELD_MODES[mode].cmap;
     // sample + find max speed for magnitude scaling
     const pts = [];
@@ -72,7 +73,8 @@ export function createGlyphs(opts = {}) {
 
   return {
     object: mesh,
-    setParams(p) { Object.assign(params, p); build(); },
+    setParams(p) { Object.assign(params, p); if (!realField) build(); },
+    setField(f) { realField = f; build(); },
     setMode(m) { mode = m; build(); },
     setVisible(v) { mesh.visible = v; },
     dispose() { geo.dispose(); mat.dispose(); },

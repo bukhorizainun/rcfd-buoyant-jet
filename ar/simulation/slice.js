@@ -18,6 +18,7 @@ export function createSlice(opts = {}) {
   let params = Object.assign({ velocity: 0.5, densityRatio: 0.5, deltaT: 0.5 }, opts.params || {});
   let mode = 0;
   let yFrac = 0.5;            // 0 bottom .. 1 top
+  let realField = opts.field || null;     // real CFD sampler, or null → model
 
   const W = 128;
   const canvas = document.createElement("canvas");
@@ -45,7 +46,8 @@ export function createSlice(opts = {}) {
   let readout = { mm: 0, T: 0, v: 0 };
 
   function redraw() {
-    const field = makeField(params, tank);
+    const field = realField || makeField(params, tank);
+    const norm = (realField && realField.umax) || 0.95;
     const cmap = FIELD_MODES[mode].cmap;
     const y = (yFrac - 0.5) * tank.h * 0.98;
     let Tsum = 0, vmax = 0;
@@ -64,14 +66,15 @@ export function createSlice(opts = {}) {
     readout = {
       mm: Math.round(yFrac * TANK_HEIGHT_MM),
       T: Math.round(T_RANGE.lo + (Tsum / W) * (T_RANGE.hi - T_RANGE.lo)),
-      v: Math.min(1, vmax / 0.95),
+      v: Math.min(1, vmax / norm),
     };
   }
   redraw();
 
   return {
     object: group,
-    setParams(p) { Object.assign(params, p); redraw(); },
+    setParams(p) { Object.assign(params, p); if (!realField) redraw(); },
+    setField(f) { realField = f; redraw(); },
     setMode(m) { mode = m; redraw(); },
     setHeight(f) { yFrac = Math.min(1, Math.max(0, f)); redraw(); },
     setVisible(v) { group.visible = v; },

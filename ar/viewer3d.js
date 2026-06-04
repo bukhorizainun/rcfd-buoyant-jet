@@ -17,6 +17,7 @@ import { createJetField, makeLOD } from "./simulation/jet-gpu.js";
 import { createStreamlines } from "./simulation/streamlines.js";
 import { createGlyphs } from "./simulation/glyphs.js";
 import { createSlice } from "./simulation/slice.js";
+import { loadRealField } from "./simulation/cfd-field.js";
 
 export async function createViewer(host, opts = {}) {
   const onMode = opts.onMode || (() => {});
@@ -90,7 +91,9 @@ export async function createViewer(host, opts = {}) {
     } catch (e) { /* fall through to the live scene */ }
   }
   if (!built) {
-    const live = buildLiveScene(root, opts.cfdVideo || null);
+    // the REAL CFD velocity + temperature field (Fluent export), if available
+    const realField = await loadRealField("data/cfd_field.json", { w: 1.6, h: 1.6, d: 1.0 });
+    const live = buildLiveScene(root, opts.cfdVideo || null, realField);
     fieldVideo = live.video;
     jet = live.jet;
     streams = live.streams;
@@ -98,9 +101,9 @@ export async function createViewer(host, opts = {}) {
     slice = live.slice;
     backdropMat = live.backdrop;
     lod = makeLOD(jet, { target: 52, min: 1600 });
-    onMode(opts.cfdVideo
-      ? "Streamlines + particles · field model reproducing the observed laminar topology"
-      : "Buoyant jet · live laminar flow (illustrative)");
+    onMode(realField
+      ? "Streamlines · glyphs · slice from the REAL CFD field (Fluent, 85k cells) · particles illustrative"
+      : "Buoyant jet · live laminar flow (model)");
   }
 
   /* ---- resize + auto-fit (handles tall portrait canvases) ---- */
@@ -210,7 +213,7 @@ function frameObject(obj, root) {
  * cfd_reference.mp4, kept as real data), and the shared GPU laminar-jet
  * engine as the dynamic, orbitable foreground. Returns { video, jet }.
  * ------------------------------------------------------------------- */
-function buildLiveScene(root, videoUrl) {
+function buildLiveScene(root, videoUrl, realField) {
   const TANK = { w: 1.6, h: 1.6, d: 1.0 };
 
   // faint glass tank + glowing cyan edges
@@ -266,14 +269,15 @@ function buildLiveScene(root, videoUrl) {
   const jet = createJetField({ tank: TANK, count: 5200, size: 27 });
   root.add(jet.object);
 
-  // animated laminar streamlines (flow direction + the two vortices)
-  const streams = createStreamlines({ tank: TANK });
+  // animated laminar streamlines (flow direction + the two vortices) — driven
+  // by the REAL CFD field when available, otherwise the analytic model
+  const streams = createStreamlines({ tank: TANK, field: realField });
   root.add(streams.object);
 
   // velocity glyphs + interactive slice plane (both off by default)
-  const glyphs = createGlyphs({ tank: TANK });
+  const glyphs = createGlyphs({ tank: TANK, field: realField });
   root.add(glyphs.object);
-  const slice = createSlice({ tank: TANK });
+  const slice = createSlice({ tank: TANK, field: realField });
   root.add(slice.object);
 
   // CFD-style reference frame: faint ground grid + axis triad

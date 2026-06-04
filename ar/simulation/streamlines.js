@@ -1,21 +1,22 @@
 /* =====================================================================
  * simulation/streamlines.js — animated laminar streamlines (Feature #1).
  *
- * Integrates the shared analytic field (jet-field.js) from a band of inlet
- * seeds spread across the jet height AND the tank depth, so the streamlines
- * form a 3D set that reveals the flow direction, the buoyant curving and the
- * two recirculation vortices. A travelling brightness pulse along each line
- * shows the flow motion. Coloured by the selected scientific field with a
- * perceptual colormap (no rainbow). Smooth + steady → strictly laminar.
+ * Seeds a grid of points across the tank and integrates the flow BOTH ways
+ * (forward + backward) — the standard CFD way to reveal recirculation — so
+ * the two counter-rotating vortices and the jet read clearly. A travelling
+ * brightness pulse animates the flow direction; colour follows the selected
+ * field with a perceptual colormap (no rainbow).
+ *
+ * The field is either the REAL CFD solver field (cfd-field.js, passed in as
+ * opts.field) or the analytic model (jet-field.js, slider-driven, used by the
+ * Flow panel). Smooth + steady → strictly laminar either way.
  * ===================================================================== */
 import * as THREE from "three";
 import { makeField } from "./jet-field.js";
 import { CMAPS_GLSL } from "./colormaps.js";
 
 const VERT = /* glsl */ `
-attribute float aArc;    // 0..1 along the streamline
-attribute float aTemp;   // field temperature 0..1
-attribute float aSpeed;  // field velocity magnitude 0..1
+attribute float aArc; attribute float aTemp; attribute float aSpeed;
 varying float vArc; varying float vT; varying float vS;
 void main(){
   vArc = aArc; vT = aTemp; vS = aSpeed;
@@ -28,10 +29,8 @@ ${CMAPS_GLSL}
 varying float vArc; varying float vT; varying float vS;
 uniform float uTime; uniform float uMode;
 void main(){
-  // scalar for the active mode: 0 temp, 1 velocity, 2 density(=1-T), 3 buoyancy(=T)
   float s = (uMode < 0.5) ? vT : (uMode < 1.5) ? vS : (uMode < 2.5) ? (1.0 - vT) : vT;
   vec3 col = cfdColor(uMode, s);
-  // travelling brightness pulse along arc-length → direction + animation
   float wave = 0.4 + 0.6 * pow(0.5 + 0.5 * sin((vArc * 7.0 - uTime * 1.1) * 6.2831853), 2.0);
   gl_FragColor = vec4(col * wave, 0.9);
 }`;
@@ -39,9 +38,10 @@ void main(){
 export function createStreamlines(opts = {}) {
   const tank = opts.tank || { w: 1.6, h: 1.6, d: 1.0 };
   let params = Object.assign({ velocity: 0.5, densityRatio: 0.5, deltaT: 0.5 }, opts.params || {});
-  let nY = opts.nY || 5;     // seeds across the jet height
-  let nZ = opts.nZ || 4;     // seeds across the depth (gives the 3D set)
-  const steps = opts.steps || 150;
+  let field = opts.field || null;     // real CFD sampler, or null → model
+  let nS = opts.seeds || 5;           // seed grid is nS × (nS-1)
+  let nZ = opts.nZ || 2;
+  const steps = opts.steps || 200;
 
   const geo = new THREE.BufferGeometry();
   const material = new THREE.ShaderMaterial({
@@ -52,35 +52,47 @@ export function createStreamlines(opts = {}) {
   const lines = new THREE.LineSegments(geo, material);
   lines.frustumCulled = false;
 
+  function trace(f, x0, y0, z, sgn, ds, hw, hh) {
+    let x = x0, y = y0;
+    const pts = [[x, y, z]];
+    for (let k = 0; k < steps; k++) {
+      const vel = f.velocity(x, y);
+      if (vel.speed < 1e-7) break;
+      const inv = (ds * sgn) / vel.speed;
+      x += vel.vx * inv; y += vel.vy * inv;
+      if (x < -hw || x > hw || y < -hh || y > hh) break;
+      pts.push([x, y, z]);
+    }
+    return pts;
+  }
+
   function build() {
-    const field = makeField(params, tank);
-    const halfW = tank.w / 2, halfH = tank.h / 2, halfD = tank.d / 2;
-    const ds = (tank.w / steps) * 1.5;
+    const f = field || makeField(params, tank);
+    const norm = f.umax || 0.95;
+    const hw = tank.w / 2, hh = tank.h / 2;
+    const ds = tank.w / 170;
     const pos = [], arc = [], tmp = [], spd = [];
 
     for (let iz = 0; iz < nZ; iz++) {
-      const z = nZ > 1 ? ((iz / (nZ - 1)) - 0.5) * tank.d * 0.7 : 0;
-      for (let iy = 0; iy < nY; iy++) {
-        const fy = nY > 1 ? (iy / (nY - 1)) - 0.5 : 0;
-        let x = -halfW + 0.012 * tank.w;
-        let y = fy * 0.16 * halfH;                     // thin laminar inlet band
-        const pts = [];
-        for (let k = 0; k < steps; k++) {
-          pts.push([x, y, z]);
-          const { vx, vy, speed } = field.velocity(x, y);
-          if (speed < 1e-5) break;
-          const inv = ds / (speed + 1e-6);
-          x += vx * inv; y += vy * inv;
-          if (x > halfW + 0.42 || y > halfH * 1.02 || y < -halfH * 1.02) { pts.push([x, y, z]); break; }
-        }
-        const M = pts.length;
-        for (let k = 0; k < M - 1; k++) {
-          for (const idx of [k, k + 1]) {
-            const p = pts[idx];
-            pos.push(p[0], p[1], p[2]);
-            arc.push(idx / (M - 1));
-            tmp.push(field.temperature(p[0], p[1]));
-            spd.push(Math.min(1, field.velocity(p[0], p[1]).speed / 0.95));
+      const z = nZ > 1 ? ((iz / (nZ - 1)) - 0.5) * tank.d * 0.6 : 0;
+      for (let sy = 0; sy < nS - 1; sy++) {
+        const y0 = ((sy + 0.5) / (nS - 1) - 0.5) * tank.h * 0.82;
+        for (let sx = 0; sx < nS; sx++) {
+          const x0 = ((sx + 0.5) / nS - 0.5) * tank.w * 0.82;
+          const back = trace(f, x0, y0, z, -1, ds, hw, hh).reverse();
+          const fwd = trace(f, x0, y0, z, 1, ds, hw, hh);
+          const pts = back.concat(fwd.slice(1));
+          const M = pts.length;
+          if (M < 4) continue;
+          for (let k = 0; k < M - 1; k++) {
+            for (const idx of [k, k + 1]) {
+              const p = pts[idx];
+              pos.push(p[0], p[1], p[2]);
+              arc.push(idx / (M - 1));
+              tmp.push(f.temperature(p[0], p[1]));
+              const vel = f.velocity(p[0], p[1]);
+              spd.push(Math.min(1, vel.speed / norm));
+            }
           }
         }
       }
@@ -97,13 +109,10 @@ export function createStreamlines(opts = {}) {
   return {
     object: lines,
     update(dt) { material.uniforms.uTime.value += dt; },
-    setParams(p) { Object.assign(params, p); build(); },
+    setField(f) { field = f; build(); },
+    setParams(p) { Object.assign(params, p); if (!field) build(); },
     setMode(m) { material.uniforms.uMode.value = m; },
-    setDensity(level) {            // 0 sparse .. 2 dense
-      nY = [3, 5, 8][level] || 5;
-      nZ = [3, 4, 5][level] || 4;
-      build();
-    },
+    setDensity(level) { nS = [4, 5, 7][level] || 5; build(); },
     dispose() { geo.dispose(); material.dispose(); },
   };
 }

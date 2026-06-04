@@ -40,14 +40,15 @@ In **AR** (scan the printed poster) a floating **CASE PARAMETERS** plate appears
 
 | Layer | Status |
 |---|---|
-| Temperature field | **Real CFD data** (Fluent solve; shown as the back-wall contour and the timestep montage) |
+| Temperature field | **Real CFD data** (Fluent solve; field coloring, slice and back-wall contour) |
+| **Velocity field · streamlines · glyphs** | **Real CFD data** — extracted from the Fluent solve `BouyantJet_END_CFD_RUN` (85,625 cells), sampled on the symmetry plane to a 64×64 grid (`data/cfd_field.json`). Streamlines are grid-seeded and integrated forward+backward through this real field; glyphs and the slice sample it directly. |
 | Geometry (tank, pipes, 5×5 mm inlet, 1 mm cells, 7.5 cm tank) | **Real** |
 | Scalar parameters (Re ≈ 100, ΔT = 40 K, U = 0.02 m/s, 600 s) | **Real / verified in Fluent** |
-| Streamlines · velocity magnitude · glyphs | **Interpretive model** that reproduces the *observed* topology (jet + two vortices from the Fluent streamline figure) — not raw solver vectors |
-| Density · Buoyancy fields | **Derived from temperature** via the Boussinesq approximation (ρ = ρ₀[1 − β(T − T₀)], f_b ∝ ρ₀ g β (T − T₀)) |
+| Density · Buoyancy fields | **Derived from the real temperature** via the Boussinesq approximation (ρ = ρ₀[1 − β(T − T₀)], f_b ∝ ρ₀ g β (T − T₀)) |
+| Glowing particle plume | **Illustrative** laminar model (the only non-data layer) — clearly the decorative element, not a measurement |
 | Richardson number Ri ≈ 1 | **Computed** as g β ΔT D / U² with assumed β ≈ 2.1×10⁻⁴ K⁻¹ and L = D — *verify β / length scale against the Fluent setup before quoting a precise value* |
 
-The honesty is built into the UI: every field-mode legend is tagged *CFD data / modelled / derived*.
+The honesty is built into the UI: every field-mode legend is tagged *CFD data / derived*.
 
 ---
 
@@ -63,18 +64,19 @@ The honesty is built into the UI: every field-mode legend is tagged *CFD data / 
 ## 5. Anticipated questions + honest answers
 
 - **"Is the flow turbulent?"** → No. Re ≈ 100, laminar, confirmed in Fluent. The visualisation avoids turbulence on purpose.
-- **"Are these your real CFD fields?"** → The **temperature** field is real solver output (back-wall contour + the timestep montage on the poster). The interactive **streamlines / velocity / glyphs** are an interpretive model reproducing the observed topology for communication; **density / buoyancy** are derived from the temperature. I label each in the legend.
-- **"Why a model and not the raw 3D field?"** → The case is essentially 2D (a vertical slice); the raw field is exported as the temperature contour. The 3D interactive layer is for intuition. Grounding the velocity field in exported Fluent data is the planned next step.
+- **"Are these your real CFD fields?"** → **Yes — both temperature and velocity are the real Fluent solve** (`BouyantJet_END_CFD_RUN`, 85,625 cells). The streamlines are integrated through the real velocity field; the glyphs and the slice sample it directly; **density / buoyancy** are derived from the real temperature (Boussinesq). The only illustrative layer is the glowing particle plume.
+- **"How did you get the field into the browser?"** → Exported the cell-centre velocity (u, v) and temperature from the Fluent `.cas.h5/.dat.h5`, sampled the symmetry plane onto a 64×64 grid, and the viewer bilinearly interpolates it.
 - **"What does rCFD actually buy you?"** → ~263× less compute for the same temperature transport, CoG RMSE 0.069 mm — so new cases (e.g. heat loss, Step 2) become minutes instead of hours.
 
 ---
 
 ## 6. Known limitations (own them — it reads as rigour)
 
-- Velocity magnitude, streamlines and glyphs are **modelled**, not raw solver vectors.
-- Slice read-out values are **representative** (model) except the height, which is geometric.
+- The field is a single representative snapshot (end of the reference run) sampled on the symmetry plane; the case is quasi-2D so this captures the in-plane flow well.
+- Density and buoyancy are derived from the real temperature (Boussinesq), not separate measurements.
 - Ri ≈ 1 depends on the assumed β and length scale.
-- The field backdrop colormap is Fluent's default rainbow (it is the raw recording); the interactive layers use perceptual maps.
+- The glowing particle plume is an illustrative laminar model, not data.
+- The faint back-wall contour uses Fluent's default rainbow (it is the raw recording); the interactive layers use perceptual maps.
 
 ---
 
@@ -88,10 +90,9 @@ The honesty is built into the UI: every field-mode legend is tagged *CFD data / 
 
 ---
 
-## 8. Suggested next improvements (for an international venue)
+## 8. Improvements status
 
-1. **Ground the velocity field in real data** — export the Fluent velocity field (even downsampled) and drive the streamlines/glyphs from it; flips the biggest caveat into a strength.
-2. **Time evolution** — scrub the field through the 600 s (the real temperature video already exists) so the stratification *builds* live.
-3. **Validation overlay** — show where rCFD deviates from CFD across the f_sd sweep (your actual result), in 3D.
-4. **Export-figure button** — capture a clean still from the viewer for the printed poster / paper.
-5. **Numeric colorbar ticks** with physical units on every mode.
+- ✅ **Velocity grounded in real data** — streamlines/glyphs/slice now run on the exported Fluent field.
+- ✅ **Time evolution** — the Time toggle scrubs the real temperature field over 0–600 s.
+- ✅ **Export-figure button** + ✅ **numeric colorbar ticks**.
+- Remaining ideas for an international venue: (a) drive the glowing plume itself through the real velocity texture (so even the decorative layer is data); (b) a 3D rCFD-vs-CFD deviation overlay across the f_sd sweep; (c) several time snapshots of the *velocity* field, not just temperature.
