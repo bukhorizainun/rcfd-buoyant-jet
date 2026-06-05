@@ -31,15 +31,20 @@ uniform float uTime; uniform float uMode;
 void main(){
   float s = (uMode < 0.5) ? vT : (uMode < 1.5) ? vS : (uMode < 2.5) ? (1.0 - vT) : vT;
   vec3 col = cfdColor(uMode, s);
-  float wave = 0.35 + 0.5 * pow(0.5 + 0.5 * sin((vArc * 7.0 - uTime * 1.1) * 6.2831853), 2.0);
-  gl_FragColor = vec4(col * wave, 0.55);   // a subtle structure guide; the glowing parcels are the star
+  // a travelling brightness pulse rides the line so flow direction reads; the
+  // floor is kept high so the lines themselves (the two vortices) stay bold.
+  float wave = 0.55 + 0.45 * pow(0.5 + 0.5 * sin((vArc * 7.0 - uTime * 1.1) * 6.2831853), 2.0);
+  // keep a cool structural underglow so the LINES stay visible even in the cold
+  // (near-black) end of the colormap — otherwise the lower vortex disappears.
+  col = col * (0.55 + 0.55 * wave) + vec3(0.07, 0.14, 0.24) * (0.5 + 0.5 * wave);
+  gl_FragColor = vec4(col, 0.92);   // bold structure: the streamlines ARE the vortices
 }`;
 
 export function createStreamlines(opts = {}) {
   const tank = opts.tank || { w: 1.6, h: 1.6, d: 1.0 };
   let params = Object.assign({ velocity: 0.5, densityRatio: 0.5, deltaT: 0.5 }, opts.params || {});
   let field = opts.field || null;     // real CFD sampler, or null → model
-  let nS = opts.seeds || 7;           // seed grid is nS × (nS-1) — denser = clearer vortices
+  let nS = opts.seeds || 9;           // seed grid is nS × (nS-1) — denser = clearer vortices
   let nZ = opts.nZ || 2;
   const steps = opts.steps || 220;
 

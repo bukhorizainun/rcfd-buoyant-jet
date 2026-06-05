@@ -290,15 +290,21 @@ function buildLiveScene(root, videoUrl, realField) {
   // the live GPU jet — parcels advect along the REAL velocity field when we
   // have it (so even the "decorative" layer is data-driven), else the model
   const jet = createJetField({
-    tank: TANK, count: 7200, size: 32,
+    tank: TANK, count: 5200, size: 22,
+    // a soft haze BEHIND the streamlines (real field) — the bold streamlines are
+    // what reveal the two vortices; the particles add life without the clutter
+    // that was drowning the structure out.
+    alpha: realField ? 0.5 : 1.0,
     fieldTex: realField ? buildFieldTexture(realField.data) : null,
     fieldUmax: realField ? realField.umax : 0.03,
   });
   root.add(jet.object);
 
   // animated laminar streamlines (flow direction + the two vortices) — driven
-  // by the REAL CFD field when available, otherwise the analytic model
-  const streams = createStreamlines({ tank: TANK, field: realField });
+  // by the REAL CFD field when available, otherwise the analytic model. A single
+  // crisp plane on the symmetry plane (nZ:1) so the two counter-rotating vortices
+  // read cleanly face-on instead of smearing across stacked depth slices.
+  const streams = createStreamlines({ tank: TANK, field: realField, nZ: 1 });
   root.add(streams.object);
 
   // velocity glyphs + interactive slice plane (both off by default)

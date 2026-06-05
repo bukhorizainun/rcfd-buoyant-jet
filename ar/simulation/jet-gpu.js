@@ -204,6 +204,7 @@ varying float vTemp;
 varying float vDensity;
 varying float vSpeed;
 uniform float uMode;
+uniform float uAlpha;   // per-instance opacity (viewer dims its haze; Flow panel = 1)
 
 void main(){
   vec2 q = gl_PointCoord - 0.5;
@@ -213,7 +214,7 @@ void main(){
   // scalar for the active field: 0 temp, 1 velocity, 2 density(=1-T), 3 buoyancy(=T)
   float s = (uMode < 0.5) ? vTemp : (uMode < 1.5) ? vSpeed : (uMode < 2.5) ? (1.0 - vTemp) : vTemp;
   vec3 col = cfdColor(uMode, s);
-  float alpha = a * vDensity * 0.6;
+  float alpha = a * vDensity * 0.6 * uAlpha;
   if (alpha < 0.003) discard;
   // brighter where the scalar is high (emissive feel under additive blending)
   gl_FragColor = vec4(col * (0.7 + 0.6 * s), alpha);
@@ -271,6 +272,7 @@ export function createJetField(opts = {}) {
     uHasField: { value: opts.fieldTex ? 1 : 0 },
     uField: { value: opts.fieldTex || dummyTexture() },
     uFieldUmax: { value: opts.fieldUmax || 0.03 },
+    uAlpha: { value: opts.alpha != null ? opts.alpha : 1.0 },
   };
 
   const material = new THREE.ShaderMaterial({
