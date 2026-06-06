@@ -4,15 +4,15 @@
     "version": 2
   },
 
-  "greeting": "I'm the poster's research assistant. Ask me about the buoyant jet, rCFD, face-swap diffusion, or the results, and I'll explain it in layers. You can always tap “Ask more” for the maths, an analogy, or a deeper take.",
-  "fallback": "I don't have that in my local knowledge base yet. Try: buoyancy, vortex formation, the Reynolds number, rCFD, face-swap diffusion (f_sd), mesh, or the speed-up. A cloud LLM can be plugged into the same box later (see ai/llm-hooks.js).",
+  "greeting": "Hello, researcher — I'm Astro Duck. Ask me anything about buoyancy, vortices, recurrence CFD, or wall heat loss, and I'll explain it in layers. Tap “Ask more” for the maths, an analogy, or a deeper take.",
+  "fallback": "I don't have that in my local knowledge base yet. Try: buoyancy, vortex formation, the Reynolds number, rCFD, face-swap diffusion (f_sd), the speed-up, or wall heat loss.",
   "suggestions": [
     "Why does a vortex form?",
     "What is the buoyancy effect?",
     "Why is rCFD used?",
-    "Explain mesh quality",
     "What is face-swap diffusion?",
-    "Why is the best f_sd metric-dependent?"
+    "Why is the best f_sd metric-dependent?",
+    "How does wall heat loss change things?"
   ],
 
   "followupLabels": {
@@ -121,7 +121,7 @@
       "physical": "Mixing spreads heat faster than real advection, so any mixing overshoots the mean temperature — hence f_sd=0 wins there. But some mixing is needed to put the heat at the right height, so the centre of gravity is best at a middle value.",
       "cfd": "The T_mean error shrinks monotonically as f_sd→0, while the CoG_y error has a genuine minimum at f_sd=0.500 (RMSE 0.069 mm), slightly better than 0.375 and 0.750. The optimum is broad, not knife-edge.",
       "more": {
-        "deeper": "The two optima move in opposite directions on the f_sd axis, so there is no single best value — the choice is a deliberate trade-off, which is exactly the kind of judgement Step 2 will need to make under heat loss.",
+        "deeper": "The two optima move in opposite directions on the f_sd axis, so there is no single best value — the choice is a deliberate trade-off, which is exactly the kind of judgement the wall-heat-loss study has to make.",
         "math": "T_mean error ∝ overshoot, monotone in f_sd. CoG_y error is U-shaped: under-mixing sits the heat too high, over-mixing too low; the minimum is near f_sd ≈ 0.5.",
         "analogy": "Seasoning a soup: no salt keeps the 'average' truest to the recipe, but a pinch is needed to get the flavour distributed right. The best amount depends on which you care about."
       },
@@ -196,11 +196,11 @@
       "physical": "T_mean is the volume-averaged temperature; CoG_y is the height of the 'centre of mass' of the heat. Together they say how much heat there is and where it is.",
       "cfd": "Both are written every step for the CFD reference and each rCFD case, so accuracy is judged directly: f_sd=0 best for T_mean, f_sd=0.5 best for CoG_y.",
       "more": {
-        "deeper": "Using two complementary metrics is deliberate: a method can get the total heat right while placing it at the wrong height, or vice versa. Step 2's heat loss makes CoG even more central.",
+        "deeper": "Using two complementary metrics is deliberate: a method can get the total heat right while placing it at the wrong height, or vice versa. Wall heat loss makes CoG even more central.",
         "math": "T_mean = (1/V)∫T dV; CoG_y = ∫ y·(T−T₀) dV / ∫(T−T₀) dV.",
         "analogy": "Marks on a thermometer (how hot overall) versus a water-level gauge (how high it reaches)."
       },
-      "followup": { "text": "What comes next — Step 2?", "id": "step2" },
+      "followup": { "text": "How does wall heat loss change things?", "id": "heatloss" },
       "related": ["stratification", "fsd_metric"]
     },
     {
@@ -227,26 +227,41 @@
       "cfd": "Quantitatively: T_mean best at f_sd=0.000, CoG_y best at f_sd=0.500 (RMSE 0.069 mm), replay 120–701× faster. The optimum for CoG is broad around 0.375–0.750.",
       "more": {
         "deeper": "The headline is not a single magic number but a trade-off surface: accuracy vs cost vs which metric matters. That framing is what Step 2 carries forward.",
-        "math": "See the f_sd sweep table: CoG RMSE 0.116, 0.097, 0.074, 0.069, 0.072, 0.137, 0.280 for f_sd = 0, 0.125, 0.375, 0.5, 0.75, 1.5, 3.",
+        "math": "The CoG RMSE bottoms at f_sd = 0.5 (0.069 mm) and rises for both less mixing (interfaces stay too sharp) and more mixing (the field over-smooths).",
         "analogy": "A good photocopy of the flow at a fraction of the ink — faithful where it matters most."
       },
-      "followup": { "text": "What comes next — Step 2?", "id": "step2" },
+      "followup": { "text": "Now switch on wall heat loss", "id": "heatloss" },
       "related": ["fsd_metric", "speedup"]
     },
     {
-      "id": "step2",
-      "title": "Next step — heat loss",
-      "keywords": ["step 2", "next", "outlook", "future", "heat loss", "heatloss", "extension", "what next", "adiabatic"],
-      "short": "Step 1 (this poster) is adiabatic — no heat escapes. Step 2 makes the walls lose heat to the surroundings and tests whether rCFD still holds.",
-      "physical": "Real tanks leak heat through their walls. Adding wall heat loss couples the temperature field to where the warm fluid actually touches the wall, making the centre-of-gravity metric even more important.",
-      "cfd": "Step 2 introduces a wall flux q = h·(T_wall − T∞) and likely a multi-database approach so replay can pick from several recorded regimes. The suggested starting point is f_sd = 0.500 with a small confirming sweep around 0.375–0.750.",
+      "id": "heatloss",
+      "title": "Wall heat loss",
+      "keywords": ["heat loss", "heatloss", "wall", "cooling", "sink", "q wall", "ambient", "lose heat", "non-adiabatic", "adiabatic", "next", "outlook"],
+      "short": "Letting the top surface lose heat tests the reuse idea: replaying the reused adiabatic database recovers only about a quarter of the true cooling.",
+      "physical": "Real tanks leak heat. A gentle loss at the warm top surface, q = h(T − T∞) with h ≈ 8 W/m²K, slowly cools the tank. How fast depends on keeping warm fluid at the surface — which is exactly what the live flow does and a frozen replay does not.",
+      "cfd": "It is modelled as a balance-registered sink in the thin top cell layer (kept inside the energy balance). The full CFD cools 1.45 K; the rCFD replay on the reused adiabatic C2C database cools only 0.36 K — a recovery of ~24%. CoG_y barely moves, while the heterogeneity δT_mean drops as the warm top is pulled toward the bulk.",
       "more": {
-        "deeper": "Because heat loss responds to where warm fluid sits, CoG_y becomes the key diagnostic, and the single-database assumption may need to become several recorded regimes blended during replay.",
-        "math": "Energy balance gains a sink term: dE/dt = −∫ h(T_wall−T∞) dA. The face-swap operator stays mass/energy-consistent; the wall term is added on top.",
-        "analogy": "Step 1 is a perfectly insulated thermos; Step 2 is an ordinary cup that slowly cools the drink through its sides."
+        "deeper": "Reusing the adiabatic database is cheap (no rebuild) but freezes a flow recorded without cooling, so the buoyancy-driven overturning that refreshes the surface is missing. The gap is therefore advective, not a diffusion-tuning issue.",
+        "math": "Energy balance gains a sink: dE/dt = −∫_top h (T − T∞) dA, registered through the rCFD balance source so the safety belt does not cancel it. We compare it as a difference of differences: cooling = T_adiabatic − T_heatloss for each method.",
+        "analogy": "An insulated thermos (adiabatic) versus an ordinary cup that cools through its top — except here we try to predict the cup using a recording made of the thermos."
       },
-      "followup": { "text": "Why is CoG the key metric for Step 2?", "id": "diagnostics" },
-      "related": ["diagnostics", "fsd_metric"]
+      "followup": { "text": "Why does rCFD under-predict the cooling?", "id": "frozen" },
+      "related": ["frozen", "diagnostics"]
+    },
+    {
+      "id": "frozen",
+      "title": "Why the frozen replay under-predicts cooling",
+      "keywords": ["frozen", "under-predict", "underpredict", "shortfall", "why less", "advective", "overturning", "reuse", "why 24"],
+      "short": "The replay reuses a flow recorded with no heat loss, so it never carries the down-draft that keeps warm fluid at the cooled surface — the loss fades and rCFD recovers only ~24%.",
+      "physical": "In the real CFD, cooled surface fluid sinks and is replaced by fresh warm fluid, so the surface stays warm and the loss stays strong. The frozen replay just lets the top cool in place: the surface temperature difference shrinks and the loss dies away.",
+      "cfd": "Both methods use the same sink law, so the difference is purely the flow. The reused adiabatic C2C database has no cooling-driven overturning to advect heat back to the surface, so rCFD's 0.36 K sits far below the CFD's 1.45 K.",
+      "more": {
+        "deeper": "This quantifies the limit of the 'record once, reuse the database' shortcut for a coupled problem: it holds while the added physics barely perturbs the flow, and breaks once the new physics changes the flow itself. The cure is a non-adiabatic (or multi-regime) database.",
+        "math": "Cooling ratio ≈ 0.36 / 1.45 ≈ 0.24. The adiabatic replay bias (~1.7 K baseline gap) explains only a small part; the dominant cause is the missing advective feedback.",
+        "analogy": "Like predicting how fast a stirred pot cools from a video of an unstirred one — the stirring is exactly what keeps the heat coming to the surface."
+      },
+      "followup": { "text": "Why is CoG the key metric here?", "id": "diagnostics" },
+      "related": ["heatloss", "diagnostics"]
     },
     {
       "id": "entrainment",

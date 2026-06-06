@@ -3,6 +3,7 @@
  */
 import { $, el, esc } from "../core/utils.js";
 import * as conversation from "../ai/conversation.js";
+import { answerAvatar } from "./astro-duck.js";
 
 let inited = false;
 
@@ -38,7 +39,12 @@ export function ask(query) {
 
 function addBubble(log, who, text) {
   const m = el("div", { class: "msg " + who });
-  m.textContent = text;
+  if (who === "bot") {
+    m.innerHTML = answerAvatar() + `<span class="msg-txt"></span>`;
+    m.querySelector(".msg-txt").textContent = text;   // text stays escaped
+  } else {
+    m.textContent = text;
+  }
   log.appendChild(m);
   log.scrollTop = log.scrollHeight;
 }
@@ -72,7 +78,7 @@ export function renderAnswer(container, opts = {}) {
 
   container.innerHTML =
     `<div class="answer">
-       <div class="ans-title">${esc(plan.title)}</div>
+       <div class="ans-title">${answerAvatar()}${esc(plan.title)}</div>
        ${blocksHtml}
        <div class="ans-extra"></div>
        ${moreBtns.length ? `<div class="ans-more">${moreBtns.join("")}</div>` : ""}

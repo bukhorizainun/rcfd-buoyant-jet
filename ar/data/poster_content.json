@@ -1,23 +1,23 @@
 {
   "meta": {
-    "comment": "Central content for the AR scientific poster. All physical values are the REAL parameters of the buoyant-jet test case (laminar, Re~100), not generic placeholders. Edit freely; the app reloads from this file."
+    "comment": "Central content for the AR scientific poster. All physical values are the REAL parameters of the buoyant-jet test case (laminar, Re~100) and its wall-heat-loss study — not generic placeholders. Edit freely; the app reloads from this file."
   },
 
   "title": "Data-based Numerical Simulation of Buoyant Jet Flow",
-  "subtitle": "Master's Thesis · Step 1 — CFD reference, rCFD workflow & face-swap-diffusion sweep",
+  "subtitle": "Master's Thesis · recurrence-CFD of a laminar buoyant jet — adiabatic baseline & wall heat loss",
   "author": "Mochamad Bukhori Zainun (k12438440)",
   "supervisor": "Prof. Stefan Pirker",
   "institution": "Department of Particulate Flow Modelling, JKU Linz",
-  "year": "May 2026",
+  "year": "June 2026",
 
   "researchAreas": [
-    "Artificial Intelligence",
     "Computational Fluid Dynamics",
-    "Scientific Visualization",
-    "Fluid Mechanics"
+    "Recurrence CFD",
+    "Heat Transfer",
+    "Scientific Visualization"
   ],
 
-  "abstract": "A short CFD run records the recurring flow patterns of a laminar buoyant jet in a closed water tank. Recurrence-CFD (rCFD) then replays those patterns to transport the temperature field at a fraction of the cost, with a face-swap diffusion operator (parameter f_sd) restoring the missing mixing.",
+  "abstract": "A short CFD run records the recurring flow patterns of a laminar buoyant jet in a closed water tank. Recurrence-CFD (rCFD) then replays those patterns to transport the temperature field at a fraction of the cost, with a face-swap diffusion operator (parameter f_sd) restoring the missing mixing. Switching on wall heat loss then stress-tests the idea: replaying the reused adiabatic database recovers only about a quarter of the true cooling, quantifying where the reuse assumption breaks.",
 
   "detectionBanner": {
     "line1": "Poster Detected",
@@ -35,8 +35,10 @@
       { "label": "Temperature Difference", "value": "40 K", "note": "warm jet 333 K vs tank 293 K", "icon": "temp" },
       { "label": "Jet Velocity", "value": "0.02 m/s", "note": "5 × 5 mm inlet", "icon": "speed" },
       { "label": "Simulation Time", "value": "600 s", "note": "warm inlet on until t = 315 s", "icon": "clock" },
-      { "label": "Mesh Cell Size", "value": "1 mm", "note": "structured cubic cells", "icon": "grid" },
-      { "label": "Best f_sd (CoG)", "value": "0.500", "note": "lowest centre-of-gravity error", "icon": "target" }
+      { "label": "Mesh Cell Size", "value": "1 mm", "note": "≈ 85,625 structured cubic cells", "icon": "grid" },
+      { "label": "Best f_sd (CoG)", "value": "0.500", "note": "lowest centre-of-gravity error · 0.069 mm", "icon": "target" },
+      { "label": "Wall heat-transfer h", "value": "≈ 8 W/m²K", "note": "gentle top-surface loss, q = h(T−T∞)", "icon": "temp" },
+      { "label": "Heat-loss recovered", "value": "≈ 24%", "note": "rCFD 0.36 K vs CFD 1.45 K cooling", "icon": "target" }
     ]
   },
 
@@ -57,15 +59,15 @@
 
   "insights": {
     "title": "Research Insights",
-    "subtitle": "Step 1 · adiabatic buoyant jet",
+    "subtitle": "Adiabatic baseline & wall heat loss",
     "groups": [
       {
         "heading": "Key findings",
         "icon": "star",
         "items": [
-          "rCFD reproduces the 600 s buoyant-jet temperature transport from one short CFD run.",
-          "Best mixing strength is metric-dependent: f_sd = 0.000 for mean temperature, f_sd = 0.500 for thermal centre of gravity (CoG RMSE 0.069 mm).",
-          "The CoG optimum is broad (0.375–0.750), not knife-edge."
+          "rCFD reproduces the 600 s buoyant-jet temperature transport from one short CFD run, ~263× faster.",
+          "Adiabatic: best mixing strength is metric-dependent — f_sd = 0.000 for mean temperature, f_sd = 0.500 for the thermal centre of gravity (CoG RMSE 0.069 mm).",
+          "Wall heat loss: replaying the reused adiabatic database recovers only ~24% of the true cooling (rCFD 0.36 K vs CFD 1.45 K)."
         ]
       },
       {
@@ -78,6 +80,15 @@
         ]
       },
       {
+        "heading": "Wall heat loss — a stress test",
+        "icon": "heat",
+        "items": [
+          "A gentle top-surface sink q = h(T−T∞), h ≈ 8 W/m²K, is added as a balance-registered source term.",
+          "The full CFD cools by 1.45 K; the frozen adiabatic replay cools only 0.36 K — it misses the buoyancy-driven overturning that keeps fresh warm fluid at the cooled surface.",
+          "The shortfall is advective, motivating a non-adiabatic (or multi-regime) database rather than reusing the adiabatic one."
+        ]
+      },
+      {
         "heading": "Numerical stability",
         "icon": "grid",
         "items": [
@@ -85,24 +96,15 @@
           "Face-swap diffusion is mass- and energy-conservative; above the 1/8 cap it splits into inner sweeps.",
           "Laminar solver matches the regime, avoiding spurious turbulent mixing."
         ]
-      },
-      {
-        "heading": "AI / data-driven contribution",
-        "icon": "ai",
-        "items": [
-          "rCFD is data-based: recurring flow patterns are learned once and replayed, the same spirit as ML surrogates.",
-          "Average speed-up ~263× (120–701× across the sweep), compute-only.",
-          "The single knob f_sd is the tunable parameter a future learned model could optimise."
-        ]
       }
     ]
   },
 
   "comparison": {
-    "title": "CFD vs AI-assisted rCFD",
+    "title": "CFD vs rCFD replay",
     "subtitle": "Drag the divider to compare",
     "left": { "label": "Full CFD", "video": "assets/videos/cfd_reference.mp4" },
-    "right": { "label": "AI-assisted rCFD", "video": "assets/videos/rcfd_replay.mp4" },
+    "right": { "label": "rCFD · f_sd = 0.5", "video": "assets/videos/rcfd_replay.mp4" },
     "metrics": [
       { "label": "Compute time", "cfd": "569 min", "rcfd": "2.2 min", "win": "~263× faster" },
       { "label": "CoG accuracy", "cfd": "reference", "rcfd": "0.069 mm RMSE", "win": "matched" },
@@ -112,6 +114,7 @@
 
   "references": [
     { "id": "lichtenegger2016", "text": "Lichtenegger, T. & Pirker, S. (2016). Recurrence CFD — a novel approach to simulate multiphase flows with strongly separated time scales. Chemical Engineering Science, 153, 394–410." },
-    { "id": "pirker2018", "text": "Pirker, S. & Lichtenegger, T. (2018). Efficient time-extrapolation of single- and multiphase simulations by transport-based recurrence CFD. Chemical Engineering Science, 188, 65–83." }
+    { "id": "pirker2018", "text": "Pirker, S. & Lichtenegger, T. (2018). Efficient time-extrapolation of single- and multiphase simulations by transport-based recurrence CFD. Chemical Engineering Science, 188, 65–83." },
+    { "id": "lumetzberger2025", "text": "Lumetzberger, H. et al. (2025). Local-diffusion recurrence CFD. Chemical Engineering Science, 311, 121624." }
   ]
 }

@@ -5,7 +5,7 @@
   },
 
   "greeting": "Hi! I'm the poster's offline research assistant. Ask me about buoyancy, vortices, the Reynolds number, rCFD, face-swap diffusion, or what the results mean.",
-  "fallback": "I don't have that in my local knowledge base yet. Try asking about: buoyancy, vortex formation, Reynolds number, rCFD, face-swap diffusion (f_sd), the test case, or the speed-up. (A cloud LLM can be plugged in later — see the README.)",
+  "fallback": "I don't have that in my local knowledge base yet. Try asking about: buoyancy, vortex formation, Reynolds number, rCFD, face-swap diffusion (f_sd), the test case, the speed-up, or wall heat loss.",
   "suggestions": [
     "What is buoyancy?",
     "Why does vortex formation occur?",
@@ -107,16 +107,16 @@
       "answer": "rCFD is compared against the full CFD reference using T_mean(t) and CoG_y(t), plus side-by-side temperature snapshots at several times. The errors stay small across the whole 600 s, and a sweep over f_sd shows how the mixing strength trades off mean-temperature accuracy against centre-of-gravity accuracy."
     },
     {
-      "id": "ai-role",
-      "question": "Where does AI come in?",
-      "keywords": ["ai", "artificial intelligence", "machine learning", "data driven", "data-based", "role of ai", "where is ai"],
-      "answer": "rCFD is a data-based / data-driven method: instead of re-solving the physics, it learns the recurring flow patterns from data and reuses them. That is the same spirit as modern ML surrogates for simulation. Future steps of the thesis explore richer data-driven models (e.g. reduced-order and learned operators) on top of this rCFD baseline."
+      "id": "data-based",
+      "question": "Is this an AI or machine-learning method?",
+      "keywords": ["data driven", "data-based", "method", "learned", "model", "physics"],
+      "answer": "No — rCFD is a physics-based, data-driven method. It records the recurring flow patterns from one CFD run and reuses them to transport temperature cheaply, but it solves no learned model and trains no network. The single tunable knob is the face-swap diffusion strength f_sd."
     },
     {
-      "id": "step2",
-      "question": "What is the next step (Step 2)?",
-      "keywords": ["step 2", "next", "outlook", "future", "heat loss", "extension", "what next"],
-      "answer": "Step 2 extends the workflow toward a heat-loss scenario and a multi-database approach, so the replay can pick from several recorded regimes instead of one. The current Step 1 result — that face-swap diffusion with f_sd = 0.500 reproduces the buoyant-jet transport cheaply — is the baseline that Step 2 builds on."
+      "id": "heatloss",
+      "question": "What about wall heat loss?",
+      "keywords": ["heat loss", "heatloss", "wall", "cooling", "next", "outlook", "adiabatic"],
+      "answer": "Letting the top surface lose heat, q = h(T − T∞) with h ≈ 8 W/m²K, stress-tests the reuse idea. Replaying the reused adiabatic database cools the tank by only 0.36 K against 1.45 K in the full CFD (~24%): the frozen replay misses the buoyancy-driven overturning that keeps warm fluid at the surface. The fix is to record a non-adiabatic database rather than reuse the adiabatic one."
     }
   ]
 }

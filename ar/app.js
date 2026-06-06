@@ -26,6 +26,7 @@ import { renderInsights } from "./ui/insights.js";
 import { initComparison, pauseComparison } from "./ui/comparison.js";
 import { startBackground } from "./ui/background.js";
 import { startARScene, resetARScene } from "./ui/ar-scene.js";
+import * as astroDuck from "./ui/astro-duck.js";
 import { FIELD_MODES, legendGradient, sampleCmap } from "./simulation/colormaps.js";
 // flow-sim.js (and its Three.js dependency) is imported lazily in openFlowSim()
 
@@ -89,6 +90,7 @@ function showStart() {
       "Tip: the AR target (<code>target.mind</code>) isn't compiled yet, so AR can't lock onto the poster. " +
       "“Explore on screen” works right now — see the README to enable full AR.";
   }
+  astroDuck.mountWelcome();
   wireGlobalUI();
 }
 
@@ -104,6 +106,7 @@ function wireGlobalUI() {
     const on = toggleResearchMode();
     $("#btnResearch").classList.toggle("on", on);
     $("#btnResearch").setAttribute("aria-pressed", String(on));
+    if (on) astroDuck.startTour(); else astroDuck.stopTour();
   });
 
   $$("#dock .dock-btn").forEach((btn) => {
@@ -131,6 +134,7 @@ function enterStage(showInfo = true) {
 
 function exitToStart() {
   closeAllPanels(); closeOverlay("model3d"); closeOverlay("popup");
+  astroDuck.stopTour();
   resetARScene();
   STATE.arReady = false;
   $("#demoStage").classList.add("hidden");
@@ -171,9 +175,10 @@ function showInfoLayer() {
  * ===================================================================== */
 function startDemo() {
   STATE.mode = "demo";
-  enterStage(true);
+  enterStage(false);
   $("#demoStage").classList.remove("hidden");
   renderDemoHotspots();
+  astroDuck.celebrate("Poster loaded — let's explore the flow physics.");
 }
 
 async function launchAR() {
@@ -189,7 +194,7 @@ async function launchAR() {
   enterStage(false);
   $("#scanHint").classList.remove("hidden");
   try {
-    await startARScene({ onFirstFound: showInfoLayer, onError: () =>
+    await startARScene({ onFirstFound: () => astroDuck.celebrate(), onError: () =>
       showError("Camera unavailable", "Could not start the camera. Grant camera permission, or continue on screen.") });
   } catch (err) {
     console.error(err);

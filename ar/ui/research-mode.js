@@ -1,6 +1,6 @@
 /* ui/research-mode.js — context-aware "Research Mode" (Feature 2).
  *
- * When on, every hotspot opens straight into an AI explainer and the UI puts
+ * When on, every hotspot opens straight into an explainer and the UI puts
  * on a lab accent (body.research-mode). State lives in STATE.researchMode;
  * ui/hotspots.js reads it when a hotspot is opened.
  */
@@ -14,7 +14,7 @@ export function setResearchMode(on) {
   bus.emit("mode:research", STATE.researchMode);
   toast(
     STATE.researchMode
-      ? "Research Mode on — hotspots are now AI explainer nodes"
+      ? "Research Mode on — hotspots are now guided explainer nodes"
       : "Research Mode off — hotspots show the quick summary",
     3200
   );

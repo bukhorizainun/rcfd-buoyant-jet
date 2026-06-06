@@ -5,6 +5,7 @@ import { $, el, esc } from "../core/utils.js";
 import { STATE } from "../core/state.js";
 import * as memory from "../ai/memory.js";
 import { renderAnswer } from "./chat.js";
+import * as astroDuck from "./astro-duck.js";
 
 /* ---- on-screen demo hotspots (poster shown on the page) ---- */
 export function renderDemoHotspots() {
@@ -21,12 +22,13 @@ export function renderDemoHotspots() {
   });
 }
 
-/* ---- hotspot popup: static info + Level-2 questions + AI explainer ---- */
+/* ---- hotspot popup: static info + Level-2 questions + explainer ---- */
 export function openPopup(h) {
   memory.recordHotspot(h.id);
   const research = STATE.researchMode;
+  if (research) astroDuck.tourStep(h.id);   // Astro Duck narrates the guided tour
 
-  $("#popupEyebrow").textContent = research ? "AI Explainer · " + h.label : "Poster · " + h.label;
+  $("#popupEyebrow").textContent = research ? "Explainer · " + h.label : "Poster · " + h.label;
   $("#popupTitle").textContent = h.label || "";
   $("#popupBody").textContent = h.body || "";
 
@@ -61,7 +63,7 @@ export function openPopup(h) {
   });
   $("#popupSubsLabel").textContent = (h.subs && h.subs.length) ? "Dig deeper" : "";
 
-  // Research Mode: open straight into the AI explainer for the hotspot's topic
+  // Research Mode: open straight into the explainer for the hotspot's topic
   const card = $("#popup .popup-card");
   card.classList.toggle("research", research);
   if (research && h.topic) renderAnswer(explainer, { intentId: h.topic });

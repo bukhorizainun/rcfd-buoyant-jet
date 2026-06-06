@@ -1,4 +1,4 @@
-/* ui/comparison.js — Scenario comparison: CFD vs AI-assisted rCFD (Feature 7).
+/* ui/comparison.js — Scenario comparison: CFD vs rCFD replay (Feature 7).
  * A draggable wipe between the two videos plus a metric read-out.
  */
 import { $, esc } from "../core/utils.js";
