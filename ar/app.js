@@ -109,6 +109,19 @@ function wireGlobalUI() {
     if (on) astroDuck.startTour(); else astroDuck.stopTour();
   });
 
+  const btnPresent = $("#btnPresent");
+  if (btnPresent) btnPresent.addEventListener("click", () => {
+    const on = !btnPresent.classList.contains("on");
+    btnPresent.classList.toggle("on", on);
+    btnPresent.setAttribute("aria-pressed", String(on));
+    if (on) astroDuck.startPresentation({
+      openPanel: openPanelByName,
+      closeAll: () => { closeAllPanels(); closeOverlay("model3d"); },
+      onEnd: () => { btnPresent.classList.remove("on"); btnPresent.setAttribute("aria-pressed", "false"); },
+    });
+    else astroDuck.stopPresentation();
+  });
+
   $$("#dock .dock-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const which = btn.dataset.panel;
@@ -123,6 +136,29 @@ function wireGlobalUI() {
   });
   $("#popup").addEventListener("click", (e) => { if (e.target.id === "popup") closeOverlay("popup"); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTopMost(); });
+
+  // hidden easter egg: five taps on the assistant avatar
+  const aiAva = document.querySelector(".ai-ava");
+  if (aiAva) aiAva.addEventListener("click", () => astroDuck.nudgeEasterEgg());
+}
+
+/* Open a single panel by name (used by Presentation Mode), without toggling. */
+function openPanelByName(name) {
+  if (name === "model3d") return openModel3D();
+  closeOverlay("model3d");
+  closeAllPanels();
+  const node = document.getElementById("panel-" + name);
+  if (!node) return;
+  node.classList.remove("hidden");
+  STATE.activePanel = name;
+  const btn = document.querySelector(`#dock .dock-btn[data-panel="${name}"]`);
+  if (btn) btn.classList.add("active");
+  if (name === "dashboard") renderDashboard();
+  if (name === "timeline") initTimeline();
+  if (name === "ai") initChat();
+  if (name === "flow") openFlowSim();
+  if (name === "insights") renderInsights();
+  if (name === "comparison") initComparison();
 }
 
 function enterStage(showInfo = true) {
@@ -277,12 +313,15 @@ function initTimeline() {
       const t = Number(slider.value);
       if (v.duration && isFinite(v.duration)) v.currentTime = (t / simMax) * v.duration;
       updateTLReadout(t);
+      astroDuck.timelineSeek(t);
     };
     tlScrub = scrub;
     slider.addEventListener("input", scrub);
     v.addEventListener("loadedmetadata", scrub);
   }
   updateTLReadout(Number(slider.value));
+  astroDuck.mountTimelineCompanion();
+  astroDuck.timelineSeek(Number(slider.value));
 }
 let tlScrub = null;
 function updateTLReadout(t) {
@@ -403,6 +442,15 @@ function buildModel3DUI() {
 
   // export a clean figure for the printed poster / paper
   $("#m3dExport").addEventListener("click", exportFigure);
+
+  // Astro Duck scientific guide (points out structures per active field)
+  const guideBtn = $("#m3dGuideBtn");
+  if (guideBtn) guideBtn.addEventListener("click", () => {
+    const on = !guideBtn.classList.contains("on");
+    guideBtn.classList.toggle("on", on); guideBtn.setAttribute("aria-pressed", String(on));
+    astroDuck.set3DGuide(on, FIELD_MODES[m3dMode].label);
+  });
+  astroDuck.recordMode(m3dMode);   // viewing the modal counts the default field
 }
 function updateSliceRead() {
   if (!STATE.viewer3d || !STATE.viewer3d.getSliceReadout) return;
@@ -414,6 +462,8 @@ function setFieldMode(i) {
   $$("#m3dModes .m3d-mode").forEach((b) => b.classList.toggle("on", Number(b.dataset.mode) === i));
   if (STATE.viewer3d && STATE.viewer3d.setFieldMode) STATE.viewer3d.setFieldMode(i);
   applyLegend(i);
+  astroDuck.recordMode(i);                       // achievement: all 3D fields
+  astroDuck.update3DGuide(FIELD_MODES[i].label); // refresh guide line if shown
 }
 function setSource(src) {
   m3dSource = src === "model" ? "model" : "real";

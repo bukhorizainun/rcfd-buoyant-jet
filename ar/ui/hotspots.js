@@ -27,6 +27,7 @@ export function openPopup(h) {
   memory.recordHotspot(h.id);
   const research = STATE.researchMode;
   if (research) astroDuck.tourStep(h.id);   // Astro Duck narrates the guided tour
+  astroDuck.recordHotspot(h.id);            // achievement: open every hotspot
 
   $("#popupEyebrow").textContent = research ? "Explainer · " + h.label : "Poster · " + h.label;
   $("#popupTitle").textContent = h.label || "";

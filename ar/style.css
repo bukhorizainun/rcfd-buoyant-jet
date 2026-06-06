@@ -677,5 +677,68 @@ body.research-mode .hotspot { filter: drop-shadow(0 0 6px var(--violet)); }
   .ad-guide { transform: scale(0.9); transform-origin: left bottom; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ad-figure, .ad-eye, .ad-anten, .ad-particles i, .dot-online { animation: none !important; }
+  .ad-figure, .ad-eye, .ad-anten, .ad-particles i, .dot-online,
+  .ad-egg-orbit, .ad-egg-orbit .ad-figure-sm { animation: none !important; }
 }
+
+/* ---- extended Astro Duck features (timeline / 3D / badges / present / egg) ---- */
+.ad-figure-sm { width: 46px; height: 46px; }
+
+/* 5. timeline companion — rides above the slider thumb */
+.ad-timeline { z-index: 55; transform: translate(-50%, -100%); flex-direction: column-reverse;
+  align-items: center; gap: 2px; }
+.ad-timeline .ad-bubble { display: none; max-width: 190px; }
+.ad-timeline.milestone .ad-bubble { display: block; }
+.ad-timeline .ad-bubble::after { left: 50%; right: auto; bottom: -6px; transform: translateX(-50%) rotate(45deg);
+  border: none; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+
+/* 6. 3D viewer guide — bottom-left inside the canvas */
+.ad-m3d { left: 14px; bottom: 16px; align-items: flex-end; z-index: 6; max-width: 78%; }
+.ad-m3d .ad-bubble { max-width: 230px; }
+
+/* 7. achievement badge toast — top-centre */
+.ad-badge { position: fixed; top: 16px; left: 50%; z-index: 140; pointer-events: none;
+  transform: translate(-50%, -16px); opacity: 0; transition: opacity .45s ease, transform .45s ease; }
+.ad-badge.show { opacity: 1; transform: translate(-50%, 0); }
+.ad-badge-card { display: flex; align-items: center; gap: 12px; background: var(--glass-2);
+  border: 1px solid var(--line); border-left: 3px solid var(--cyan); border-radius: 14px;
+  padding: 11px 16px 11px 13px; backdrop-filter: blur(10px);
+  box-shadow: 0 14px 40px rgba(0,0,0,.5), var(--glow-cyan); }
+.ad-badge-txt { display: flex; flex-direction: column; line-height: 1.3; }
+.ad-badge-txt small { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--cyan); }
+.ad-badge-name { font-size: 15px; font-weight: 800; }
+.ad-badge-desc { font-size: 12px; color: var(--ink-soft); }
+
+/* 9. presentation mode — guided thesis walk-through */
+.ad-present { position: fixed; inset: 0; z-index: 130; pointer-events: none;
+  display: flex; justify-content: center; align-items: flex-start; padding-top: 7vh;
+  opacity: 0; transition: opacity .45s ease;
+  background: radial-gradient(620px 420px at 50% 22%, rgba(5,7,15,0.66), rgba(5,7,15,0) 74%); }
+.ad-present.show { opacity: 1; }
+.ad-present-stage { display: flex; flex-direction: column; align-items: center; gap: 14px;
+  width: min(560px, 92vw); }
+.ad-present .ad-presenter { position: relative; opacity: 1; transform: none; }
+.ad-present .ad-bubble { max-width: 460px; }
+.ad-present-dots { display: flex; gap: 9px; }
+.ad-present-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); transition: .25s; }
+.ad-present-dots i.on { background: var(--cyan); box-shadow: var(--glow-cyan); transform: scale(1.15); }
+.ad-present-ctl { display: flex; gap: 10px; pointer-events: auto; }
+.ad-btn-primary, .ad-btn-ghost { font-family: inherit; font-weight: 600; font-size: 13.5px;
+  border-radius: 999px; padding: 10px 20px; border: 1px solid var(--line); cursor: pointer; }
+.ad-btn-primary { background: linear-gradient(135deg, var(--cyan), var(--violet)); color: #03060f; border: none; }
+.ad-btn-ghost { background: rgba(255,255,255,.06); color: var(--ink); }
+
+/* 8. easter egg — a quick ride around a recirculation vortex */
+.ad-egg { position: fixed; inset: 0; z-index: 135; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  opacity: 0; transition: opacity .4s ease;
+  background: radial-gradient(420px 420px at 50% 46%, rgba(5,7,15,0.6), rgba(5,7,15,0) 70%); }
+.ad-egg.show { opacity: 1; }
+.ad-egg-orbit { position: relative; width: 150px; height: 150px; animation: ad-orbit 2.1s linear infinite; }
+.ad-egg-orbit .ad-figure-sm { position: absolute; top: -8px; left: 50%; margin-left: -23px;
+  animation: ad-orbit-rev 2.1s linear infinite; }
+.ad-egg-say { max-width: 280px; }
+
+@keyframes ad-orbit     { from { transform: rotate(0); }    to { transform: rotate(360deg); } }
+@keyframes ad-orbit-rev { from { transform: rotate(0); }    to { transform: rotate(-360deg); } }

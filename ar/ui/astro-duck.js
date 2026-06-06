@@ -14,6 +14,7 @@
  * idempotent and defensive so it never breaks the rest of the app.
  */
 import { $, el } from "../core/utils.js";
+import { STATE } from "../core/state.js";
 
 /* ---- the holographic Astro Duck mark (inline SVG) ----
  * Cute-but-intellectual: plump proportions, a big bright eye and a faint blush
@@ -141,4 +142,226 @@ export function stopTour() {
 /* Small avatar markup placed beside a chat answer (used by ui/chat.js). */
 export function answerAvatar() {
   return `<span class="ad-mini" aria-hidden="true">${duckSVG()}</span>`;
+}
+
+/* small reusable "guide" node: a mini duck + a one-line bubble, used by the
+ * timeline companion and the 3D viewer guide. */
+function makeGuideNode(id, cls) {
+  const n = el("div", { id, class: "astro-duck " + cls });
+  n.innerHTML = `<div class="ad-figure ad-figure-sm">${duckSVG()}</div>
+                 <div class="ad-bubble"><b>Astro&nbsp;Duck</b><span class="ad-say"></span></div>`;
+  return n;
+}
+function setSay(node, text) {
+  if (!node) return;
+  const s = node.querySelector(".ad-say"); if (s) s.textContent = text;
+  node.classList.remove("pop"); void node.offsetWidth; node.classList.add("pop");
+}
+
+/* ===================== 5. TIMELINE COMPANION ========================= */
+/* Astro Duck rides above the timeline slider and calls out the key moments.
+ * Wording is laminar-honest (this is a Re~100 case — no turbulent "coherent
+ * structures"); milestones align with the real events (warm inlet off at 315 s). */
+const TL_MILE = [
+  { t: 120, say: "The warm plume is climbing — a stratified layer forms under the ceiling." },
+  { t: 315, say: "Warm inlet switches off here — this is peak heat content." },
+  { t: 450, say: "Cold inlet now flushes the tank; the warm layer slowly relaxes." },
+  { t: 600, say: "End of the run — a slow, quasi-steady cool-down." },
+];
+let tlSeen = new Set();
+export function mountTimelineCompanion() {
+  const panel = $("#panel-timeline");
+  if (!panel || $("#adTimeline")) return;
+  const n = makeGuideNode("adTimeline", "ad-timeline");
+  panel.appendChild(n);
+  tlSeen = new Set();
+  timelineSeek(Number(($("#tlSlider") || {}).value || 0));
+}
+export function timelineSeek(t) {
+  const n = $("#adTimeline"), slider = $("#tlSlider");
+  if (!n || !slider) return;
+  const max = Number(slider.max) || 600;
+  const frac = Math.max(0, Math.min(1, t / max));
+  // offsetLeft/Top share the same coordinate space as the absolutely-positioned
+  // companion (both resolve against the fixed #panel-timeline) — no padding skew.
+  const x = slider.offsetLeft + frac * slider.offsetWidth;
+  const y = slider.offsetTop;
+  n.style.left = x + "px";
+  n.style.top = y + "px";
+  n.classList.add("show");
+  // fire the nearest milestone once, when the playhead reaches it
+  for (const m of TL_MILE) {
+    if (t >= m.t - 6 && !tlSeen.has(m.t)) {
+      tlSeen.add(m.t);
+      setSay(n, m.say);
+      n.classList.add("milestone");
+      recordMilestone(m.t);
+    }
+  }
+}
+
+/* ====================== 6. 3D VIEWER GUIDE =========================== */
+const M3D_LINES = {
+  Temperature: "The warm core is the rising buoyant plume; cooler fluid settles below.",
+  Velocity:    "Follow the loops — two steady counter-rotating recirculation vortices.",
+  Density:     "Density is derived from temperature (Boussinesq): warmer means lighter.",
+  Buoyancy:    "Buoyancy is the upward push on the warm fluid — the engine of the flow.",
+};
+export function set3DGuide(on, modeLabel) {
+  const host = $("#model3dCanvas");
+  if (!host) return;
+  let n = $("#adModel3DGuide");
+  if (on) {
+    if (!n) { n = makeGuideNode("adModel3DGuide", "ad-m3d"); host.appendChild(n); }
+    update3DGuide(modeLabel);
+    requestAnimationFrame(() => n.classList.add("show"));
+  } else if (n) {
+    n.classList.remove("show");
+  }
+}
+export function update3DGuide(modeLabel) {
+  const n = $("#adModel3DGuide");
+  if (!n) return;
+  setSay(n, M3D_LINES[modeLabel] || "Drag to orbit; toggle fields, a slice plane and time.");
+}
+
+/* ====================== 7. ACHIEVEMENTS ============================== */
+/* Quiet, tasteful "discoveries". Progress persists in localStorage so a badge
+ * is announced only once per visitor. */
+const AKEY = "astroduck_ach_v1";
+function aLoad() { try { return JSON.parse(localStorage.getItem(AKEY)) || {}; } catch (e) { return {}; } }
+function aSave(s) { try { localStorage.setItem(AKEY, JSON.stringify(s)); } catch (e) {} }
+function aRecord(bucket, item, need, badge) {
+  const s = aLoad();
+  const arr = s[bucket] = s[bucket] || [];
+  if (!arr.includes(item)) arr.push(item);
+  s.awarded = s.awarded || [];
+  if (arr.length >= need && !s.awarded.includes(badge.name)) {
+    s.awarded.push(badge.name); aSave(s); announceBadge(badge);
+  } else { aSave(s); }
+}
+export function recordHotspot(id) {
+  const need = (STATE.hotspots && STATE.hotspots.hotspots) ? STATE.hotspots.hotspots.length : 6;
+  aRecord("hotspots", id, need, { name: "CFD Explorer", desc: "Opened every hotspot on the poster." });
+}
+export function recordMilestone(t) {
+  aRecord("milestones", t, TL_MILE.length, { name: "Flow Historian", desc: "Followed the flow through all its key moments." });
+}
+export function recordMode(i) {
+  aRecord("modes", i, 4, { name: "Scientific Visualizer", desc: "Viewed every 3D scientific field." });
+}
+function announceBadge(badge) {
+  let n = $("#adBadge");
+  if (!n) {
+    n = el("div", { id: "adBadge", class: "ad-badge" });
+    n.innerHTML = `<div class="ad-badge-card">
+        <div class="ad-figure ad-figure-sm">${duckSVG("ad-glow")}</div>
+        <div class="ad-badge-txt"><small>Achievement unlocked</small>
+          <b class="ad-badge-name"></b><span class="ad-badge-desc"></span></div>
+      </div>`;
+    document.body.appendChild(n);
+  }
+  n.querySelector(".ad-badge-name").textContent = badge.name;
+  n.querySelector(".ad-badge-desc").textContent = badge.desc;
+  n.classList.remove("hidden", "show"); void n.offsetWidth; n.classList.add("show");
+  clearTimeout(announceBadge._t);
+  announceBadge._t = setTimeout(() => {
+    n.classList.remove("show");
+    setTimeout(() => n.classList.add("hidden"), 500);
+  }, 4200);
+}
+
+/* ====================== 9. PRESENTATION MODE ========================= */
+/* A guided, conference-grade walk-through. Astro Duck presents the thesis in
+ * five beats; `hooks` lets the app open the matching panel for each beat. */
+const TALK = [
+  { k: "Problem",       say: "The problem: full CFD of long, slow heat transport is wasteful — the flow repeats within ~30 s while the temperature evolves for 600 s." },
+  { k: "Method",        say: "The method: recurrence CFD. Record the flow once as cell-to-cell shift maps, then replay them to transport heat — no Navier–Stokes during replay.", panel: "model3d" },
+  { k: "Results",       say: "Results: rCFD reproduces the field ~263× faster; the best mixing f_sd is metric-dependent — 0.000 for mean temperature, 0.500 for stratification.", panel: "comparison" },
+  { k: "Contributions", say: "Contribution: a Windows/Fluent port, a characterised f_sd, and a wall-heat-loss stress test that quantifies the reuse limit — rCFD recovers ~24% of the cooling.", panel: "insights" },
+  { k: "Future work",   say: "Future work: record a non-adiabatic (or multi-regime) database so the replay carries the cooling-driven overturning the frozen one misses.", panel: "dashboard" },
+];
+let talkStep = 0, talkHooks = null, talkTimer = null;
+export function startPresentation(hooks) {
+  talkHooks = hooks || {};
+  talkStep = 0;
+  let n = $("#adPresent");
+  if (!n) {
+    n = el("div", { id: "adPresent", class: "ad-present" });
+    n.innerHTML = `
+      <div class="ad-present-stage">
+        <div class="astro-duck ad-presenter show">
+          ${particlesHTML()}
+          <div class="ad-figure">${duckSVG("ad-glow")}</div>
+          <div class="ad-bubble ad-bubble-center">
+            <b class="ad-talk-k">Astro Duck</b><span class="ad-say"></span></div>
+        </div>
+        <div class="ad-present-dots"></div>
+        <div class="ad-present-ctl">
+          <button type="button" class="ad-btn-ghost" data-ad="stop">Exit</button>
+          <button type="button" class="ad-btn-primary" data-ad="next">Next ›</button>
+        </div>
+      </div>`;
+    document.body.appendChild(n);
+    n.querySelector('[data-ad="next"]').addEventListener("click", () => talkAdvance(1));
+    n.querySelector('[data-ad="stop"]').addEventListener("click", stopPresentation);
+    n.querySelector(".ad-present-dots").innerHTML =
+      TALK.map((_, i) => `<i data-i="${i}"></i>`).join("");
+  }
+  n.classList.remove("hidden");
+  requestAnimationFrame(() => n.classList.add("show"));
+  talkRender();
+}
+function talkRender() {
+  const n = $("#adPresent"); if (!n) return;
+  const beat = TALK[talkStep];
+  n.querySelector(".ad-talk-k").textContent = "Astro Duck · " + beat.k;
+  setSay(n.querySelector(".ad-presenter"), beat.say);
+  n.querySelectorAll(".ad-present-dots i").forEach((d, i) =>
+    d.classList.toggle("on", i === talkStep));
+  n.querySelector('[data-ad="next"]').textContent =
+    talkStep >= TALK.length - 1 ? "Finish" : "Next ›";
+  if (beat.panel && talkHooks.openPanel) talkHooks.openPanel(beat.panel);
+  clearTimeout(talkTimer);
+  talkTimer = setTimeout(() => talkAdvance(1), 11000);   // gentle auto-advance
+}
+function talkAdvance(d) {
+  talkStep += d;
+  if (talkStep >= TALK.length) return stopPresentation();
+  if (talkStep < 0) talkStep = 0;
+  talkRender();
+}
+export function stopPresentation() {
+  clearTimeout(talkTimer);
+  const n = $("#adPresent"); if (!n) return;
+  n.classList.remove("show");
+  setTimeout(() => n.classList.add("hidden"), 400);
+  if (talkHooks && talkHooks.closeAll) talkHooks.closeAll();
+}
+
+/* ====================== 8. EASTER EGG (hidden) ======================= */
+/* Deliberately hidden + opt-in (no random distraction): tapping the panel
+ * avatar five times sends Astro Duck for a quick ride around a recirculation
+ * vortex. Tasteful, brief, dismisses itself. */
+let eggTaps = 0, eggTimer = null;
+export function nudgeEasterEgg() {
+  eggTaps++;
+  clearTimeout(eggTimer);
+  eggTimer = setTimeout(() => { eggTaps = 0; }, 1500);
+  if (eggTaps >= 5) { eggTaps = 0; flourish(); }
+}
+function flourish() {
+  let n = $("#adEgg");
+  if (!n) {
+    n = el("div", { id: "adEgg", class: "ad-egg" });
+    n.innerHTML = `<div class="ad-egg-orbit"><div class="ad-figure ad-figure-sm">${duckSVG("ad-glow")}</div></div>
+      <div class="ad-bubble ad-bubble-center ad-egg-say">Wheee — surfing a recirculation vortex. Back to science in 3, 2, 1…</div>`;
+    document.body.appendChild(n);
+  }
+  n.classList.remove("hidden", "show"); void n.offsetWidth; n.classList.add("show");
+  clearTimeout(flourish._t);
+  flourish._t = setTimeout(() => {
+    n.classList.remove("show");
+    setTimeout(() => n.classList.add("hidden"), 500);
+  }, 4200);
 }
