@@ -327,6 +327,7 @@ async function openModel3D() {
     });
     if (STATE.viewer3d.setFieldMode) STATE.viewer3d.setFieldMode(m3dMode);
     // re-apply any toggle state to the freshly created viewer
+    if (STATE.viewer3d.setSource) STATE.viewer3d.setSource(m3dSource);
     STATE.viewer3d.setGlyphs($("#m3dGlyphs").classList.contains("on"));
     STATE.viewer3d.setSlice($("#m3dSliceBtn").classList.contains("on"));
     STATE.viewer3d.setSliceHeight(Number($("#m3dSliceRange").value) / 100);
@@ -341,7 +342,7 @@ async function openModel3D() {
 }
 
 /* ---- Feature 2: scientific field selector + legend + parameters ---- */
-let m3dMode = 0, m3dUIBuilt = false;
+let m3dMode = 0, m3dSource = "real", m3dUIBuilt = false;
 function buildModel3DUI() {
   if (m3dUIBuilt) return;
   m3dUIBuilt = true;
@@ -350,6 +351,11 @@ function buildModel3DUI() {
     const b = el("button", { class: "m3d-mode" + (i === 0 ? " on" : ""), type: "button", "data-mode": String(i) }, esc(m.label));
     b.addEventListener("click", () => setFieldMode(i));
     modes.appendChild(b);
+  });
+
+  // Real / Model source toggle (rCFD solver data vs clean analytic model)
+  $$("#m3dSource .m3d-mode").forEach((b) => {
+    b.addEventListener("click", () => setSource(b.dataset.src));
   });
   $("#m3dParams").innerHTML = [
     ["Re", "≈ 100", "laminar"],
@@ -404,11 +410,20 @@ function setFieldMode(i) {
   if (STATE.viewer3d && STATE.viewer3d.setFieldMode) STATE.viewer3d.setFieldMode(i);
   applyLegend(i);
 }
+function setSource(src) {
+  m3dSource = src === "model" ? "model" : "real";
+  $$("#m3dSource .m3d-mode").forEach((b) => b.classList.toggle("on", b.dataset.src === m3dSource));
+  if (STATE.viewer3d && STATE.viewer3d.setSource) STATE.viewer3d.setSource(m3dSource);
+  applyLegend(m3dMode);   // keep the legend provenance honest (rCFD field ↔ analytic model)
+}
 function applyLegend(i) {
   const m = FIELD_MODES[i];
   $("#m3dCbar").style.background = legendGradient(m.cmap);
   $("#m3dTicks").innerHTML = (m.ticks || []).map((t) => `<span>${esc(t)}</span>`).join("");
-  $("#m3dLegName").innerHTML = esc(m.label) + ` <em>· ${esc(m.prov)}</em>`;
+  // in Model mode every layer comes from the analytic laminar field, so don't
+  // keep claiming "rCFD field" — state the real provenance instead.
+  const prov = m3dSource === "model" ? "model · analytic laminar" : m.prov;
+  $("#m3dLegName").innerHTML = esc(m.label) + ` <em>· ${esc(prov)}</em>`;
 }
 
 function applyTime() {

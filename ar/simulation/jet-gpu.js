@@ -297,6 +297,14 @@ export function createJetField(opts = {}) {
       if (p.deltaT != null) uniforms.uDeltaT.value = p.deltaT;
     },
     setMode(m) { uniforms.uMode.value = m; },
+    // swap the advection source live: a velocity texture (→ real-field path) or
+    // null (→ analytic slider model). Used by the viewer's Real/Model toggle.
+    setField(tex, umax) {
+      uniforms.uHasField.value = tex ? 1 : 0;
+      uniforms.uField.value = tex || dummyTexture();
+      if (umax != null) uniforms.uFieldUmax.value = umax;
+    },
+    setAlpha(a) { uniforms.uAlpha.value = a; },
     setCount(n) { geo.setDrawRange(0, Math.max(400, Math.min(MAX, n | 0))); },
     dispose() { geo.dispose(); material.dispose(); },
   };

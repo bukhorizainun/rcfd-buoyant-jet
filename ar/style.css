@@ -393,6 +393,11 @@ button { font-family: inherit; cursor: pointer; }
 .m3d-mode.on { color: #03060f; background: linear-gradient(135deg, var(--cyan), var(--violet));
   border-color: transparent; font-weight: 700; }
 
+/* Real / Model source toggle */
+.m3d-src { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 0 12px 8px; }
+.m3d-src-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-soft); opacity: .65; margin-right: 2px; }
+.m3d-src .m3d-mode { padding: 5px 12px; }
+
 /* parameter read-out (floating, lab-style) */
 .m3d-params {
   position: absolute; left: 14px; top: 14px; z-index: 2; display: grid; gap: 6px;

@@ -19,6 +19,11 @@ import { createGlyphs } from "./simulation/glyphs.js";
 import { createSlice } from "./simulation/slice.js";
 import { loadRealField } from "./simulation/cfd-field.js";
 
+const FOOT = {
+  real: "Streamlines · glyphs · slice · particles — all from the real rCFD field (Fluent replay, 85k cells)",
+  model: "Analytic laminar model — clean two-vortex topology (model, not solver data)",
+};
+
 export async function createViewer(host, opts = {}) {
   const onMode = opts.onMode || (() => {});
 
@@ -79,6 +84,9 @@ export async function createViewer(host, opts = {}) {
   let slice = null;       // interactive cross-section plane (toggle)
   let backdropMat = null; // real-CFD field backdrop material (time-scrub)
   let lod = null;         // frame-rate governor for the jet
+  let realField = null;   // real CFD sampler (Real/Model toggle)
+  let fieldTex = null;    // its GPU advection texture (built once, reused on toggle)
+  let source = "real";    // 'real' = rCFD data · 'model' = analytic laminar model
 
   const haveGLB = opts.glb ? await fileExists(opts.glb) : false;
   let built = false;
@@ -94,7 +102,7 @@ export async function createViewer(host, opts = {}) {
   }
   if (!built) {
     // the REAL CFD velocity + temperature field (Fluent export), if available
-    const realField = await loadRealField("data/cfd_field.json", { w: 1.6, h: 1.6, d: 1.0 });
+    realField = await loadRealField("data/cfd_field.json", { w: 1.6, h: 1.6, d: 1.0 });
     const live = buildLiveScene(root, opts.cfdVideo || null, realField);
     fieldVideo = live.video;
     jet = live.jet;
@@ -102,10 +110,9 @@ export async function createViewer(host, opts = {}) {
     glyphs = live.glyphs;
     slice = live.slice;
     backdropMat = live.backdrop;
+    fieldTex = live.fieldTex;
     lod = makeLOD(jet, { target: 52, min: 1600 });
-    onMode(realField
-      ? "Streamlines · glyphs · slice · particles — all from the real rCFD field (Fluent replay, 85k cells)"
-      : "Buoyant jet · live laminar flow (model)");
+    onMode(realField ? FOOT.real : FOOT.model);
   }
 
   /* ---- resize + auto-fit (handles tall portrait canvases) ---- */
@@ -152,9 +159,26 @@ export async function createViewer(host, opts = {}) {
     if (slice) slice.setMode(m);
   }
 
+  // Real/Model toggle: 'real' drives every dynamic layer from the rCFD field;
+  // 'model' swaps in the analytic laminar model (clean two-vortex topology) by
+  // passing null fields — the sub-modules already fall back to jet-field.js.
+  function setSource(src) {
+    source = src === "model" ? "model" : "real";
+    const f = source === "real" ? realField : null;   // null → analytic model
+    if (streams) streams.setField(f);
+    if (glyphs) glyphs.setField(f);
+    if (slice) slice.setField(f);
+    if (jet) {
+      jet.setField(f ? fieldTex : null, realField ? realField.umax : 0.03);
+      jet.setAlpha(source === "real" ? 0.5 : 1.0);     // model particles are the hero
+    }
+    onMode(source === "real" && realField ? FOOT.real : FOOT.model);
+  }
+
   /* ---- disposer ---- */
   return {
     setFieldMode,
+    setSource,
     setGlyphs(on) { if (glyphs) glyphs.setVisible(on); },
     setSlice(on) { if (slice) slice.setVisible(on); },
     setSliceHeight(f) { if (slice) slice.setHeight(f); },
@@ -289,13 +313,15 @@ function buildLiveScene(root, videoUrl, realField) {
 
   // the live GPU jet — parcels advect along the REAL velocity field when we
   // have it (so even the "decorative" layer is data-driven), else the model
+  // build the advection texture once; the Real/Model toggle reuses it
+  const fieldTex = realField ? buildFieldTexture(realField.data) : null;
   const jet = createJetField({
     tank: TANK, count: 5200, size: 22,
     // a soft haze BEHIND the streamlines (real field) — the bold streamlines are
     // what reveal the two vortices; the particles add life without the clutter
     // that was drowning the structure out.
     alpha: realField ? 0.5 : 1.0,
-    fieldTex: realField ? buildFieldTexture(realField.data) : null,
+    fieldTex,
     fieldUmax: realField ? realField.umax : 0.03,
   });
   root.add(jet.object);
@@ -322,7 +348,7 @@ function buildLiveScene(root, videoUrl, realField) {
   axes.position.set(-TANK.w / 2 - 0.12, -TANK.h / 2, -TANK.d / 2);
   root.add(axes);
 
-  return { video, jet, streams, glyphs, slice, backdrop: backdropMat };
+  return { video, jet, streams, glyphs, slice, backdrop: backdropMat, fieldTex };
 }
 
 /* The buoyant-jet plume itself is the shared GPU engine in
