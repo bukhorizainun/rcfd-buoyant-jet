@@ -1409,46 +1409,30 @@
 <p>The sketch below shows the mechanism we are trying to capture, which is also the one thing the cheap replay gets wrong. Heat escapes at the surface, the cooled water there gets denser and sinks, warm water rises to replace it, and that slow overturning loop keeps feeding warm fluid to the surface, which keeps the loss going. Tap the parts of each tank to read more.</p>
 
 <style>
-  /* heat-loss illustration — Step-1 "workflow" visual language */
-  .hl-anim .hl-rise { fill:none; color:var(--warn);   stroke:var(--warn);   stroke-width:2.4; opacity:0.92; }
-  .hl-anim .hl-sink { fill:none; color:var(--accent); stroke:var(--accent); stroke-width:2.4; opacity:0.92; }
-  .hl-anim .hl-dot.warm { fill:var(--warn); }
-  .hl-anim .hl-dot.cool { fill:var(--accent); }
-  .hl-anim .hl-jet { stroke:var(--warn); stroke-width:2.6; }
-
-  /* (1) dynamic temperature fade — rCFD top cools, then stays cool (cool-and-hold) */
-  @keyframes hlFadeWarm { 0% { opacity:1; } 28% { opacity:0.12; } 90% { opacity:0.12; } 100% { opacity:1; } }
-  @keyframes hlFadeCold { 0% { opacity:0; } 28% { opacity:0.95; } 90% { opacity:0.95; } 100% { opacity:0; } }
-  .hl-anim.adiabatic .hl-fade-warm { animation: hlFadeWarm 11s ease-in-out infinite; }
-  .hl-anim.adiabatic .hl-fade-cold { animation: hlFadeCold 11s ease-in-out infinite; }
-
-  /* (1b) Real CFD top stays warm — gentle replenishment pulse */
-  @keyframes hlKeepWarm { 0%,100% { opacity:0.85; } 50% { opacity:1; } }
-  .hl-anim:not(.adiabatic) .hl-keepwarm { animation: hlKeepWarm 3.6s ease-in-out infinite; }
-
-  /* (1c) rCFD heat loss is weaker — shorter, fainter flux pulse than Real CFD */
-  @keyframes hlFluxWeak { 0%,100% { transform:translateY(0); opacity:0.12; } 50% { transform:translateY(-6px); opacity:0.5; } }
-  .hl-anim.adiabatic .hl-flux-g { animation: hlFluxWeak 2.2s ease-in-out infinite; }
-
-  /* (3) heat ripple just above the surface */
-  .hl-anim .hl-surface { animation: hlShimmer 3s linear infinite; }
+  /* heat-loss illustration — temperature-coded convection parcel */
+  .hl-anim .hl-tank { fill:none; stroke:var(--ink-soft); stroke-width:2.4; }
+  .hl-anim .hl-surface { stroke:var(--accent); stroke-width:1.4; stroke-dasharray:6 4; opacity:0.5; animation: hlShimmer 3s linear infinite; }
   @keyframes hlShimmer { to { stroke-dashoffset:-16; } }
   .hl-anim .hl-ripple  { fill:none; stroke:var(--accent-soft); stroke-width:1.2; stroke-dasharray:3 6; opacity:0.4; animation: hlRipple 2.4s linear infinite; }
   @keyframes hlRipple { to { stroke-dashoffset:-18; } }
-
-  /* (4) rCFD circulation stalls: faded dashed arrows + dim crawling dots */
-  .hl-anim.adiabatic .hl-rise, .hl-anim.adiabatic .hl-sink { stroke-dasharray:4 5; opacity:0.38; }
-  .hl-anim.adiabatic .hl-dot { opacity:0.42; }
+  .hl-anim .hl-loop { fill:none; stroke:var(--ink-soft); stroke-width:1.6; stroke-dasharray:3 6; opacity:0.28; }
+  .hl-anim .hl-loop.faint { opacity:0.16; }
+  .hl-anim .hl-parcel { stroke:#fff; stroke-width:1.2; }
+  .hl-anim .hl-jet { stroke:var(--warn); stroke-width:2.6; }
+  .hl-flux { stroke:var(--accent); stroke-width:2.6; }
+  .hl-flux.weak { stroke-width:1.8; opacity:0.55; }
+  .hl-anim .hl-label { fill:var(--ink-soft); font:600 12px Inter, sans-serif; }
+  .hl-anim .hl-label.cool { fill:var(--accent); }
+  .hl-anim .hl-label.warm { fill:var(--warn); }
 
   .hl-clickable { cursor:pointer; }
-  .hl-clickable:hover .hl-rise, .hl-clickable:hover .hl-sink { opacity:1; stroke-width:2.9; }
   .hl-clickable:hover text, .hl-clickable:focus text { text-decoration:underline; }
   .hl-clickable:focus { outline:none; }
 
-  /* (2) active highlight — the clicked part glows in sync with the text box */
+  /* active highlight — the clicked part glows in sync with the text box */
   .hl-clickable.is-active { filter: drop-shadow(0 0 5px var(--accent)); }
-  .hl-clickable.is-active .hl-rise, .hl-clickable.is-active .hl-sink { opacity:1; stroke-width:3; }
-  .hl-clickable.is-active .hl-flux { stroke-width:3; }
+  .hl-clickable.is-active .hl-loop { opacity:0.55; }
+  .hl-clickable.is-active .hl-flux { stroke-width:3.2; }
   .hl-clickable.is-active text { fill:var(--accent); font-weight:700; opacity:1 !important; }
 
   .hl-explain { margin-top:1rem; padding:0.8rem 1.05rem; border-radius:8px; background:var(--note-bg); border-left:4px solid var(--accent-soft); font-size:0.92rem; line-height:1.55; color:var(--ink-soft); text-align:left; transition:border-color .2s, color .2s; }
@@ -1485,69 +1469,71 @@
           </filter>
         </defs>
         <rect x="42" y="52" width="236" height="214" rx="8" fill="url(#hlWater)"/>
-        <rect class="hl-keepwarm" x="42" y="52" width="236" height="48" fill="url(#hlWarmGrad)"/>
         <rect class="hl-tank" x="42" y="52" width="236" height="214" rx="8" filter="url(#hlShadow)"/>
         <path class="hl-ripple" d="M 54 48 C 72 44 88 52 106 48 C 124 44 140 52 158 48 C 176 44 192 52 210 48 C 228 44 244 52 262 48"/>
         <line class="hl-surface" x1="42" y1="54" x2="278" y2="54"/>
 
-        <g class="hl-clickable" data-explain="loop-cfd" tabindex="0" role="button" aria-label="Explain the overturning loop">
-          <rect x="92" y="100" width="136" height="156" fill="transparent"/>
-          <path id="hlRiseA" class="hl-rise" d="M 142 244 C 106 214 104 150 138 116" marker-end="url(#hlHead)"/>
-          <path id="hlSinkA" class="hl-sink" d="M 182 116 C 216 150 214 214 178 244" marker-end="url(#hlHead)"/>
-          <circle r="4.6" class="hl-dot warm"><animateMotion dur="3.6s" repeatCount="indefinite"><mpath href="#hlRiseA"/></animateMotion></circle>
-          <circle r="4.2" class="hl-dot cool"><animateMotion dur="3.6s" begin="-1.8s" repeatCount="indefinite"><mpath href="#hlSinkA"/></animateMotion></circle>
-          <text class="hl-label" x="160" y="190" text-anchor="middle" style="opacity:0.7">overturning</text>
-        </g>
-
-        <line class="hl-jet" x1="8" y1="180" x2="44" y2="180" marker-end="url(#hlHead)" style="color:var(--warn)"/>
-        <text class="hl-label warm" x="2" y="170">warm jet</text>
+        <line class="hl-jet" x1="8" y1="186" x2="44" y2="186" marker-end="url(#hlHead)" style="color:var(--warn)"/>
+        <text class="hl-label warm" x="2" y="176">warm jet</text>
 
         <g class="hl-clickable" data-explain="flux" tabindex="0" role="button" aria-label="Explain the surface heat loss" style="color:var(--accent)">
           <rect x="92" y="12" width="136" height="46" fill="transparent"/>
-          <g class="hl-flux-g"><line class="hl-flux" x1="110" y1="52" x2="110" y2="26" marker-end="url(#hlHead)"/><circle class="hl-flux-dot" cx="110" cy="52" r="2.4"/></g>
-          <g class="hl-flux-g d2"><line class="hl-flux" x1="160" y1="52" x2="160" y2="26" marker-end="url(#hlHead)"/><circle class="hl-flux-dot" cx="160" cy="52" r="2.4"/></g>
-          <g class="hl-flux-g d3"><line class="hl-flux" x1="210" y1="52" x2="210" y2="26" marker-end="url(#hlHead)"/><circle class="hl-flux-dot" cx="210" cy="52" r="2.4"/></g>
+          <g>
+            <line class="hl-flux" x1="120" y1="52" x2="120" y2="26" marker-end="url(#hlHead)"/>
+            <line class="hl-flux" x1="160" y1="52" x2="160" y2="26" marker-end="url(#hlHead)"/>
+            <line class="hl-flux" x1="200" y1="52" x2="200" y2="26" marker-end="url(#hlHead)"/>
+            <animate attributeName="opacity" dur="7s" repeatCount="indefinite" keyTimes="0;0.30;0.42;0.6;1" values="0.18;0.5;1;0.5;0.15"/>
+          </g>
           <text class="hl-label cool" x="160" y="18" text-anchor="middle">Q̇ heat loss</text>
         </g>
 
+        <g class="hl-clickable" data-explain="loop-cfd" tabindex="0" role="button" aria-label="Explain the overturning loop">
+          <rect x="80" y="70" width="160" height="188" fill="transparent"/>
+          <path id="hlLoopA" class="hl-loop" d="M 105 240 C 85 195 85 130 110 95 C 135 78 185 78 210 95 C 235 130 235 195 215 240 C 182 260 138 260 105 240 Z"/>
+          <circle class="hl-parcel" r="7" fill="#d6452a">
+            <animateMotion dur="7s" repeatCount="indefinite" rotate="0"><mpath href="#hlLoopA"/></animateMotion>
+            <animate attributeName="fill" dur="7s" repeatCount="indefinite" keyTimes="0;0.34;0.46;0.80;0.94;1" values="#d6452a;#e8923a;#2f6fb8;#2f6fb8;#d6452a;#d6452a"/>
+          </circle>
+          <text class="hl-label" x="160" y="158" text-anchor="middle" style="opacity:0.7">overturning</text>
+        </g>
+
         <text class="wf-title" x="160" y="296" text-anchor="middle">Real CFD</text>
-        <text class="wf-sub"   x="160" y="314" text-anchor="middle">overturning keeps the surface warm</text>
+        <text class="wf-sub"   x="160" y="314" text-anchor="middle">warm rises, cools at the top, sinks, reheats</text>
       </svg>
     </div>
     <div>
-      <svg class="hl-anim adiabatic" viewBox="0 0 320 322" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Frozen, stalling flow in the rCFD replay">
+      <svg class="hl-anim adiabatic" viewBox="0 0 320 322" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A parcel stalls near the top and cools in place (rCFD replay)">
         <rect x="42" y="52" width="236" height="214" rx="8" fill="url(#hlWater)"/>
-        <rect class="hl-fade-warm" x="42" y="52" width="236" height="48" fill="url(#hlWarmGrad)"/>
-        <rect class="hl-fade-cold" x="42" y="52" width="236" height="48" fill="url(#hlColdGrad)"/>
         <rect class="hl-tank" x="42" y="52" width="236" height="214" rx="8" filter="url(#hlShadow)"/>
         <path class="hl-ripple" d="M 54 48 C 72 44 88 52 106 48 C 124 44 140 52 158 48 C 176 44 192 52 210 48 C 228 44 244 52 262 48" style="opacity:0.28"/>
         <line class="hl-surface" x1="42" y1="54" x2="278" y2="54"/>
 
-        <g class="hl-clickable" data-explain="frozen" tabindex="0" role="button" aria-label="Explain the frozen, stalling flow">
-          <rect x="92" y="100" width="136" height="156" fill="transparent"/>
-          <path id="hlRiseB" class="hl-rise" d="M 142 244 C 106 214 104 150 138 116" marker-end="url(#hlHead)"/>
-          <path id="hlSinkB" class="hl-sink" d="M 182 116 C 216 150 214 214 178 244" marker-end="url(#hlHead)"/>
-          <circle r="4.4" class="hl-dot warm"><animateMotion dur="9s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0.25;0.25;0.5;0.5;0.75;0.75;1" keyTimes="0;0.15;0.4;0.55;0.7;0.85;0.92;1"><mpath href="#hlRiseB"/></animateMotion></circle>
-          <circle r="4"   class="hl-dot cool"><animateMotion dur="9s" begin="-4.5s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0.25;0.25;0.5;0.5;0.75;0.75;1" keyTimes="0;0.15;0.4;0.55;0.7;0.85;0.92;1"><mpath href="#hlSinkB"/></animateMotion></circle>
-          <text class="hl-label" x="160" y="190" text-anchor="middle" style="opacity:0.7">no buoyant drive</text>
-        </g>
-
         <g style="color:var(--accent)">
-          <g class="hl-flux-g"><line class="hl-flux" x1="110" y1="52" x2="110" y2="36" marker-end="url(#hlHead)"/></g>
-          <g class="hl-flux-g d2"><line class="hl-flux" x1="160" y1="52" x2="160" y2="36" marker-end="url(#hlHead)"/></g>
-          <g class="hl-flux-g d3"><line class="hl-flux" x1="210" y1="52" x2="210" y2="36" marker-end="url(#hlHead)"/></g>
+          <line class="hl-flux weak" x1="130" y1="52" x2="130" y2="38" marker-end="url(#hlHead)"/>
+          <line class="hl-flux weak" x1="190" y1="52" x2="190" y2="38" marker-end="url(#hlHead)"/>
         </g>
         <text class="hl-label cool" x="160" y="22" text-anchor="middle" style="opacity:0.85">weaker Q̇</text>
 
+        <g class="hl-clickable" data-explain="frozen" tabindex="0" role="button" aria-label="Explain the stalled, frozen flow">
+          <rect x="80" y="70" width="160" height="188" fill="transparent"/>
+          <path class="hl-loop faint" d="M 105 240 C 85 195 85 130 110 95 C 135 78 185 78 210 95 C 235 130 235 195 215 240 C 182 260 138 260 105 240 Z"/>
+          <path id="hlRiseR" d="M 160 242 C 140 200 135 140 150 92" fill="none" stroke="none"/>
+          <circle class="hl-parcel" r="6.5" fill="#d6452a">
+            <animateMotion dur="8.5s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1;1;0" keyTimes="0;0.30;0.90;1"><mpath href="#hlRiseR"/></animateMotion>
+            <animate attributeName="fill" dur="8.5s" repeatCount="indefinite" keyTimes="0;0.40;0.62;0.90;1" values="#d6452a;#d6452a;#2f6fb8;#2f6fb8;#d6452a"/>
+          </circle>
+          <text class="hl-label" x="160" y="158" text-anchor="middle" style="opacity:0.7">no buoyant drive</text>
+        </g>
+
         <text class="wf-title" x="160" y="296" text-anchor="middle">rCFD replay</text>
-        <text class="wf-sub"   x="160" y="314" text-anchor="middle">the loop stalls, top cools in place</text>
+        <text class="wf-sub"   x="160" y="314" text-anchor="middle">parcel stalls at the top, cools in place</text>
       </svg>
     </div>
   </div>
 
   <div class="hl-explain" id="hlExplain"><span class="pk">Tip:</span> tap a tank (the heat arrows, the circulation, or the rCFD panel) and that part is highlighted with an explanation here.</div>
 
-  <figcaption><span class="label">Figure 8.</span> The main difference behind the Step 2 results. In the real CFD (left), warm water rises and the cooled surface water sinks, an overturning loop that keeps the surface warm and the heat leaving. In the rCFD replay (right) that loop loses its buoyant drive and stalls, so the top cools in place (the warm band fades to cold). Tap a tank to highlight a part and read more.</figcaption>
+  <figcaption><span class="label">Figure 8.</span> The mechanism behind the Step 2 gap, followed as one fluid parcel. In the real CFD (left) the parcel rises warm, gives up its heat at the surface (the arrows fire as it turns blue), sinks as cooled fluid, and reheats near the warm jet, so the overturning keeps the heat leaving. In the rCFD replay (right) the frozen flow cannot carry that loop, so the parcel stalls near the top and just cools in place, and little heat leaves. Tap a tank to highlight a part and read more.</figcaption>
 </figure>
 
 <script>
@@ -1557,8 +1543,8 @@
   var def = panel.innerHTML;
   var texts = {
     'flux':     '<span class="pk">Surface heat loss.</span> The warm water at the very top touches the room air and gives up heat to it. We model it as q&#775; = h(T<sub>top</sub> &minus; T<sub>&infin;</sub>) with a gentle h &asymp; 8 W/m&sup2;K, applied only in the thin layer of cells just under the surface.',
-    'loop-cfd': '<span class="pk">The overturning loop.</span> Once the surface cools it becomes denser and sinks; warm water rises to replace it. This slow circulation keeps fresh warm fluid at the surface, so the heat loss stays strong. It is the buoyant flow pattern the rCFD replay does not have.',
-    'frozen':   '<span class="pk">Frozen, stalling flow.</span> The replay reuses the velocity field recorded with the lid closed, so it never carried the buoyancy-driven down-draft. Some weak motion is still there, but without that drive the top cools in place: the surface temperature difference shrinks and the loss fades, which is the ~75% shortfall.'
+    'loop-cfd': '<span class="pk">The overturning loop.</span> Follow the parcel: it rises warm, gives up heat at the surface and turns cold, sinks, then reheats near the jet and rises again. This circulation keeps fresh warm fluid at the surface, so the heat loss stays strong. It is the buoyant flow pattern the rCFD replay does not have.',
+    'frozen':   '<span class="pk">Frozen, stalling flow.</span> The replay reuses the velocity field recorded with the lid closed, so it never carried the buoyancy-driven down-draft. The parcel rises once but then stalls near the top and just cools in place: the surface temperature difference shrinks and the loss fades, which is the ~75% shortfall.'
   };
   function activate(el, k) {
     document.querySelectorAll('.hl-clickable.is-active').forEach(function (x) { x.classList.remove('is-active'); });
