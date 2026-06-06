@@ -170,7 +170,9 @@ export async function createViewer(host, opts = {}) {
     if (slice) slice.setField(f);
     if (jet) {
       jet.setField(f ? fieldTex : null, realField ? realField.umax : 0.03);
-      jet.setAlpha(source === "real" ? 0.5 : 1.0);     // model particles are the hero
+      // long flowing streaks for the slow real field, shorter for the fast model
+      jet.setAlpha(source === "real" ? 0.72 : 1.0);
+      jet.setTrail(source === "real" ? 0.22 : 0.10);
     }
     onMode(source === "real" && realField ? FOOT.real : FOOT.model);
   }
@@ -317,10 +319,12 @@ function buildLiveScene(root, videoUrl, realField) {
   const fieldTex = realField ? buildFieldTexture(realField.data) : null;
   const jet = createJetField({
     tank: TANK, count: 5200, size: 22,
-    // a soft haze BEHIND the streamlines (real field) — the bold streamlines are
-    // what reveal the two vortices; the particles add life without the clutter
-    // that was drowning the structure out.
-    alpha: realField ? 0.5 : 1.0,
+    // flowing comet-streaks are the hero. The real field advances slowly per
+    // phase, so it needs a LONG trail to read as flowing arcs (a short trail
+    // there just looks like a static tangle of dashes); the fast analytic model
+    // already orbits a full loop per cycle, so it wants a shorter trail.
+    alpha: realField ? 0.72 : 1.0,
+    trail: realField ? 0.22 : 0.10,
     fieldTex,
     fieldUmax: realField ? realField.umax : 0.03,
   });
@@ -329,8 +333,10 @@ function buildLiveScene(root, videoUrl, realField) {
   // animated laminar streamlines (flow direction + the two vortices) — driven
   // by the REAL CFD field when available, otherwise the analytic model. A single
   // crisp plane on the symmetry plane (nZ:1) so the two counter-rotating vortices
-  // read cleanly face-on instead of smearing across stacked depth slices.
-  const streams = createStreamlines({ tank: TANK, field: realField, nZ: 1 });
+  // read cleanly face-on. Now demoted to a faint GUIDE (opacity 0.45): the
+  // flowing comet-streaks are the hero that reveal the circulation, so bold
+  // streamlines would just clutter the real field into a rigid knot.
+  const streams = createStreamlines({ tank: TANK, field: realField, nZ: 1, opacity: 0.45 });
   root.add(streams.object);
 
   // velocity glyphs + interactive slice plane (both off by default)

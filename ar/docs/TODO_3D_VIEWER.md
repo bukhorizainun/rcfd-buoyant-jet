@@ -10,7 +10,24 @@ perbaikan bug.
   `viewer3d.js` ngalihin streamlines/glyphs/slice/jet ke field analitik (`null`),
   `jet-gpu` `setField`/`setAlpha`, dan label provenance di legend ikut jujur
   ("rCFD field" ↔ "model · analytic laminar"). Dua-dua mode pusarannya terbaca.
-- **Task B — belum dikerjakan** (comet-streak partikel, opsional).
+- **Task B — SELESAI.** Partikel comet-streak sudah jalan + terverifikasi (gstack
+  screenshot, WebGL headless). `simulation/jet-gpu.js` sekarang render
+  `THREE.LineSegments` (2 vertex/partikel: tail + head, attribute `aEnd`); posisi
+  diekstrak ke fungsi `parcelPos(phase, ...)` yang dipanggil di fase head (`basePhase`)
+  dan tail (`basePhase − uTrail`), jadi segmen mengekor sepanjang aliran nyata.
+  Comet-fade di FRAG (`vEnd` → tail redup), uniform `uTrail` (default 0.08),
+  `setCount` dikoreksi ke unit 2 vertex/partikel. Dipakai BERSAMA viewer 3D + Flow
+  panel — dua-duanya streak-nya melingkar di vortex (rCFD data, Model, dan Flow).
+  POLISH (feedback "viewer 3D seperti robot / tanpa aliran, panel Flow yg oke"):
+  field nyata bergerak lambat per fase → trail pendek cuma jadi coretan diam. Fix:
+  jalur real-field pakai trail panjang (0.22 vs 0.10 model), alpha streak naik
+  0.5→0.72 (jadi hero), fase dipercepat (uTime*0.13), + fade parcel berkecepatan
+  rendah (`dens *= mix(0.08,1,smoothstep(0.05,0.34,spd))`) biar zona stratifikasi
+  diam hilang. Streamline diturunkan jadi panduan tipis (opacity 0.45 via opsi baru
+  `opts.opacity` di streamlines.js) karena streak sudah mengungkap vortex sendiri.
+  Panel Flow TIDAK tersentuh (jalur analitik: trail default 0.08, opacity default
+  0.92, tanpa speed-fade). Re-verified gstack: rCFD kini mengalir + ada gerak antar
+  frame, Model tetap bersih.
 
 ## Cara jalanin & verifikasi (sama untuk dua task)
 ```bash

@@ -2,10 +2,13 @@
  * simulation/jet-gpu.js — shared GPU buoyant-jet engine (Three.js + GLSL)
  *
  * One engine used by BOTH the 3D model viewer (viewer3d.js) and the Flow
- * Intuition panel (flow-sim.js). A THREE.Points cloud whose positions are
- * computed entirely in the vertex shader from a per-particle seed + time +
- * the three physics uniforms — so the CPU only updates uniforms (cheap, good
- * for mobile WebAR / 60 FPS).
+ * Intuition panel (flow-sim.js). The parcels are rendered as short COMET
+ * STREAKS — each particle is a 2-vertex line segment (tail → head) whose
+ * endpoints are computed entirely in the vertex shader from a per-particle
+ * seed + time + the physics uniforms. The CPU only updates uniforms (cheap,
+ * good for mobile WebAR / 60 FPS). The trailing segment follows the flow, so
+ * in the recirculation zones the streaks bend around the vortices and reveal
+ * the circulation — not just a scatter of endpoint dots.
  *
  * Physics, kept HONEST to the test case (laminar, Re ≈ 100 — NOT turbulent):
  *   • a smooth jet enters at the nozzle and is entrained into TWO counter-
@@ -75,14 +78,15 @@ attribute float aSeed;   // identity / phase offset
 attribute float aSeed2;  // radius / depth / size variation
 attribute float aLane;   // -1.0 lower vortex, +1.0 upper vortex
 attribute float aKind;   // 1.0 = through-flow jet core (exits outlet), 0.0 = recirculation
+attribute float aEnd;    // 0.0 = streak tail, 1.0 = streak head
 
 uniform float uTime;
 uniform float uVelocity;  // 0..1 jet velocity
 uniform float uDensity;   // 0..1 density ratio (Δρ)
 uniform float uDeltaT;    // 0..1 temperature difference (ΔT)
-uniform float uSize;
 uniform float uPixelRatio;
 uniform vec3  uTank;      // w,h,d
+uniform float uTrail;     // comet-streak length, in phase units (head − tail)
 uniform float uHasField;  // 1 = advect the REAL CFD velocity texture
 uniform sampler2D uField; // RG = velocity (encoded 0..1), B = T(norm), A = speed(norm)
 uniform float uFieldUmax; // m/s scale for decoding the velocity
@@ -90,23 +94,25 @@ uniform float uFieldUmax; // m/s scale for decoding the velocity
 varying float vTemp;
 varying float vDensity;
 varying float vSpeed;
+varying float vEnd;       // 0 tail .. 1 head, for the comet fade
 
 #define ADV_STEPS 52
 ${SNOISE}
 
-void main() {
+/* Position of a parcel at a given phase (0..1 along its trajectory). The same
+ * function gives the streak's head (phase) and tail (phase − uTrail), so the
+ * segment lies along the real flow. temp/dens/spd come back through out-params. */
+vec3 parcelPos(float phase, out float temp, out float dens, out float spd) {
   float halfW = uTank.x * 0.5;
   float halfH = uTank.y * 0.5;
   float halfD = uTank.z * 0.5;
-
   vec3 P;
-  float temp, dens, spd;
 
   if (uHasField > 0.5) {
-    // ===== advect each parcel along the REAL CFD velocity field (texture) =====
-    // Stateless: integrate from the parcel's seed for phase·STEPS steps each
-    // frame, so as the phase loops the parcel streams along its real pathline.
-    float ph = fract(uTime * 0.08 + aSeed * 1.7 + aSeed2 * 0.31);
+    // ===== advect along the REAL CFD velocity field (texture) =====
+    // Integrate from the parcel's seed for phase·STEPS steps; head and tail use
+    // different step counts, so the drawn segment trails along the pathline.
+    float ph = phase;
     vec2 p = vec2((aSeed - 0.5) * uTank.x * 0.82, (aSeed2 - 0.5) * uTank.y * 0.82);
     float zc = (fract(aSeed * 13.0) - 0.5) * uTank.z * 0.6;
     float ds = uTank.x / float(ADV_STEPS) * 1.25;
@@ -124,16 +130,18 @@ void main() {
     }
     P = vec3(p, zc);
     temp = Tn;
-    // keep the slow recirculating parcels bright — they ARE the vortices
+    // fade in/out over the streak's life, AND fade where the real field barely
+    // moves (the stratified dead zones) so the view shows FLOW — the jet + the
+    // two vortices — instead of a static tangle of dashes sitting in still fluid.
     dens = smoothstep(0.0, 0.05, ph) * smoothstep(1.0, 0.88, ph);
+    dens *= mix(0.08, 1.0, smoothstep(0.05, 0.34, spd));
   } else {
     // ===== analytic laminar model (Flow panel, slider-driven) =====
-    float rate = 0.05 + uVelocity * 0.10;
     float Ri = (0.25 + uDensity * 0.9) * (0.30 + uDeltaT * 0.9) / (0.18 + uVelocity * 1.2);
     float buoy = clamp(Ri, 0.0, 1.6);
     if (aKind > 0.5) {
       // through-flow jet core: inlet → outlet
-      float p = fract(uTime * rate * 1.7 + aSeed);
+      float p = phase;
       float xext = uTank.x + 0.55;
       P.x = -halfW + p * xext;
       float bow = buoy * 0.12 * sin(p * 3.14159);
@@ -147,7 +155,7 @@ void main() {
       spd = 0.6 + 0.4 * (1.0 - p);
     } else {
       // entrained recirculation → one of the two vortices
-      float ph = fract(uTime * rate + aSeed);
+      float ph = phase;
       float reach = mix(0.30, 0.94, uVelocity);
       float feedX = -halfW + reach * uTank.x;
       float pJet  = mix(0.20, 0.48, uVelocity);
@@ -186,15 +194,33 @@ void main() {
     vec3 np = P * 2.2 + vec3(0.0, 0.0, uTime * 0.22);
     P += vec3(snoise(np), snoise(np + 17.3), snoise(np + 41.7)) * amp;
   }
+  return P;
+}
+
+void main() {
+  // base phase (head) per path; the tail trails uTrail behind, clamped at the
+  // birth point so a wrapped parcel never draws a streak across the whole tank.
+  float rate = 0.05 + uVelocity * 0.10;
+  float basePhase;
+  if (uHasField > 0.5) {
+    basePhase = fract(uTime * 0.13 + aSeed * 1.7 + aSeed2 * 0.31);
+  } else if (aKind > 0.5) {
+    basePhase = fract(uTime * rate * 1.7 + aSeed);
+  } else {
+    basePhase = fract(uTime * rate + aSeed);
+  }
+  float phaseTail = max(0.0, basePhase - uTrail);
+  float phase = mix(phaseTail, basePhase, aEnd);
+
+  float temp, dens, spd;
+  vec3 P = parcelPos(phase, temp, dens, spd);
 
   vTemp = temp;
   vDensity = dens;
   vSpeed = spd;
+  vEnd = aEnd;
 
-  vec4 mv = modelViewMatrix * vec4(P, 1.0);
-  gl_Position = projectionMatrix * mv;
-  float sizeSeed = 0.7 + aSeed2 * 0.9;
-  gl_PointSize = uSize * uPixelRatio * sizeSeed / max(0.1, -mv.z);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(P, 1.0);
 }`;
 
 const FRAG = /* glsl */ `
@@ -203,21 +229,21 @@ ${CMAPS_GLSL}
 varying float vTemp;
 varying float vDensity;
 varying float vSpeed;
+varying float vEnd;
 uniform float uMode;
 uniform float uAlpha;   // per-instance opacity (viewer dims its haze; Flow panel = 1)
 
 void main(){
-  vec2 q = gl_PointCoord - 0.5;
-  float r = dot(q, q) * 4.0;                 // 0 centre .. 1 edge
-  float a = smoothstep(1.0, 0.0, r);
-  a *= a;                                     // soft, diffuse edge
   // scalar for the active field: 0 temp, 1 velocity, 2 density(=1-T), 3 buoyancy(=T)
   float s = (uMode < 0.5) ? vTemp : (uMode < 1.5) ? vSpeed : (uMode < 2.5) ? (1.0 - vTemp) : vTemp;
   vec3 col = cfdColor(uMode, s);
-  float alpha = a * vDensity * 0.6 * uAlpha;
+  // comet fade: bright at the head (vEnd→1), fading out along the tail (vEnd→0)
+  float streak = mix(0.10, 1.0, vEnd);
+  float alpha = vDensity * 0.6 * uAlpha * streak;
   if (alpha < 0.003) discard;
-  // brighter where the scalar is high (emissive feel under additive blending)
-  gl_FragColor = vec4(col * (0.7 + 0.6 * s), alpha);
+  // brighter where the scalar is high (emissive feel under additive blending) +
+  // a faint cool underglow so thin streaks stay visible in the cold colormap end
+  gl_FragColor = vec4(col * (0.7 + 0.6 * s) + vec3(0.04, 0.09, 0.16) * streak, alpha);
 }`;
 
 let _dummyTex = null;
@@ -230,25 +256,32 @@ function dummyTexture() {
 }
 
 /* ---------------------------------------------------------------------
- * createJetField — build the GPU particle plume. When opts.fieldTex (a
- * velocity texture) is given, the parcels advect along the REAL CFD field;
- * otherwise they follow the analytic laminar model (slider-driven).
- * Returns { object, update, setParams, setCount, maxCount, dispose }.
+ * createJetField — build the GPU comet-streak plume. Each particle is one
+ * 2-vertex line segment (tail → head). When opts.fieldTex (a velocity
+ * texture) is given, the parcels advect along the REAL CFD field; otherwise
+ * they follow the analytic laminar model (slider-driven).
+ * Returns { object, update, setParams, setMode, setField, setAlpha, setTrail,
+ *           setCount, maxCount, dispose }.
  * ------------------------------------------------------------------- */
 export function createJetField(opts = {}) {
-  const MAX = opts.count || 5200;
+  const MAX = opts.count || 5200;       // particles (each = 2 vertices)
+  const N = MAX * 2;                     // vertices
   const tank = opts.tank || { w: 1.6, h: 1.6, d: 1.0 };
 
-  const seed = new Float32Array(MAX);
-  const seed2 = new Float32Array(MAX);
-  const lane = new Float32Array(MAX);
-  const kind = new Float32Array(MAX);   // ~30% through-flow jet core, rest recirculate
-  const pos = new Float32Array(MAX * 3); // dummy (positions come from the shader)
+  const seed = new Float32Array(N);
+  const seed2 = new Float32Array(N);
+  const lane = new Float32Array(N);
+  const kind = new Float32Array(N);     // ~30% through-flow jet core, rest recirculate
+  const end = new Float32Array(N);      // 0 = tail, 1 = head (alternating per pair)
+  const pos = new Float32Array(N * 3);  // dummy (positions come from the shader)
   for (let i = 0; i < MAX; i++) {
-    seed[i] = Math.random();
-    seed2[i] = Math.random();
-    lane[i] = Math.random() < 0.5 ? -1 : 1;
-    kind[i] = Math.random() < 0.3 ? 1 : 0;
+    const s = Math.random(), s2 = Math.random();
+    const ln = Math.random() < 0.5 ? -1 : 1;
+    const kn = Math.random() < 0.3 ? 1 : 0;
+    for (let e = 0; e < 2; e++) {
+      const j = i * 2 + e;
+      seed[j] = s; seed2[j] = s2; lane[j] = ln; kind[j] = kn; end[j] = e;
+    }
   }
 
   const geo = new THREE.BufferGeometry();
@@ -257,7 +290,8 @@ export function createJetField(opts = {}) {
   geo.setAttribute("aSeed2", new THREE.BufferAttribute(seed2, 1));
   geo.setAttribute("aLane", new THREE.BufferAttribute(lane, 1));
   geo.setAttribute("aKind", new THREE.BufferAttribute(kind, 1));
-  geo.setDrawRange(0, MAX);
+  geo.setAttribute("aEnd", new THREE.BufferAttribute(end, 1));
+  geo.setDrawRange(0, N);
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 4);
 
   const uniforms = {
@@ -265,9 +299,9 @@ export function createJetField(opts = {}) {
     uVelocity: { value: 0.5 },
     uDensity: { value: 0.5 },
     uDeltaT: { value: 0.5 },
-    uSize: { value: opts.size || 26 },
     uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, 2) },
     uTank: { value: new THREE.Vector3(tank.w, tank.h, tank.d) },
+    uTrail: { value: opts.trail != null ? opts.trail : 0.08 },
     uMode: { value: 0 },   // 0 temp · 1 velocity · 2 density · 3 buoyancy
     uHasField: { value: opts.fieldTex ? 1 : 0 },
     uField: { value: opts.fieldTex || dummyTexture() },
@@ -284,11 +318,11 @@ export function createJetField(opts = {}) {
     blending: THREE.AdditiveBlending,
   });
 
-  const points = new THREE.Points(geo, material);
-  points.frustumCulled = false;
+  const streaks = new THREE.LineSegments(geo, material);
+  streaks.frustumCulled = false;
 
   return {
-    object: points,
+    object: streaks,
     maxCount: MAX,
     update(dt) { uniforms.uTime.value += dt; },
     setParams(p) {
@@ -305,7 +339,12 @@ export function createJetField(opts = {}) {
       if (umax != null) uniforms.uFieldUmax.value = umax;
     },
     setAlpha(a) { uniforms.uAlpha.value = a; },
-    setCount(n) { geo.setDrawRange(0, Math.max(400, Math.min(MAX, n | 0))); },
+    setTrail(t) { uniforms.uTrail.value = t; },
+    // n is in PARTICLES; the geometry holds 2 vertices per particle.
+    setCount(n) {
+      const c = Math.max(400, Math.min(MAX, n | 0));
+      geo.setDrawRange(0, c * 2);
+    },
     dispose() { geo.dispose(); material.dispose(); },
   };
 }

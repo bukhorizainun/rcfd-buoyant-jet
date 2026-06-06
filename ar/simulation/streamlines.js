@@ -27,17 +27,16 @@ const FRAG = /* glsl */ `
 precision highp float;
 ${CMAPS_GLSL}
 varying float vArc; varying float vT; varying float vS;
-uniform float uTime; uniform float uMode;
+uniform float uTime; uniform float uMode; uniform float uOpacity;
 void main(){
   float s = (uMode < 0.5) ? vT : (uMode < 1.5) ? vS : (uMode < 2.5) ? (1.0 - vT) : vT;
   vec3 col = cfdColor(uMode, s);
-  // a travelling brightness pulse rides the line so flow direction reads; the
-  // floor is kept high so the lines themselves (the two vortices) stay bold.
+  // a travelling brightness pulse rides the line so flow direction reads.
   float wave = 0.55 + 0.45 * pow(0.5 + 0.5 * sin((vArc * 7.0 - uTime * 1.1) * 6.2831853), 2.0);
   // keep a cool structural underglow so the LINES stay visible even in the cold
   // (near-black) end of the colormap — otherwise the lower vortex disappears.
   col = col * (0.55 + 0.55 * wave) + vec3(0.07, 0.14, 0.24) * (0.5 + 0.5 * wave);
-  gl_FragColor = vec4(col, 0.92);   // bold structure: the streamlines ARE the vortices
+  gl_FragColor = vec4(col, uOpacity);
 }`;
 
 export function createStreamlines(opts = {}) {
@@ -50,7 +49,8 @@ export function createStreamlines(opts = {}) {
 
   const geo = new THREE.BufferGeometry();
   const material = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uMode: { value: 0 } },
+    uniforms: { uTime: { value: 0 }, uMode: { value: 0 },
+      uOpacity: { value: opts.opacity != null ? opts.opacity : 0.92 } },
     vertexShader: VERT, fragmentShader: FRAG,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
@@ -117,6 +117,7 @@ export function createStreamlines(opts = {}) {
     setField(f) { field = f; build(); },
     setParams(p) { Object.assign(params, p); if (!field) build(); },
     setMode(m) { material.uniforms.uMode.value = m; },
+    setOpacity(o) { material.uniforms.uOpacity.value = o; },
     setDensity(level) { nS = [4, 5, 7][level] || 5; build(); },
     dispose() { geo.dispose(); material.dispose(); },
   };
