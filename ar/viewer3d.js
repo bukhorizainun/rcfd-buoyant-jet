@@ -86,7 +86,7 @@ export async function createViewer(host, opts = {}) {
   let lod = null;         // frame-rate governor for the jet
   let realField = null;   // real CFD sampler (Real/Model toggle)
   let fieldTex = null;    // its GPU advection texture (built once, reused on toggle)
-  let source = "real";    // 'real' = rCFD data · 'model' = analytic laminar model
+  let source = "model";   // default 'model' = clean analytic laminar · 'real' = rCFD data (toggle)
 
   const haveGLB = opts.glb ? await fileExists(opts.glb) : false;
   let built = false;
@@ -112,7 +112,8 @@ export async function createViewer(host, opts = {}) {
     backdropMat = live.backdrop;
     fieldTex = live.fieldTex;
     lod = makeLOD(jet, { target: 52, min: 1600 });
-    onMode(realField ? FOOT.real : FOOT.model);
+    onMode(FOOT.model);   // default view is the clean analytic model
+
   }
 
   /* ---- resize + auto-fit (handles tall portrait canvases) ---- */
@@ -163,7 +164,9 @@ export async function createViewer(host, opts = {}) {
   // 'model' swaps in the analytic laminar model (clean two-vortex topology) by
   // passing null fields — the sub-modules already fall back to jet-field.js.
   function setSource(src) {
-    source = src === "model" ? "model" : "real";
+    const next = src === "model" ? "model" : "real";
+    if (next === source) return;     // already in this mode — skip the rebuild
+    source = next;
     const f = source === "real" ? realField : null;   // null → analytic model
     if (streams) streams.setField(f);
     if (glyphs) glyphs.setField(f);
@@ -313,36 +316,31 @@ function buildLiveScene(root, videoUrl, realField) {
     root.add(plane);
   }
 
-  // the live GPU jet — parcels advect along the REAL velocity field when we
-  // have it (so even the "decorative" layer is data-driven), else the model
-  // build the advection texture once; the Real/Model toggle reuses it
+  // Default view = the clean analytic MODEL (reads like the Flow panel). The
+  // real rCFD field is still loaded — its advection texture is built once here so
+  // the Real/Model toggle (setSource('real')) can swap it in; setSource also
+  // lengthens the trail + raises alpha there so the slow real field reads as
+  // flowing arcs instead of a static tangle.
   const fieldTex = realField ? buildFieldTexture(realField.data) : null;
   const jet = createJetField({
     tank: TANK, count: 5200, size: 22,
-    // flowing comet-streaks are the hero. The real field advances slowly per
-    // phase, so it needs a LONG trail to read as flowing arcs (a short trail
-    // there just looks like a static tangle of dashes); the fast analytic model
-    // already orbits a full loop per cycle, so it wants a shorter trail.
-    alpha: realField ? 0.72 : 1.0,
-    trail: realField ? 0.22 : 0.10,
-    fieldTex,
-    fieldUmax: realField ? realField.umax : 0.03,
+    alpha: 1.0, trail: 0.10,        // model defaults; setSource adjusts for real
   });
   root.add(jet.object);
 
-  // animated laminar streamlines (flow direction + the two vortices) — driven
-  // by the REAL CFD field when available, otherwise the analytic model. A single
-  // crisp plane on the symmetry plane (nZ:1) so the two counter-rotating vortices
-  // read cleanly face-on. Now demoted to a faint GUIDE (opacity 0.45): the
-  // flowing comet-streaks are the hero that reveal the circulation, so bold
-  // streamlines would just clutter the real field into a rigid knot.
-  const streams = createStreamlines({ tank: TANK, field: realField, nZ: 1, opacity: 0.45 });
+  // animated laminar streamlines (flow direction + the two vortices). Built on
+  // the analytic model by default; setSource('real') rebuilds them on the real
+  // field. A single crisp plane on the symmetry plane (nZ:1) so the two counter-
+  // rotating vortices read cleanly face-on, demoted to a faint GUIDE (opacity
+  // 0.45) since the flowing comet-streaks are the hero that reveal the circulation.
+  const streams = createStreamlines({ tank: TANK, field: null, nZ: 1, opacity: 0.45 });
   root.add(streams.object);
 
-  // velocity glyphs + interactive slice plane (both off by default)
-  const glyphs = createGlyphs({ tank: TANK, field: realField });
+  // velocity glyphs + interactive slice plane (both off by default; follow the
+  // Real/Model toggle via setField)
+  const glyphs = createGlyphs({ tank: TANK, field: null });
   root.add(glyphs.object);
-  const slice = createSlice({ tank: TANK, field: realField });
+  const slice = createSlice({ tank: TANK, field: null });
   root.add(slice.object);
 
   // CFD-style reference frame: faint ground grid + axis triad

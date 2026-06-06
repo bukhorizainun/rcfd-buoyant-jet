@@ -342,7 +342,7 @@ async function openModel3D() {
 }
 
 /* ---- Feature 2: scientific field selector + legend + parameters ---- */
-let m3dMode = 0, m3dSource = "real", m3dUIBuilt = false;
+let m3dMode = 0, m3dSource = "model", m3dUIBuilt = false;
 function buildModel3DUI() {
   if (m3dUIBuilt) return;
   m3dUIBuilt = true;

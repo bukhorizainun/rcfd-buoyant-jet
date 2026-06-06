@@ -28,6 +28,13 @@ perbaikan bug.
   Panel Flow TIDAK tersentuh (jalur analitik: trail default 0.08, opacity default
   0.92, tanpa speed-fade). Re-verified gstack: rCFD kini mengalir + ada gerak antar
   frame, Model tetap bersih.
+  DEFAULT DIUBAH (permintaan user): viewer 3D kini default ke **Model** (tampilan
+  bersih ala Flow); **rCFD data** jadi toggle "data asli". index.html chip `on` di
+  "Model", app.js `m3dSource="model"`, viewer3d build live-scene pakai field analitik
+  (jet/streamlines/glyphs/slice field=null, alpha 1.0, trail 0.10) + `source="model"`
+  + `onMode(FOOT.model)`; fieldTex real tetap dibangun utk toggle; `setSource` dikasih
+  guard (skip rebuild kalau mode sama). Legend jujur ikut: default "model · analytic
+  laminar", toggle → "rCFD field". Verified gstack.
 
 ## Cara jalanin & verifikasi (sama untuk dua task)
 ```bash
