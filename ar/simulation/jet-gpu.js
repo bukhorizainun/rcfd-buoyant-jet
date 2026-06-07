@@ -95,6 +95,7 @@ varying float vTemp;
 varying float vDensity;
 varying float vSpeed;
 varying float vEnd;       // 0 tail .. 1 head, for the comet fade
+varying float vLife;      // per-parcel brightness/flicker (real path; 1.0 for model)
 
 #define ADV_STEPS 52
 ${SNOISE}
@@ -135,6 +136,15 @@ vec3 parcelPos(float phase, out float temp, out float dens, out float spd) {
     // two vortices — instead of a static tangle of dashes sitting in still fluid.
     dens = smoothstep(0.0, 0.05, ph) * smoothstep(1.0, 0.88, ph);
     dens *= mix(0.08, 1.0, smoothstep(0.05, 0.34, spd));
+    // (4) VOLUMETRIC weave: corkscrew gently through depth so orbiting the view
+    // reveals a 3D structure instead of a flat symmetry-plane sheet.
+    P.z += 0.12 * uTank.z * sin(ph * 6.2831853 + aSeed * 6.2831853);
+    // (3) small time-varying organic wobble — a RENDER aesthetic only; the
+    // large-scale circulation still comes from the data. Calmer in the slow
+    // stratified zones (scaled by speed) so they don't shimmer.
+    float wamp = (0.016 + 0.014 * spd) * uTank.y;
+    vec3 wp = P * 3.0 + vec3(0.0, 0.0, uTime * 0.3);
+    P += vec3(snoise(wp), snoise(wp + 19.1), snoise(wp + 43.7)) * wamp;
   } else {
     // ===== analytic laminar model (Flow panel, slider-driven) =====
     float Ri = (0.25 + uDensity * 0.9) * (0.30 + uDeltaT * 0.9) / (0.18 + uVelocity * 1.2);
@@ -202,14 +212,24 @@ void main() {
   // birth point so a wrapped parcel never draws a streak across the whole tank.
   float rate = 0.05 + uVelocity * 0.10;
   float basePhase;
+  float life = 1.0;
   if (uHasField > 0.5) {
-    basePhase = fract(uTime * 0.13 + aSeed * 1.7 + aSeed2 * 0.31);
+    // (1) DESYNC: each parcel gets its own advance rate + offset, so they no
+    // longer march in lockstep (which reads as a conveyor belt / robotic).
+    float pr = 0.085 + 0.085 * fract(aSeed * 7.31);
+    basePhase = fract(uTime * pr + aSeed * 1.7 + aSeed2 * 0.31 + aLane * 0.13);
+    // (2) per-parcel brightness variation + a slow flicker → the field looks
+    // alive and uneven instead of a uniform mechanical sheet.
+    life = (0.78 + 0.22 * sin(uTime * 1.7 + aSeed * 27.0)) * (0.82 + 0.36 * fract(aSeed * 3.7));
   } else if (aKind > 0.5) {
     basePhase = fract(uTime * rate * 1.7 + aSeed);
   } else {
     basePhase = fract(uTime * rate + aSeed);
   }
-  float phaseTail = max(0.0, basePhase - uTrail);
+  // (2) vary the streak length per parcel on the real path → less uniform
+  float tr = uTrail;
+  if (uHasField > 0.5) tr *= (0.55 + 0.9 * fract(aSeed2 * 5.7));
+  float phaseTail = max(0.0, basePhase - tr);
   float phase = mix(phaseTail, basePhase, aEnd);
 
   float temp, dens, spd;
@@ -219,6 +239,7 @@ void main() {
   vDensity = dens;
   vSpeed = spd;
   vEnd = aEnd;
+  vLife = life;
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(P, 1.0);
 }`;
@@ -230,6 +251,7 @@ varying float vTemp;
 varying float vDensity;
 varying float vSpeed;
 varying float vEnd;
+varying float vLife;
 uniform float uMode;
 uniform float uAlpha;   // per-instance opacity (viewer dims its haze; Flow panel = 1)
 
@@ -239,7 +261,7 @@ void main(){
   vec3 col = cfdColor(uMode, s);
   // comet fade: bright at the head (vEnd→1), fading out along the tail (vEnd→0)
   float streak = mix(0.10, 1.0, vEnd);
-  float alpha = vDensity * 0.6 * uAlpha * streak;
+  float alpha = vDensity * 0.6 * uAlpha * streak * vLife;
   if (alpha < 0.003) discard;
   // brighter where the scalar is high (emissive feel under additive blending) +
   // a faint cool underglow so thin streaks stay visible in the cold colormap end

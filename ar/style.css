@@ -225,9 +225,12 @@ button { font-family: inherit; cursor: pointer; }
   padding: 8px; border-radius: 999px; background: var(--glass-2);
   border: 1px solid var(--line); backdrop-filter: blur(14px);
   box-shadow: 0 14px 40px rgba(0,0,0,0.5);
+  max-width: calc(100vw - 16px); overflow-x: auto; scrollbar-width: none;
 }
+.dock::-webkit-scrollbar { display: none; }
 .dock-btn {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
+  flex: 0 0 auto;
   background: transparent; border: none; color: var(--ink-soft);
   padding: 8px 14px; border-radius: 999px; font-size: 10.5px; font-weight: 600;
   transition: color .15s, background .15s;
@@ -393,10 +396,20 @@ button { font-family: inherit; cursor: pointer; }
 .m3d-mode.on { color: #03060f; background: linear-gradient(135deg, var(--cyan), var(--violet));
   border-color: transparent; font-weight: 700; }
 
-/* Real / Model source toggle */
-.m3d-src { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 0 12px 8px; }
-.m3d-src-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-soft); opacity: .65; margin-right: 2px; }
-.m3d-src .m3d-mode { padding: 5px 12px; }
+/* Field-source toggle — segmented control (clean Model vs real rCFD field) */
+.m3d-src { display: flex; align-items: center; justify-content: center; gap: 9px; flex-wrap: wrap; padding: 0 12px 10px; }
+.m3d-src-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-soft); opacity: .7; }
+.m3d-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--line); }
+.m3d-segbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 6px 16px;
+  border: none; border-radius: 999px; background: transparent; color: var(--ink-soft);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: color .15s, background .15s, box-shadow .15s; }
+.m3d-segbtn:hover { color: var(--ink); }
+.m3d-segbtn.on { color: #03060f; background: linear-gradient(135deg, var(--cyan), var(--violet));
+  box-shadow: 0 2px 10px rgba(54,209,255,0.32); }
+.m3d-live { width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 6px var(--green); }
+.m3d-segbtn.on .m3d-live { background: #03060f; box-shadow: none; }
 
 /* parameter read-out (floating, lab-style) */
 .m3d-params {
@@ -742,3 +755,93 @@ body.research-mode .hotspot { filter: drop-shadow(0 0 6px var(--violet)); }
 
 @keyframes ad-orbit     { from { transform: rotate(0); }    to { transform: rotate(360deg); } }
 @keyframes ad-orbit-rev { from { transform: rotate(0); }    to { transform: rotate(-360deg); } }
+
+/* ======================================================================
+   HEAT-LOSS LAB (Step 2) — model + interactive thermal lab
+   ====================================================================== */
+#panel-heatloss #heatLabBody { display: flex; flex-direction: column; gap: 14px; }
+
+/* the model card */
+.hl-model { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line);
+  background: linear-gradient(160deg, rgba(54,209,255,0.08), rgba(124,77,255,0.05)); }
+.hl-model-eq { font-family: var(--mono); font-size: 16px; color: var(--cyan); letter-spacing: .3px; }
+.hl-model-txt { margin: 8px 0 10px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+.hl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.hl-chip { font-family: var(--mono); font-size: 10.5px; color: var(--ink); padding: 3px 9px;
+  border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid var(--line); }
+
+/* the mechanism: two mini tanks */
+.hlab-mech { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hlab-mini { margin: 0; padding: 10px; border-radius: 14px; border: 1px solid var(--line);
+  background: rgba(10,16,32,0.5); }
+.hlab-mini svg { display: block; width: 100%; height: auto; }
+.hlab-mini figcaption { margin-top: 6px; font-size: 10.5px; color: var(--ink-soft); line-height: 1.45; }
+.hlab-mini figcaption b { color: var(--ink); }
+.hlab-mtank { fill: none; stroke: var(--ink-faint); stroke-width: 2; }
+.hlab-msurf { stroke: var(--cyan); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: .55; }
+.hlab-loop { fill: none; stroke: var(--ink-soft); stroke-width: 1.4; stroke-dasharray: 3 5; opacity: .34; }
+.hlab-loop.faint { opacity: .16; }
+.hlab-loopflow { opacity: .5; animation: hlabSpin 5s linear infinite; }
+@keyframes hlabSpin { to { stroke-dashoffset: -40; } }
+.hlab-parcel { stroke: #fff; stroke-width: 1; }
+.hlab-stall { stroke: #fff; stroke-width: .8; animation: hlabPulse 3s ease-in-out infinite; }
+@keyframes hlabPulse { 0%,100% { opacity: .2; } 50% { opacity: .55; } }
+.hlab-mflux { color: var(--cyan); }
+.hlab-marrow { stroke: var(--cyan); stroke-width: 2; animation: hlabRise 1.9s ease-in-out infinite; }
+.hlab-marrow.d2 { animation-delay: .5s; }
+.hlab-marrow.weak { stroke-width: 1.3; opacity: .5; }
+@keyframes hlabRise { 0%,100% { transform: translateY(0); opacity: .25; } 50% { transform: translateY(-5px); opacity: 1; } }
+
+/* control bar */
+.hlab-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.hlab-bar-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: .4px;
+  text-transform: uppercase; color: var(--ink-soft); opacity: .7; width: 100%; }
+.hlab-h { display: flex; flex-wrap: wrap; gap: 6px; }
+.hlab-hb { font-family: var(--mono); font-size: 11.5px; padding: 5px 11px; border-radius: 8px;
+  border: 1px solid var(--line); background: rgba(255,255,255,0.03); color: var(--ink-soft); cursor: pointer;
+  transition: all .15s; }
+.hlab-hb:hover { color: var(--ink); border-color: var(--cyan); }
+.hlab-hb.on { color: #03060f; background: linear-gradient(135deg, var(--cyan), var(--violet)); border-color: transparent; font-weight: 700; }
+.hlab-ir { margin-left: auto; font-size: 11.5px; padding: 5px 11px; border-radius: 8px;
+  border: 1px solid var(--line); background: rgba(255,255,255,0.03); color: var(--ink-soft); cursor: pointer; }
+.hlab-ir.on { color: #03060f; background: var(--amber); border-color: transparent; font-weight: 700; }
+
+/* tank + readout */
+.hlab-stage { display: grid; grid-template-columns: 1.15fr 1fr; gap: 12px; align-items: center; }
+@media (max-width: 520px) { .hlab-stage { grid-template-columns: 1fr; } }
+.hlab-tank { margin: 0; }
+.hlab-tank svg { display: block; width: 100%; height: auto; }
+.hlab-water { fill: rgba(54,209,255,0.07); transition: fill .4s; }
+.hlab-tank.ir .hlab-water { fill: rgba(255,80,40,0.16); }
+.hlab-tankline { fill: none; stroke: var(--ink-soft); stroke-width: 2.2; }
+.hlab-surf { stroke: var(--cyan); stroke-width: 1.4; stroke-dasharray: 6 4; opacity: .55; }
+.hlab-cap { fill: var(--cyan); transition: height .5s ease, opacity .5s ease; }
+.hlab-tank.ir .hlab-cap { fill: #0a1f8a; }
+.hlab-strat { stroke: rgba(255,255,255,0.35); stroke-width: 1; stroke-dasharray: 5 5; }
+.hlab-arrow { stroke: var(--cyan); stroke-width: 2; transition: opacity .4s; animation: hlabRise 1.9s ease-in-out infinite; }
+.hlab-arrow:nth-child(2) { animation-delay: .3s; } .hlab-arrow:nth-child(3) { animation-delay: .6s; }
+.hlab-arrow:nth-child(4) { animation-delay: .9s; } .hlab-arrow:nth-child(5) { animation-delay: 1.2s; }
+.hlab-tank.ir .hlab-arrow { stroke: var(--amber); }
+.hlab-tank.ir .hlab-surf { stroke: var(--amber); }
+.hlab-tlabel { font-family: var(--sans); font-size: 11px; font-weight: 600; }
+.hlab-tlabel.cool { fill: var(--cyan); } .hlab-tlabel.warm { fill: var(--amber); }
+.hlab-tank.ir .hlab-tlabel.cool { fill: #7fd0ff; }
+
+.hlab-read { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hlab-g { padding: 9px 10px; border-radius: 11px; border: 1px solid var(--line); background: rgba(10,16,32,0.55); }
+.hlab-g .lab { display: block; font-size: 10px; color: var(--ink-soft); }
+.hlab-g .val { display: block; font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--cyan); margin: 2px 0; }
+.hlab-g .unit { display: block; font-size: 9.5px; color: var(--ink-faint); }
+
+.hlab-note { margin: 0; font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
+.hlab-note b { color: var(--ink); }
+
+.hlab-key { padding: 11px 13px; border-radius: 12px; border: 1px solid rgba(54,209,255,0.4);
+  border-left: 4px solid var(--cyan); background: rgba(54,209,255,0.06); }
+.hlab-key h4 { margin: 0 0 5px; color: var(--cyan); font-size: 13px; }
+.hlab-key p { margin: 0; font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
+.hlab-key b { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hlab-loopflow, .hlab-marrow, .hlab-arrow, .hlab-stall { animation: none; }
+}

@@ -175,6 +175,10 @@
     <svg viewBox="0 0 24 24" class="ic"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5"/></svg>
     <span>3D</span>
   </button>
+  <button class="dock-btn" data-panel="heatloss" title="Heat-loss lab (Step 2)">
+    <svg viewBox="0 0 24 24" class="ic"><path d="M14 14.76V5a2 2 0 1 0-4 0v9.76a4 4 0 1 0 4 0z"/><path d="M12 9v6"/></svg>
+    <span>Heat lab</span>
+  </button>
 </nav>
 
 <!-- ===================================================================== -->
@@ -335,6 +339,20 @@
 </section>
 
 <!-- ===================================================================== -->
+<!-- HEAT-LOSS LAB PANEL (Step 2)                                          -->
+<!-- ===================================================================== -->
+<section id="panel-heatloss" class="panel hidden" aria-labelledby="hlTitle">
+  <div class="panel-head">
+    <div>
+      <h2 id="hlTitle">Heat-Loss Lab</h2>
+      <p class="panel-sub">Step 2 · wall heat loss — the model &amp; an interactive thermal lab</p>
+    </div>
+    <button class="panel-x" data-close="panel-heatloss" aria-label="Close">✕</button>
+  </div>
+  <div id="heatLabBody"></div>
+</section>
+
+<!-- ===================================================================== -->
 <!-- 3D MODEL VIEWER MODAL (Feature 5)                                     -->
 <!-- ===================================================================== -->
 <div id="model3d" class="model3d hidden" role="dialog" aria-modal="true" aria-label="3D buoyant jet field viewer">
@@ -344,9 +362,11 @@
   </div>
   <div class="m3d-modes" id="m3dModes" role="tablist" aria-label="Scientific field"></div>
   <div class="m3d-src" id="m3dSource" role="group" aria-label="Field source">
-    <span class="m3d-src-lbl">source</span>
-    <button class="m3d-mode" data-src="real" type="button">rCFD data</button>
-    <button class="m3d-mode on" data-src="model" type="button">Model</button>
+    <span class="m3d-src-lbl">Field source</span>
+    <div class="m3d-seg">
+      <button class="m3d-segbtn" data-src="real" type="button" aria-pressed="false"><span class="m3d-live"></span>rCFD data</button>
+      <button class="m3d-segbtn on" data-src="model" type="button" aria-pressed="true">Model</button>
+    </div>
   </div>
   <div class="m3d-tools" id="m3dTools">
     <button class="m3d-toggle" id="m3dGlyphs" type="button" aria-pressed="false">

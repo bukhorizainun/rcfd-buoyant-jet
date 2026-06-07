@@ -5,11 +5,22 @@ Status saat ini: vortex sudah terbaca jelas di viewer 3D setelah commit `456d8a2
 kabut halus `uAlpha 0.5`). Dua item di bawah ini OPSIONAL — buat polish, bukan
 perbaikan bug.
 
-- **Task A — SELESAI.** Toggle Real/Model sudah jalan + terverifikasi (gstack
-  screenshot): chip `#m3dSource` ("rCFD data" / "Model"), `setSource` di
-  `viewer3d.js` ngalihin streamlines/glyphs/slice/jet ke field analitik (`null`),
-  `jet-gpu` `setField`/`setAlpha`, dan label provenance di legend ikut jujur
-  ("rCFD field" ↔ "model · analytic laminar"). Dua-dua mode pusarannya terbaca.
+- **Task A — DIKEMBALIKAN + DIPERBAIKI (2026-06-07).** Sempat dihapus, lalu user
+  pilih "kembalikan + perbaiki". Toggle Real/Model kini berupa **segmented control**
+  yang lebih besar & jelas (`.m3d-seg`/`.m3d-segbtn`, min-height 34px, ada dot
+  hijau "live" di "rCFD data") supaya gampang di-tap (dulu terasa "tidak bisa
+  diklik" — kemungkinan cache modul ES / target kecil; INGAT hard-refresh setelah
+  edit). Default tetap **Model** bersih; legend tetap jujur ("model · analytic
+  laminar" ↔ "rCFD field").
+- **rCFD 3D "kaku robot" — DIPERBAIKI (2026-06-07).** Keluhan: view field asli
+  terasa seperti ban berjalan / streamline mati. Fix di `simulation/jet-gpu.js`,
+  **hanya jalur `uHasField>0.5`** (Flow panel / model analitik TIDAK tersentuh):
+  (1) desync — tiap parcel punya rate `0.085+0.085*rand` + offset lane, jadi tak
+  lockstep; (2) variasi kecerahan + flicker pelan + panjang streak per-parcel;
+  (3) wobble organik tipis (snoise berbasis `uTime`, di-scale speed → zona
+  stratifikasi tenang) — estetika render, sirkulasi besar tetap dari data;
+  (4) weave volumetrik (`P.z += 0.12*tank.z*sin(ph*2π+seed)`) biar terasa 3D saat
+  diputar, bukan lembaran simetri datar.
 - **Task B — SELESAI.** Partikel comet-streak sudah jalan + terverifikasi (gstack
   screenshot, WebGL headless). `simulation/jet-gpu.js` sekarang render
   `THREE.LineSegments` (2 vertex/partikel: tail + head, attribute `aEnd`); posisi

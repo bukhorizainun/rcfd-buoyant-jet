@@ -24,6 +24,7 @@ import { renderDemoHotspots, openPopup } from "./ui/hotspots.js";
 import { toggleResearchMode } from "./ui/research-mode.js";
 import { renderInsights } from "./ui/insights.js";
 import { initComparison, pauseComparison } from "./ui/comparison.js";
+import { renderHeatLab } from "./ui/heat-lab.js";
 import { startBackground } from "./ui/background.js";
 import { startARScene, resetARScene } from "./ui/ar-scene.js";
 import * as astroDuck from "./ui/astro-duck.js";
@@ -159,6 +160,7 @@ function openPanelByName(name) {
   if (name === "flow") openFlowSim();
   if (name === "insights") renderInsights();
   if (name === "comparison") initComparison();
+  if (name === "heatloss") renderHeatLab();
 }
 
 function enterStage(showInfo = true) {
@@ -241,7 +243,7 @@ async function launchAR() {
 /* =====================================================================
  * PANELS
  * ===================================================================== */
-const PANELS = ["dashboard", "timeline", "ai", "flow", "insights", "comparison"];
+const PANELS = ["dashboard", "timeline", "ai", "flow", "insights", "comparison", "heatloss"];
 
 function togglePanel(which, btn) {
   const id = "panel-" + which;
@@ -257,6 +259,7 @@ function togglePanel(which, btn) {
   if (which === "flow") openFlowSim();
   if (which === "insights") renderInsights();
   if (which === "comparison") initComparison();
+  if (which === "heatloss") renderHeatLab();
 }
 
 function closeAllPanels() {
@@ -397,10 +400,11 @@ function buildModel3DUI() {
     modes.appendChild(b);
   });
 
-  // Real / Model source toggle (rCFD solver data vs clean analytic model)
-  $$("#m3dSource .m3d-mode").forEach((b) => {
+  // Field-source toggle: clean analytic Model (default) vs the real rCFD field
+  $$("#m3dSource .m3d-segbtn").forEach((b) => {
     b.addEventListener("click", () => setSource(b.dataset.src));
   });
+
   $("#m3dParams").innerHTML = [
     ["Re", "≈ 100", "laminar"],
     ["ΔT", "40 K", "333→293 K"],
@@ -466,8 +470,12 @@ function setFieldMode(i) {
   astroDuck.update3DGuide(FIELD_MODES[i].label); // refresh guide line if shown
 }
 function setSource(src) {
-  m3dSource = src === "model" ? "model" : "real";
-  $$("#m3dSource .m3d-mode").forEach((b) => b.classList.toggle("on", b.dataset.src === m3dSource));
+  m3dSource = src === "real" ? "real" : "model";
+  $$("#m3dSource .m3d-segbtn").forEach((b) => {
+    const on = b.dataset.src === m3dSource;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
   if (STATE.viewer3d && STATE.viewer3d.setSource) STATE.viewer3d.setSource(m3dSource);
   applyLegend(m3dMode);   // keep the legend provenance honest (rCFD field ↔ analytic model)
 }
