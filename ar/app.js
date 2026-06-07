@@ -400,9 +400,14 @@ function buildModel3DUI() {
     modes.appendChild(b);
   });
 
-  // Field-source toggle: clean analytic Model (default) vs the real rCFD field
-  $$("#m3dSource .m3d-segbtn").forEach((b) => {
-    b.addEventListener("click", () => setSource(b.dataset.src));
+  // Field-source toggle: clean analytic Model (default) vs the real rCFD field.
+  // Delegated and keyed on [data-src] (not a class) so it keeps working even if
+  // the markup/class changes or the browser caches mismatched index.html/app.js
+  // versions — a common cause of a toggle that looks fine but won't tap.
+  const srcGroup = $("#m3dSource");
+  if (srcGroup) srcGroup.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-src]");
+    if (b && srcGroup.contains(b)) setSource(b.dataset.src);
   });
 
   $("#m3dParams").innerHTML = [
@@ -471,7 +476,7 @@ function setFieldMode(i) {
 }
 function setSource(src) {
   m3dSource = src === "real" ? "real" : "model";
-  $$("#m3dSource .m3d-segbtn").forEach((b) => {
+  $$("#m3dSource [data-src]").forEach((b) => {
     const on = b.dataset.src === m3dSource;
     b.classList.toggle("on", on);
     b.setAttribute("aria-pressed", String(on));

@@ -396,20 +396,16 @@ button { font-family: inherit; cursor: pointer; }
 .m3d-mode.on { color: #03060f; background: linear-gradient(135deg, var(--cyan), var(--violet));
   border-color: transparent; font-weight: 700; }
 
-/* Field-source toggle — segmented control (clean Model vs real rCFD field) */
+/* Field-source toggle — clean Model (default) vs the real rCFD field.
+   Keeps the .m3d-mode class (wired by app.js) but bigger + clearer for touch. */
 .m3d-src { display: flex; align-items: center; justify-content: center; gap: 9px; flex-wrap: wrap; padding: 0 12px 10px; }
 .m3d-src-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-soft); opacity: .7; }
-.m3d-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px;
-  background: rgba(255,255,255,0.05); border: 1px solid var(--line); }
-.m3d-segbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 6px 16px;
-  border: none; border-radius: 999px; background: transparent; color: var(--ink-soft);
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: color .15s, background .15s, box-shadow .15s; }
-.m3d-segbtn:hover { color: var(--ink); }
-.m3d-segbtn.on { color: #03060f; background: linear-gradient(135deg, var(--cyan), var(--violet));
-  box-shadow: 0 2px 10px rgba(54,209,255,0.32); }
+.m3d-src .m3d-mode { display: inline-flex; align-items: center; gap: 7px; min-height: 36px;
+  padding: 8px 18px; font-size: 13px; font-weight: 600; }
+.m3d-src .m3d-mode:hover { color: var(--ink); border-color: var(--cyan); }
 .m3d-live { width: 7px; height: 7px; border-radius: 50%; background: var(--green);
   box-shadow: 0 0 6px var(--green); }
-.m3d-segbtn.on .m3d-live { background: #03060f; box-shadow: none; }
+.m3d-src .m3d-mode.on .m3d-live { background: #03060f; box-shadow: none; }
 
 /* parameter read-out (floating, lab-style) */
 .m3d-params {

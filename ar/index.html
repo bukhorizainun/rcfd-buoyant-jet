@@ -363,10 +363,8 @@
   <div class="m3d-modes" id="m3dModes" role="tablist" aria-label="Scientific field"></div>
   <div class="m3d-src" id="m3dSource" role="group" aria-label="Field source">
     <span class="m3d-src-lbl">Field source</span>
-    <div class="m3d-seg">
-      <button class="m3d-segbtn" data-src="real" type="button" aria-pressed="false"><span class="m3d-live"></span>rCFD data</button>
-      <button class="m3d-segbtn on" data-src="model" type="button" aria-pressed="true">Model</button>
-    </div>
+    <button class="m3d-mode" data-src="real" type="button" aria-pressed="false"><span class="m3d-live"></span>rCFD data</button>
+    <button class="m3d-mode on" data-src="model" type="button" aria-pressed="true">Model</button>
   </div>
   <div class="m3d-tools" id="m3dTools">
     <button class="m3d-toggle" id="m3dGlyphs" type="button" aria-pressed="false">
@@ -414,6 +412,7 @@
 </div>
 
 <!-- App logic (ES module; lazy-loads A-Frame/MindAR and the 3D viewer) -->
-<script type="module" src="app.js"></script>
+<!-- bump ?v= on each deploy to bypass stale ES-module caching on phones -->
+<script type="module" src="app.js?v=20260608"></script>
 </body>
 </html>
