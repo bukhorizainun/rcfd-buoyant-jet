@@ -1397,7 +1397,7 @@
 
 <p>$$ \dot q_\text{wall} = h \, \bigl( T_\text{top} - T_\infty \bigr), $$</p>
 
-<p>where $T_\infty = 293$ K is the room temperature, $T_\text{top}$ is the temperature of the surface cells, and $h$ is the heat-transfer coefficient. For a water surface losing heat to still air the natural value is small, roughly $h = 8$ W/m²K, so the cooling is gentle. That is the point of the small value: a weak loss only nudges the temperature and barely disturbs the flow, so the velocity field stays close to the adiabatic one we already recorded in Step 1, which is what lets us keep reusing that database. (Whether "barely" is good enough is the question we test in §12.)</p>
+<p>where $T_\infty = 293$ K is the room temperature, $T_\text{top}$ is the temperature of the surface cells, and $h$ is the heat-transfer coefficient. The quantity $\dot q_\text{wall}$ is a flux per unit area (W/m²); the total wall loss reported later is its surface integral $Q_\text{wall} = \int h\,(T_\text{top}-T_\infty)\,dA$ (W), added to each surface cell as a volumetric sink $\dot q_\text{wall}\,A_\text{face}/V_\text{cell}$. For a water surface losing heat to still air the natural value is small, roughly $h = 8$ W/m²K, so the cooling is gentle. That is the point of the small value: a weak loss only nudges the temperature and barely disturbs the flow, so the velocity field stays close to the adiabatic one we already recorded in Step 1, which is what lets us keep reusing that database. (Whether "barely" is good enough is the question we test in §12.)</p>
 
 <p>Two implementation details matter:</p>
 
@@ -1993,13 +1993,13 @@
 
 <h2 id="hsweep">13 — Turning the Dial: the h-Sweep</h2>
 
-<p>To make sure the sink and the balance accounting behave the way they should, we turned $h$ up well past its physical value and watched the cooling grow. Because the source is registered in the balance, the response should be clean and roughly linear in $h$, and it is:</p>
+<p>To make sure the sink and the balance accounting behave the way they should, we turned $h$ up well past its physical value and watched the cooling grow. Because the source is registered in the balance, the response should be clean and monotonic in $h$ &mdash; rising smoothly with no runaway &mdash; and it is:</p>
 
 <figure class="wide" id="hsweepFigure">
   <div id="plotHsweep" style="width:100%; min-height:380px;">
     <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
   </div>
-  <figcaption><span class="label">Figure 10 (interactive).</span> rCFD cooling against the heat-transfer coefficient $h$. The response is monotonic and almost linear, as a balance-registered source should be. The black marker is the CFD reference at the physical $h = 8$: rCFD only reaches that much cooling at around $h \approx 40$, another view of the same four-times shortfall. The higher $h$ values are what-ifs, not physical.</figcaption>
+  <figcaption><span class="label">Figure 10 (interactive).</span> rCFD cooling against the heat-transfer coefficient $h$. The response is monotonic and smooth, but slightly <em>sub-linear</em> (it saturates): doubling $h$ less than doubles the cooling, because as the top cools the surface difference $T_\text{top}-T_\infty$ that drives the loss shrinks. The black marker is the CFD reference at the physical $h = 8$: rCFD only reaches that much cooling at around $h \approx 40$ &mdash; about five times the physical value, slightly more than the four-times cooling shortfall precisely because of this saturation. The higher $h$ values are what-ifs, not physical; turning $h$ up is not a fix, it over-drives the surface sink rather than restoring the missing overturning flow.</figcaption>
 </figure>
 
 <div class="table-wrap">
@@ -2016,14 +2016,14 @@
 </table>
 </div>
 
-<p>The energy removed and $Q_\text{wall}$ both scale almost linearly with $h$, and in every case the global balance stays healthy: target and actual energy agree to within about $0.03\%$. That is the main check here: a local sink can be carried through the heat balance correctly, and the safety belt does not cancel it.</p>
+<p>The energy removed and $Q_\text{wall}$ both rise smoothly with $h$ &mdash; sub-linearly, as the cooling saturates &mdash; and in every case the global balance stays healthy: target and actual energy agree to within about $0.03\%$. That is the main check here: a local sink can be carried through the heat balance correctly, and the safety belt does not cancel it.</p>
 
 <figure class="wide">
   <img src="assets/figures/fig_step2_balance.png" alt="rCFD heat-loss sweep over time: mean temperature, cooling, cumulative energy lost, and wall heat-loss rate">
-  <figcaption><span class="label">Figure 11.</span> The heat-loss sweep over time, for $h = 8, 50, 100, 200$ W/m²K. Top row: the mean temperature $T_\text{mean}$ and the cooling $\Delta T_\text{mean}$ against the adiabatic baseline (the black line is the CFD truth at $h=8$). Bottom row: the cumulative energy removed $\int Q_\text{wall}\,dt$ and the wall heat-loss rate $Q_\text{wall}(t)$. Both grow smoothly and scale almost linearly with $h$, and the energy booked out matches the global balance to within $\approx 0.03\%$, the check that the local sink is carried correctly through the heat balance.</figcaption>
+  <figcaption><span class="label">Figure 11.</span> The heat-loss sweep over time, for $h = 8, 50, 100, 200$ W/m²K. Top row: the mean temperature $T_\text{mean}$ and the cooling $\Delta T_\text{mean}$ against the adiabatic baseline (the black line is the CFD truth at $h=8$). Bottom row: the cumulative energy removed $\int Q_\text{wall}\,dt$ and the wall heat-loss rate $Q_\text{wall}(t)$. Both grow smoothly with $h$ (sub-linearly, as the cooling saturates), and the energy booked out matches the global balance to within $\approx 0.03\%$, the check that the local sink is carried correctly through the heat balance.</figcaption>
 </figure>
 
-<p>Two things to read off this. The model is well-behaved, with no runaway and no sign that the balance belt is cancelling the loss. And the only physical value, $h = 8$, is where rCFD under-predicts; you need a much larger $h$ to make the reused database match reality.</p>
+<p>Two things to read off this. The model is well-behaved, with no runaway and no sign that the balance belt is cancelling the loss. And the only physical value, $h = 8$, is where rCFD under-predicts; a much larger $h$ would be needed to make the reused database match reality, but that would be papering over the missing flow with an unphysical coefficient, not a real fix.</p>
 
 <h2 id="localdiff">14 — Does Local Diffusion Help?</h2>
 
