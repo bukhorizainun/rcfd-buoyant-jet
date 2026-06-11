@@ -24,6 +24,7 @@
 <!-- Time-series data (CORS-safe under file://) -->
 <script src="assets/data/step1b_traces.js"></script>
 <script src="assets/data/step2_traces.js"></script>
+<script src="assets/data/localdiff_traces.js"></script>
 
 <link rel="stylesheet" href="styles.css">
 
@@ -176,6 +177,7 @@
       <li><a href="#quantitative">Quantitative Results</a></li>
       <li><a href="#visual">Visual Comparison</a></li>
       <li><a href="#discussion">Discussion</a></li>
+      <li><a href="#localdiff-step1">Diffusivity from the Database</a></li>
     </ol>
   </details>
 
@@ -1376,6 +1378,77 @@
 
 <p>The margin at the $CoG_y$ optimum is small: $0.069$ mm at $f_{sd}=0.500$ against $0.072$ mm at $f_{sd}=0.750$ and $0.074$ mm at $f_{sd}=0.375$, which is about four percent. The minimum is real, but it is also shallow. Any value in the range $[0.375, 0.750]$ would be defensible if there were a separate reason to prefer it.</p>
 
+<h3 id="localdiff-step1">9.3 — A physical alternative to the $f_{sd}$ knob: local diffusion</h3>
+
+<p>In §6 we picked $f_{sd}$ by hand and kept the value that fit the CFD reference best. There is a more physical option that needs no tuning. Instead of one global number, rCFD can read a diffusion value for every cell straight from the database (<code>local_diff_on = 1</code>). This per-cell value comes from the second moment of the propagator, as in Lumetzberger et al. <a href="#ref-lumetzberger2025">[3]</a> and Abbasi et al. <a href="#ref-abbasi2020">[5]</a>. The database has to store this field while it is being prepared, so it needs its own field-based build. We made one and ran it without heat loss, next to the global face-swap on the same database. That way the only difference between the two curves is how the diffusion is set: per cell, or by a single $f_{sd}$.</p>
+
+<figure class="wide" id="localDiffFigure">
+  <div id="plotLocalDiff" style="width:100%; min-height:400px;">
+    <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
+  </div>
+  <figcaption><span class="label">Figure 8c (interactive).</span> Adiabatic comparison on the same field-based database: mean temperature $T_\text{mean}(t)$ (left) and the thermal centre of gravity $CoG_y(t)$ (right), for the CFD reference (black), the global face-swap (blue, dashed), and local diffusion (green). The two rCFD curves almost overlap for the whole run, which is what this comparison is about. Both go above the CFD reference while the jet is warm and drop below it after the jet turns cold. That gap comes from the database frame count, not from the diffusion model, as explained below. Hover for values; click a legend entry to show or hide a trace.</figcaption>
+</figure>
+
+<script>
+(function(){
+  function tc(){
+    var cs=getComputedStyle(document.documentElement);
+    var dark=document.documentElement.getAttribute('data-theme')==='dark';
+    return { bg:cs.getPropertyValue('--bg').trim()||'#ffffff', text:cs.getPropertyValue('--ink').trim()||'#1a1a1a',
+      grid:dark?'#2a3038':'#e6e6e6', accent:cs.getPropertyValue('--accent').trim()||'#00467f',
+      cfd:dark?'#f0f0f0':'#111111', local:'#3a9d5d' };
+  }
+  function draw(){
+    if (typeof Plotly==='undefined' || !window.localDiffTraces) return setTimeout(draw,90);
+    var d=window.localDiffTraces, c=tc(), dash='dash';
+    var T=[
+      { x:d.t, y:d.cfd,    name:'CFD reference',    legendgroup:'cfd', line:{color:c.cfd,width:2.4}, xaxis:'x', yaxis:'y',
+        hovertemplate:'CFD<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.global, name:'global face-swap', legendgroup:'g', line:{color:c.accent,width:2,dash:dash}, xaxis:'x', yaxis:'y',
+        hovertemplate:'global<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.local,  name:'local diffusion',  legendgroup:'l', line:{color:c.local,width:2.2}, xaxis:'x', yaxis:'y',
+        hovertemplate:'local<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.cfd_cog,    legendgroup:'cfd', showlegend:false, line:{color:c.cfd,width:2.4}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'CFD<br>CoG=%{y:.2f} mm<extra></extra>' },
+      { x:d.t, y:d.global_cog, legendgroup:'g', showlegend:false, line:{color:c.accent,width:2,dash:dash}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'global<br>CoG=%{y:.2f} mm<extra></extra>' },
+      { x:d.t, y:d.local_cog,  legendgroup:'l', showlegend:false, line:{color:c.local,width:2.2}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'local<br>CoG=%{y:.2f} mm<extra></extra>' }
+    ];
+    var layout={
+      grid:{rows:1,columns:2,pattern:'independent',xgap:0.12},
+      xaxis:{ domain:[0,0.46], title:{text:'Time (s)'}, range:[0,600], gridcolor:c.grid, zeroline:false, color:c.text },
+      yaxis:{ title:{text:'T<sub>mean</sub> (K)'}, gridcolor:c.grid, zeroline:false, color:c.text },
+      xaxis2:{ domain:[0.54,1], title:{text:'Time (s)'}, range:[0,600], gridcolor:c.grid, zeroline:false, color:c.text },
+      yaxis2:{ title:{text:'CoG<sub>y</sub> (mm)'}, gridcolor:c.grid, zeroline:false, color:c.text },
+      legend:{ orientation:'h', x:0.5, xanchor:'center', y:-0.22, font:{size:11,color:c.text}, bgcolor:'rgba(0,0,0,0)' },
+      margin:{ t:16, b:70, l:62, r:16 }, hovermode:'x unified',
+      paper_bgcolor:c.bg, plot_bgcolor:c.bg, font:{family:'Inter, sans-serif', size:12, color:c.text }, uirevision:'localdiff'
+    };
+    Plotly.react('plotLocalDiff',T,layout,{ responsive:true, displaylogo:false, modeBarButtonsToRemove:['lasso2d','select2d','autoScale2d'], toImageButtonOptions:{format:'png',filename:'step1_local_diffusion',scale:2} });
+  }
+  draw();
+  document.addEventListener('themechange', function(){ if(window.localDiffTraces) draw(); });
+})();
+</script>
+
+<p>The two rCFD curves almost overlap. At the end of the run local diffusion gives $T_\text{mean} = 300.55$ K and the global face-swap gives $300.63$ K, so they differ by only $0.08$ K, and $CoG_y$ agrees to about $0.03$ mm. Reading the diffusion straight from the database gives the same result as the hand-tuned $f_{sd}$, but without any value to set by hand. This is the Step-1 result: local diffusion can replace the manual sweep.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Adiabatic, end of run</th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$CoG_y$ (mm)</th><th class="num">bias vs CFD (K)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD reference</td><td class="num">309.16</td><td class="num">38.5</td><td class="num">—</td></tr>
+<tr><td>global face-swap (60-frame DB)</td><td class="num">300.63</td><td class="num">37.3</td><td class="num">−8.5</td></tr>
+<tr><td>local diffusion (60-frame DB)</td><td class="num">300.55</td><td class="num">37.3</td><td class="num">−8.6</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>One thing to note about the absolute level. This field-based database has only $60$ frames for now, because the $600$-frame read still fails on it. With fewer frames it follows the CFD reference less closely than the $600$-frame sweep in §6: it goes too high while the jet is warm, and by the end of the run it is about $8.5$ K below the CFD reference (the $600$-frame sweep ends within about $1.7$ K). This gap comes from the small number of frames, not from the diffusion model. The local-vs-global comparison above is not affected, because both curves use the same $60$ frames. Building the field-based database at $600$ frames, so the level matches §6, is a planned step. We come back to local diffusion under heat loss in §14.</p>
+
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step2">
   <div class="kicker">Step 2 · in progress · robustness test</div>
@@ -2027,7 +2100,7 @@
 
 <h2 id="localdiff">14 — Does Local Diffusion Help?</h2>
 
-<p>One natural idea is to drop the hand-tuned global knob $f_{sd}$ and let rCFD read a physical, per-cell diffusion field straight from the database (<code>local_diff_on = 1</code>), following Lumetzberger et al. <a href="#ref-lumetzberger2025">[3]</a> and Abbasi et al. <a href="#ref-abbasi2020">[5]</a>. We got that path working and built a small database to test it. The result is clean, though for heat loss it does not help much:</p>
+<p>In §9.3 local diffusion already matched the hand-tuned face-swap on the adiabatic case: it reads a diffusion field per cell from the database (<code>local_diff_on = 1</code>) instead of tuning $f_{sd}$, following Lumetzberger et al. <a href="#ref-lumetzberger2025">[3]</a> and Abbasi et al. <a href="#ref-abbasi2020">[5]</a>. The question now is whether this same no-tuning path also helps once heat loss is on. We ran it on the same small field-based database. The result is clean, but for heat loss it does not help much:</p>
 
 <div class="table-wrap">
 <table>
