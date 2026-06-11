@@ -1709,7 +1709,69 @@
   @media (prefers-reduced-motion: reduce){ .thermlab .tl-fluxg.on { animation:none; opacity:0.85; } }
 </style>
 
-<h3 id="thermlab">10.1 — Interactive thermal lab</h3>
+<style>
+  .codeblock { background:var(--note-bg); border:1px solid var(--accent-soft); border-radius:10px;
+    padding:0.8rem 1rem; margin:0.5rem 0 1.1rem; overflow-x:auto; }
+  .codeblock .cb-cap { font:600 0.8rem Inter, sans-serif; color:var(--ink-soft); margin-bottom:0.5rem; }
+  .codeblock pre { margin:0; }
+  .codeblock code { font:0.8rem/1.55 'JetBrains Mono', ui-monospace, monospace; color:var(--ink); white-space:pre; }
+</style>
+
+<h3 id="heatcode">10.1 — The heat-loss term in code: CFD and rCFD</h3>
+
+<p>Both points above show up directly in the code, and it helps to see them side by side. The model itself is the same on each side: Newton cooling $\dot q = h\,(T - T_\text{amb})$ on the top cell layer, where a cell counts as "top" when its centre sits within one cell edge $cs$ of the highest cell, $y > y_\text{max} - cs$. What differs is how each solver takes the term.</p>
+
+<p>In the CFD reference the loss is a Fluent source term on the energy equation. <code>DEFINE_SOURCE</code> returns a volumetric sink, $-h\,(T - T_\text{amb})/cs$ in W/m³, for the top cells, plus its slope <code>dS</code> so the implicit solver stays stable. Integrated over a top cell this is $-h\,A\,(T - T_\text{amb})$, the loss across the top face, and Fluent balances the energy itself.</p>
+
+<div class="codeblock">
+  <div class="cb-cap">CFD reference — Fluent UDF (CFD_user.c)</div>
+  <pre><code>/* heat loss as a Fluent source on the energy equation */
+DEFINE_SOURCE(top_heat_loss, c, t, dS, eqn)
+{
+    double x[ND_ND], cs, source;
+    C_CENTROID(x, c, t);
+    cs = pow(C_VOLUME(c, t), 1.0/3.0);              /* cell edge length */
+
+    if (Top_region_initialized &amp;&amp; x[1] &gt; Top_y_max - cs) {   /* top layer */
+        source  = -H_EXT * (C_T(c, t) - T_AMB) / cs;          /* W/m3 sink     */
+        dS[eqn] = -H_EXT / cs;                                /* linearization */
+        return source;
+    }
+    dS[eqn] = 0.0;
+    return 0.0;
+}</code></pre>
+</div>
+
+<p>In the replay there is no energy equation to solve. The temperature is just carried along by the recorded flow, so we apply the loss to it by hand: each step the top cell cools by $\Delta T = -\dot q\,\Delta t / (\rho\,c_p\,V)$. Then we book the removed energy into the global heat balance as a negative source. Without that line the balance safety belt (the second point above) would read the missing heat as an error and put it back, and the loss would cancel. That balance entry is the part that is special to rCFD.</p>
+
+<div class="codeblock">
+  <div class="cb-cap">rCFD replay — user source (rCFD_user_run.h, inside user_access_data_before_shift)</div>
+  <pre><code>/* same Newton cooling on the top layer, applied to the transported
+   temperature, then booked into the global heat balance */
+per_node_wall_heat = 0.0;
+
+for (i_cell = 0; i_cell &lt; int_cell_count; i_cell++) {
+
+    cs = pow(cell_volume[i_cell], 1.0/3.0);
+
+    if (Top_region_initialized &amp;&amp; cell_center[i_cell][1] &gt; Top_y_max - cs) {
+
+        T_cell  = data[i_cell][water_temp] + reference_temperature;
+        q_cell  = H_EXT * cs * cs * (T_cell - T_AMB);          /* W over top face */
+        dT_cell = -q_cell * timestep / (cell_volume[i_cell] * density * heat_capacity);
+
+        data[i_cell][water_temp] += dT_cell;                   /* cool the cell  */
+        per_node_wall_heat       += q_cell * timestep;         /* J removed      */
+    }
+}
+
+/* register the removed energy so the balance belt does not add it back */
+rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_heat);</code></pre>
+</div>
+
+<p>This shape, a local source or sink plus a balance entry, is the standard rCFD way to drive a scalar on a frozen replay. The <code>steel_RH_alloying</code> tutorial in rCFDreloaded uses the same pattern to <em>add</em> alloy mass in an RH degasser; here we use it to <em>remove</em> heat at the surface, with temperature as the transported scalar instead of concentration. One small difference: the rCFD side reads $h$ from a file (<code>H_EXT.in</code>) at run time, so the $h$-sweep in §13 needs no recompile, while the CFD side keeps $h$ as a fixed constant.</p>
+
+<h3 id="thermlab">10.2 — Interactive thermal lab</h3>
 
 <p>The lab below is a <strong>schematic</strong>, not a CFD field render: it shows the mechanism, while the cooling number it reports for each $h$ is the real measured value from our rCFD runs (§13). Pick a heat-transfer coefficient and watch the heat-loss tank (right) cool against the sealed adiabatic tank (left): the cold cap at the top deepens, the surface stratification labels fade, and the wall heat-flux arrows grow in number and strength. Switch on Infrared View for a thermal-camera palette.</p>
 
