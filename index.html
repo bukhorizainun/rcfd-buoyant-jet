@@ -1386,7 +1386,7 @@
   <div id="plotLocalDiff" style="width:100%; min-height:400px;">
     <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
   </div>
-  <figcaption><span class="label">Figure 8c (interactive).</span> Adiabatic comparison on the same field-based database: mean temperature $T_\text{mean}(t)$ (left) and the thermal centre of gravity $CoG_y(t)$ (right), for the CFD reference (black), the global face-swap (blue, dashed), and local diffusion (green). The two rCFD curves almost overlap for the whole run, which is what this comparison is about. Both go above the CFD reference while the jet is warm and drop below it after the jet turns cold. That gap comes from the database frame count, not from the diffusion model, as explained below. Hover for values; click a legend entry to show or hide a trace.</figcaption>
+  <figcaption><span class="label">Figure 7b (interactive).</span> Adiabatic comparison on the same field-based database: mean temperature $T_\text{mean}(t)$ (left) and the thermal centre of gravity $CoG_y(t)$ (right), for the CFD reference (black), the global face-swap (blue, dashed), and local diffusion (green). The two rCFD curves almost overlap for the whole run, which is what this comparison is about. Both go above the CFD reference while the jet is warm and drop below it after the jet turns cold. That gap comes from the database frame count, not from the diffusion model, as explained below. Hover for values; click a legend entry to show or hide a trace.</figcaption>
 </figure>
 
 <script>
@@ -1906,6 +1906,16 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <p>$$ \delta T_\text{mean} = \frac{\sum_i m_i\,\lvert T_i - T_\text{mean}\rvert}{\sum_i m_i}. $$</p>
 
 <p>This $\delta T_\text{mean}$ is the <strong>mass-weighted mean absolute deviation</strong> (MAD) of the temperature from its mean. A closely related measure of spread is the <strong>standard deviation</strong>, $\sigma_T = \sqrt{\sum_i m_i\,(T_i - T_\text{mean})^2 / \sum_i m_i}$. Both say how uneven the field is; we report the MAD because it is less swayed by the few very hot cells in the warm cap, but the two track each other closely (for any field $\sigma_T \ge \delta T_\text{mean}$, and for a near-normal spread $\sigma_T \approx 1.25\,\delta T_\text{mean}$). The standard-deviation form needs only one extra term in the same cell loop, so it could be reported as well from a short re-run.</p>
+
+<p>Before the table, here is the reference field itself, taken from the saved end-of-run solution: the flow pattern Prof. Pirker asked for, next to the layering it sets up.</p>
+
+<figure class="wide">
+  <div style="display:flex; flex-wrap:wrap; gap:0.8rem; align-items:flex-start;">
+    <img src="assets/figures/fig_step2_cfd_flow.png" alt="CFD reference velocity pathlines: the jet enters at mid-height and the water turns over in a slow loop" style="flex:1 1 340px; min-width:0; max-width:100%; height:auto; border-radius:6px; border:1px solid var(--accent-soft);">
+    <img src="assets/figures/fig_step2_cfd_temperature.png" alt="CFD reference temperature field: warm water over cold water with a sharp layer between them" style="flex:1 1 340px; min-width:0; max-width:100%; height:auto; border-radius:6px; border:1px solid var(--accent-soft);">
+  </div>
+  <figcaption><span class="label">Figure 8c.</span> The CFD reference with heat loss, from the saved end-of-run field. Left: velocity pathlines coloured by speed (0–0.05 m/s). The jet enters at mid-height and the water turns over in a slow loop; this is the flow pattern the rCFD replay has to stand in for. Right: the temperature field (293–333 K). Warm light water sits on top of cold water with a sharp layer between them, the stratification the tank builds up.</figcaption>
+</figure>
 
 <div class="table-wrap">
 <table>
