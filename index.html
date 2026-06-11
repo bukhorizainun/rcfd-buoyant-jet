@@ -2136,6 +2136,28 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 })();
 </script>
 
+<h3 id="rcfd-heatloss-anim">12.1 — Watching it happen</h3>
+
+<p>These two clips are the same rCFD heat-loss replay, shown two ways. On the left is the temperature field (293–333 K): warm water gathers at the top and cold stays below, like the sealed tank in Step 1. The heat loss is too small to spot here. On the right is the difference, $\Delta T = $ (with heat loss) $-$ (without), so it shows only what the heat loss adds. A blue cap grows at the surface, where the water is now cooler than it would be with no heat loss. The cap stays at the top and never reaches down, because the replay flow is frozen and cannot carry the cooled water into the tank. That trapped cap is why rCFD picks up only about a quarter of the cooling.</p>
+
+<figure class="wide">
+  <div style="display:flex; flex-wrap:wrap; gap:0.8rem;">
+    <div style="flex:1 1 340px; min-width:0;">
+      <video autoplay loop muted playsinline controls preload="metadata" style="width:100%; border-radius:6px; border:1px solid var(--accent-soft);">
+        <source src="assets/videos/rcfd_heatloss_field.mp4" type="video/mp4">
+      </video>
+      <div style="text-align:center; font-size:0.82rem; color:var(--ink-soft); margin-top:0.35rem;">Temperature field (293–333 K)</div>
+    </div>
+    <div style="flex:1 1 340px; min-width:0;">
+      <video autoplay loop muted playsinline controls preload="metadata" style="width:100%; border-radius:6px; border:1px solid var(--accent-soft);">
+        <source src="assets/videos/rcfd_heatloss_deltaT.mp4" type="video/mp4">
+      </video>
+      <div style="text-align:center; font-size:0.82rem; color:var(--ink-soft); margin-top:0.35rem;">Heat-loss effect $\Delta T$ (with − without)</div>
+    </div>
+  </div>
+  <figcaption><span class="label">Figure 9d.</span> The same rCFD heat-loss run shown two ways: the temperature field (left) and the heat-loss effect $\Delta T$ (right, with minus without heat loss, range $-2\ldots0$ K). In the field view the cooling is hard to see. In the $\Delta T$ view a cold cap forms at the surface and stays put, because the frozen flow cannot pull it down. That trapped cap is the advection gap behind the ~25 % capture.</figcaption>
+</figure>
+
 <h2 id="hsweep">13 — Turning the Dial: the h-Sweep</h2>
 
 <p>To make sure the sink and the balance accounting behave the way they should, we turned $h$ up well past its physical value and watched the cooling grow. Because the source is registered in the balance, the response should be clean and monotonic in $h$ &mdash; rising smoothly with no runaway &mdash; and it is:</p>
