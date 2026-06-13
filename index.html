@@ -671,7 +671,7 @@
 
 <h3>5.1 — First rCFD replay at $f_{sd} = 0.75$</h3>
 
-<p>For the first replay we used $f_{sd} = 0.75$, the value Prof. Pirker had picked. The rCFD curves follow the CFD curves in shape, but $T_\text{mean}$ sits clearly above the reference. That offset is what motivated Step 1b: instead of guessing the right value of $f_{sd}$, we decided to sweep it.</p>
+<p>For the first replay we used $f_{sd} = 0.75$ as a starting value. The rCFD curves follow the CFD curves in shape, but $T_\text{mean}$ sits clearly above the reference. That offset is what motivated Step 1b: instead of guessing the right value of $f_{sd}$, we decided to sweep it.</p>
 
 <figure class="wide">
   <img src="assets/figures/fig_comparison_TMean_CoG.png" alt="Step 1a CFD vs rCFD comparison at f_sd = 0.75">
@@ -1453,7 +1453,7 @@
 <div class="part-divider wip" id="part-step2">
   <div class="kicker">Step 2 · in progress · robustness test</div>
   <div class="part-title">Stress-testing recurrence CFD under heat loss</div>
-  <p>Step 1 calibrated rCFD against a sealed, adiabatic tank. Step 2 changes the rules: the tank is now allowed to lose heat at its top surface, a thermal boundary condition the recurrence database never saw. We add the loss as a local source/sink, account for it in the energy balance, and ask the real test question: how well does a database built on adiabatic flow hold up when the physics shifts under it? It helps to read this section as a robustness test, not just "adding heat loss". The results below are our current findings, still to be reviewed with Prof. Pirker.</p>
+  <p>Step 1 calibrated rCFD against a sealed, adiabatic tank. Step 2 changes the rules: the tank is now allowed to lose heat at its top surface, a thermal boundary condition the recurrence database never saw. We add the loss as a local source/sink, account for it in the energy balance, and ask the real test question: how well does a database built on adiabatic flow hold up when the physics shifts under it? It helps to read this section as a robustness test, not just "adding heat loss". The results below are our current findings.</p>
   <p class="stage-strip" aria-label="Where Step 2 sits in the project">
     <span>Step 1 · calibration</span>
     <span class="now">Step 2 · robustness test</span>
@@ -1901,20 +1901,43 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <h2 id="cfdheat">11 — The CFD Reference with Heat Loss</h2>
 
-<p>First the ground truth. We re-ran the full CFD with the heat-loss sink switched on (laminar, $h = 8$) and compared it to the sealed adiabatic CFD. We report Prof. Pirker's three diagnostics: the mean temperature $T_\text{mean}$, the height of the heat $CoG_y$, and a new one, $\delta T_\text{mean}$, the average spread of temperature around the mean, i.e. how <em>uneven</em> the field is:</p>
+<p>First the ground truth. We re-ran the full CFD with the heat-loss sink switched on (laminar, $h = 8$) and compared it to the sealed adiabatic CFD. We report three diagnostics: the mean temperature $T_\text{mean}$, the height of the heat $CoG_y$, and a new one, $\delta T_\text{mean}$, the average spread of temperature around the mean, i.e. how <em>uneven</em> the field is:</p>
 
 <p>$$ \delta T_\text{mean} = \frac{\sum_i m_i\,\lvert T_i - T_\text{mean}\rvert}{\sum_i m_i}. $$</p>
 
 <p>This $\delta T_\text{mean}$ is the <strong>mass-weighted mean absolute deviation</strong> (MAD) of the temperature from its mean. A closely related measure of spread is the <strong>standard deviation</strong>, $\sigma_T = \sqrt{\sum_i m_i\,(T_i - T_\text{mean})^2 / \sum_i m_i}$. Both say how uneven the field is; we report the MAD because it is less swayed by the few very hot cells in the warm cap, but the two track each other closely (for any field $\sigma_T \ge \delta T_\text{mean}$, and for a near-normal spread $\sigma_T \approx 1.25\,\delta T_\text{mean}$). The standard-deviation form needs only one extra term in the same cell loop, so it could be reported as well from a short re-run.</p>
 
-<p>Before the table, here is the reference field itself, taken from the saved end-of-run solution: the flow pattern Prof. Pirker asked for, next to the layering it sets up.</p>
+<p>Before the table, here is the reference run playing out: the flow pattern, next to the temperature layering it builds up over time.</p>
+
+<style>
+  .syncp-bar{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.7rem;flex-wrap:wrap;}
+  .syncp-btn{font:600 0.82rem Inter,sans-serif;padding:0.35rem 0.85rem;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;}
+  .syncp-btn.sec{background:transparent;color:var(--accent);}
+  .syncp-slider{flex:1 1 150px;max-width:320px;accent-color:var(--accent);}
+  .syncp-pct{font:600 0.78rem JetBrains Mono,monospace;color:var(--ink-soft);min-width:2.8em;text-align:right;}
+  .syncp-grid{display:flex;flex-wrap:wrap;gap:0.8rem;justify-content:center;}
+  .syncp-cell{flex:1 1 300px;max-width:360px;min-width:0;}
+  .syncp-cell.wide{flex:1 1 640px;max-width:680px;}
+  .syncp-cell video{width:100%;border-radius:6px;border:1px solid var(--accent-soft);display:block;background:#eef1f6;}
+  .syncp-lab{text-align:center;font-size:0.82rem;color:var(--ink-soft);margin-top:0.35rem;}
+</style>
 
 <figure class="wide">
-  <div style="display:flex; flex-wrap:wrap; gap:0.8rem; align-items:flex-start;">
-    <img src="assets/figures/fig_step2_cfd_flow.png" alt="CFD reference velocity pathlines: the jet enters at mid-height and the water turns over in a slow loop" style="flex:1 1 340px; min-width:0; max-width:100%; height:auto; border-radius:6px; border:1px solid var(--accent-soft);">
-    <img src="assets/figures/fig_step2_cfd_temperature.png" alt="CFD reference temperature field: warm water over cold water with a sharp layer between them" style="flex:1 1 340px; min-width:0; max-width:100%; height:auto; border-radius:6px; border:1px solid var(--accent-soft);">
+  <div class="syncp" data-syncp>
+    <div class="syncp-bar">
+      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
+      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
+      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
+      <span class="syncp-pct">0%</span>
+    </div>
+    <div class="syncp-grid">
+      <div class="syncp-cell wide">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/CFD_heatloss_Tpath.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">Temperature (left) &middot; flow pattern (right)</div>
+      </div>
+    </div>
   </div>
-  <figcaption><span class="label">Figure 8c.</span> The CFD reference with heat loss, from the saved end-of-run field. Left: velocity pathlines coloured by speed (0–0.05 m/s). The jet enters at mid-height and the water turns over in a slow loop; this is the flow pattern the rCFD replay has to stand in for. Right: the temperature field (293–333 K). Warm light water sits on top of cold water with a sharp layer between them, the stratification the tank builds up.</figcaption>
+  <figcaption><span class="label">Figure 8c.</span> The CFD reference with heat loss, played over the whole run. Press Play, or drag the slider to stop at any moment. Left: the temperature field (293&ndash;333 K). Warm light water collects on top of cold water and a sharp layer forms between them, the stratification the tank builds up. Right: velocity pathlines coloured by speed (0&ndash;0.05 m/s). The jet comes in at mid-height and the water turns over in a slow loop. This is the flow pattern the rCFD replay has to stand in for.</figcaption>
 </figure>
 
 <div class="table-wrap">
@@ -2141,22 +2164,79 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <p>These two clips are the same rCFD heat-loss replay, shown two ways. On the left is the temperature field (293–333 K): warm water gathers at the top and cold stays below, like the sealed tank in Step 1. The heat loss is too small to spot here. On the right is the difference, $\Delta T = $ (with heat loss) $-$ (without), so it shows only what the heat loss adds. A blue cap grows at the surface, where the water is now cooler than it would be with no heat loss. The cap stays at the top and never reaches down, because the replay flow is frozen and cannot carry the cooled water into the tank. That trapped cap is why rCFD picks up only about a quarter of the cooling.</p>
 
 <figure class="wide">
-  <div style="display:flex; flex-wrap:wrap; gap:0.8rem;">
-    <div style="flex:1 1 340px; min-width:0;">
-      <video autoplay loop muted playsinline controls preload="metadata" style="width:100%; border-radius:6px; border:1px solid var(--accent-soft);">
-        <source src="assets/videos/rcfd_heatloss_field.mp4" type="video/mp4">
-      </video>
-      <div style="text-align:center; font-size:0.82rem; color:var(--ink-soft); margin-top:0.35rem;">Temperature field (293–333 K)</div>
+  <div class="syncp" data-syncp>
+    <div class="syncp-bar">
+      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
+      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
+      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
+      <span class="syncp-pct">0%</span>
     </div>
-    <div style="flex:1 1 340px; min-width:0;">
-      <video autoplay loop muted playsinline controls preload="metadata" style="width:100%; border-radius:6px; border:1px solid var(--accent-soft);">
-        <source src="assets/videos/rcfd_heatloss_deltaT.mp4" type="video/mp4">
-      </video>
-      <div style="text-align:center; font-size:0.82rem; color:var(--ink-soft); margin-top:0.35rem;">Heat-loss effect $\Delta T$ (with − without)</div>
+    <div class="syncp-grid">
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rcfd_heatloss_field.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">Temperature field (293&ndash;333 K)</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rcfd_heatloss_deltaT.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">Heat-loss effect $\Delta T$ (with &minus; without)</div>
+      </div>
     </div>
   </div>
   <figcaption><span class="label">Figure 9d.</span> The same rCFD heat-loss run shown two ways: the temperature field (left) and the heat-loss effect $\Delta T$ (right, with minus without heat loss, range $-2\ldots0$ K). In the field view the cooling is hard to see. In the $\Delta T$ view a cold cap forms at the surface and stays put, because the frozen flow cannot pull it down. That trapped cap is the advection gap behind the ~25 % capture.</figcaption>
 </figure>
+
+<p>So far Step 2 has shown the rCFD side on its own. The player below puts it next to the real CFD: the same heat-loss case, run both ways. Press Play to run them together, or drag the slider to pause both at the same moment.</p>
+
+<figure class="wide">
+  <div class="syncp" data-syncp>
+    <div class="syncp-bar">
+      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
+      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
+      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
+      <span class="syncp-pct">0%</span>
+    </div>
+    <div class="syncp-grid">
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/CFD_heatloss_fieldonly.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">CFD (resolved)</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_heatloss_fieldonly.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">rCFD (replay)</div>
+      </div>
+    </div>
+  </div>
+  <figcaption><span class="label">Figure 9e (interactive).</span> The same heat-loss case in CFD (left) and rCFD (right): the temperature field, 293&ndash;333 K. Play runs both at once and the slider stops them together. The CFD keeps a sharp line between the warm top and the cold bottom, while the rCFD replay smooths it out, because the face-swap step adds extra mixing on top of the saved flow. The cooling itself is small in the field view; the $\Delta T$ view in Figure 9d shows it more clearly.</figcaption>
+</figure>
+
+<script>
+(function(){
+  function wire(root){
+    var vids=[].slice.call(root.querySelectorAll('.syncp-vid'));
+    if(!vids.length) return;
+    var play=root.querySelector('.syncp-play'), reset=root.querySelector('.syncp-reset'),
+        slider=root.querySelector('.syncp-slider'), pct=root.querySelector('.syncp-pct'),
+        lead=vids[0], on=false, raf=null;
+    function show(f){ slider.value=Math.round(f*1000); pct.textContent=Math.round(f*100)+'%'; }
+    function seek(f){ f=Math.max(0,Math.min(1,f)); vids.forEach(function(v){ if(v.duration) v.currentTime=f*v.duration; }); show(f); }
+    function loop(){
+      if(!on) return;
+      if(lead.ended || (lead.duration && lead.currentTime>=lead.duration-0.04)){ vids.forEach(function(v){ v.currentTime=0; v.play(); }); }
+      show(lead.duration ? lead.currentTime/lead.duration : 0);
+      raf=requestAnimationFrame(loop);
+    }
+    play.addEventListener('click', function(){
+      on=!on;
+      if(on){ vids.forEach(function(v){v.play();}); play.innerHTML='&#10074;&#10074; Pause'; raf=requestAnimationFrame(loop); }
+      else { vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); }
+    });
+    reset.addEventListener('click', function(){ on=false; vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); seek(0); });
+    slider.addEventListener('input', function(){ on=false; vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); seek((+slider.value)/1000); });
+    vids.forEach(function(v){ if(v.readyState>=1){try{v.currentTime=0.001;}catch(e){}} else { v.addEventListener('loadedmetadata',function(){try{v.currentTime=0.001;}catch(e){}},{once:true}); } });
+  }
+  document.querySelectorAll('[data-syncp]').forEach(wire);
+})();
+</script>
 
 <h2 id="hsweep">13 — Turning the Dial: the h-Sweep</h2>
 
@@ -2212,7 +2292,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <div class="keybox">
   <h4>One idea for closing the gap → Step 3</h4>
-  <p>If the problem is a missing flow pattern, one natural thing to try would be to give rCFD a database that already contains it: rebuild the C2C database from a CFD run that <em>itself</em> has heat loss, so the cooling-driven down-flows are recorded into the patterns. There is a clear trade-off: such a database would be tied to that one heat-loss setting, so we would be swapping rCFD's "build once, reuse everywhere" strength for accuracy. Whether that is worth doing, and how far to take it, is something we would look into in Step 3 under Prof. Pirker's guidance.</p>
+  <p>If the problem is a missing flow pattern, one natural thing to try would be to give rCFD a database that already contains it: rebuild the C2C database from a CFD run that <em>itself</em> has heat loss, so the cooling-driven down-flows are recorded into the patterns. There is a clear trade-off: such a database would be tied to that one heat-loss setting, so we would be swapping rCFD's "build once, reuse everywhere" strength for accuracy. Whether that is worth doing, and how far to take it, is something we would look into in Step 3.</p>
 </div>
 
 <script>
@@ -2235,7 +2315,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   function drawGap(d) {
     const tc = themeColors();
     const dash = 'dash', solid = 'solid';
-    // Prof. Pirker's three diagnostics: T_mean | CoG_y | delta-T_mean
+    // three diagnostics: T_mean | CoG_y | delta-T_mean
     const T = [
       // Panel 1 — T_mean (these four define the shared legend)
       { x:d.t, y:d.cfd_adia,  name:'CFD — adiabatic',  legendgroup:'ca', line:{color:tc.cfd,    width:2.2, dash}, xaxis:'x', yaxis:'y',
@@ -2343,16 +2423,16 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <div class="part-divider wip" id="part-step3">
   <div class="kicker">Step 3 · planned</div>
   <div class="part-title">Multi-database simulation experiments</div>
-  <p>Step 2 left us with a clean question: when is one reused database enough, and when might a purpose-built one be needed? Step 3 is where we would look into that; the directions below are our own first thoughts, and the actual plan will follow Prof. Pirker's guidance.</p>
+  <p>Step 2 left us with a clean question: when is one reused database enough, and when might a purpose-built one be needed? Step 3 is where we would look into that; the directions below are our own first thoughts.</p>
   <span class="chip plan">planned</span>
 </div>
 
 <h2 id="step3">15 — Step 3: Multi-Database Experiments</h2>
 
-<p>The heat-loss gap points in this direction. A single adiabatic database is cheap and reusable but misses physics it never saw; a database rebuilt for one specific condition would be more accurate but no longer reusable. Exploring that trade-off, by building and comparing a few databases, feels like a sensible next step, though how far we take it is for Prof. Pirker to steer.</p>
+<p>The heat-loss gap points in this direction. A single adiabatic database is cheap and reusable but misses physics it never saw; a database rebuilt for one specific condition would be more accurate but no longer reusable. Exploring that trade-off, by building and comparing a few databases, feels like a sensible next step.</p>
 
 <div class="wip-card">
-  <p style="margin-top:0"><strong>Directions we are considering, subject to Prof. Pirker's direction:</strong></p>
+  <p style="margin-top:0"><strong>Directions we are considering:</strong></p>
   <ul>
     <li><strong>Non-adiabatic rebuild.</strong> Rebuild the C2C database from a CFD that already has heat loss, so the cooling-driven down-flows are recorded. The hope would be that the Step-2 gap largely closes, at the price of a database tied to one condition.</li>
     <li><strong>Adiabatic vs non-adiabatic, side by side.</strong> Run the same heat-loss replay on both databases and compare against the CFD reference (1.45 K), to see how much the rebuild actually buys.</li>
