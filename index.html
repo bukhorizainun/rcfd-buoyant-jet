@@ -2166,7 +2166,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <h3 id="rcfd-heatloss-anim">12.1 — Watching it happen</h3>
 
-<p>These two clips are the same rCFD heat-loss replay, shown two ways. On the left is the temperature field (293–333 K): warm water gathers at the top and cold stays below, like the sealed tank in Step 1. The heat loss is too small to spot here. On the right is the difference, $\Delta T = $ (with heat loss) $-$ (without), so it shows only what the heat loss adds. White means no change from the no-loss run, and blue means cooler. A blue cap grows at the surface, where the water is now cooler than it would be with no heat loss. The cap stays at the top and never reaches down, because the replay flow is frozen and cannot carry the cooled water into the tank. That trapped cap is why rCFD picks up only about a quarter of the cooling.</p>
+<p>This clip is the rCFD heat-loss replay, shown as the temperature field (293–333 K): warm water gathers at the top and cold stays below, like the sealed tank in Step 1. The heat loss is there, but it is far too small to see against the 40 K spread between the warm top and the cold bottom. To bring it out we compare the run against the no-loss run a little further down, the $\Delta T$ view.</p>
 
 <figure class="wide">
   <div class="syncp" data-syncp>
@@ -2177,17 +2177,13 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       <span class="syncp-pct">0%</span>
     </div>
     <div class="syncp-grid">
-      <div class="syncp-cell">
+      <div class="syncp-cell wide">
         <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rcfd_heatloss_field.mp4" type="video/mp4"></video>
         <div class="syncp-lab">Temperature field (293&ndash;333 K)</div>
       </div>
-      <div class="syncp-cell">
-        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rcfd_heatloss_deltaT.mp4" type="video/mp4"></video>
-        <div class="syncp-lab">Heat-loss effect $\Delta T$ (with &minus; without)</div>
-      </div>
     </div>
   </div>
-  <figcaption><span class="label">Figure 9d.</span> The same rCFD heat-loss run shown two ways: the temperature field (left) and the heat-loss effect $\Delta T$ (right, with minus without heat loss; white is no change, blue is cooling, scale $\pm1.5$ K). In the field view the cooling is hard to see. In the $\Delta T$ view a cold cap forms at the surface and stays put, because the frozen flow cannot pull it down. That trapped cap is the advection gap behind the ~25 % capture.</figcaption>
+  <figcaption><span class="label">Figure 9d.</span> The rCFD heat-loss replay, temperature field (293&ndash;333 K). Warm water sits on top, cold below. The heat loss is there but too small to spot against the 40 K top-to-bottom spread, which is why we turn to the $\Delta T$ view below.</figcaption>
 </figure>
 
 <p>So far Step 2 has shown the rCFD side on its own. The player below puts it next to the real CFD: the same heat-loss case, run both ways. Press Play to run them together, or drag the slider to pause both at the same moment.</p>
@@ -2214,7 +2210,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <figcaption><span class="label">Figure 9e (interactive).</span> The same heat-loss case in CFD (left) and rCFD (right): the temperature field, 293&ndash;333 K. Play runs both at once and the slider stops them together. The CFD keeps a sharp line between the warm top and the cold bottom, while the rCFD replay smooths it out, because the face-swap step adds extra mixing on top of the saved flow. The cooling itself is small in the field view; the $\Delta T$ view below shows it more clearly.</figcaption>
 </figure>
 
-<p>In the field view the two runs look almost the same, because the cooling is small next to the 40 K difference between the warm top and the cold bottom. The $\Delta T$ view makes it easy to see, so here it is for both runs at once. White is no change from the no-loss run, and blue is cooler. Both sides use the same colour scale, so you can read them against each other.</p>
+<p>In the field view the two runs look almost the same, because the cooling is small next to the 40 K difference between the warm top and the cold bottom. To pull the heat loss out, we look at $\Delta T$: for each cell we subtract the no-loss run from the heat-loss run at the same time, $\Delta T(t) = T_\text{heat loss}(t) - T_\text{no loss}(t)$. On the CFD side that is the heat-loss run minus the adiabatic run; on the rCFD side the replay carries the difference directly. White means the two runs agree, blue means the heat-loss run is cooler, and both panels use the same $\pm1.5$ K scale, so you can read one against the other.</p>
 
 <figure class="wide">
   <div class="syncp" data-syncp>
