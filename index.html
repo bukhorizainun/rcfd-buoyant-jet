@@ -1963,7 +1963,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <div id="plotHeatGap" style="width:100%; min-height:430px;">
     <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
   </div>
-  <figcaption><span class="label">Figure 9 (interactive).</span> The three diagnostics over time, for the CFD reference and the rCFD replay, each with and without heat loss: the mean temperature $T_\text{mean}$, the height of the heat $CoG_y$, and the temperature spread $\delta T_\text{mean}$. In the first panel the heat-loss curve sits below its adiabatic twin, and that gap <em>is</em> the cooling, much wider for CFD than for rCFD. $CoG_y$ barely moves (heat loss hardly shifts where the warm fluid sits), while $\delta T_\text{mean}$ drops. Because $\delta T_\text{mean}$ is a whole-field statistic (unlike the per-step $T_\text{mean}$ and $CoG_y$ monitors), the CFD value was only computed once, from the saved end-of-run field, so it appears as the two markers rather than a curve. Hover for values; click a legend entry to toggle that case.</figcaption>
+  <figcaption><span class="label">Figure 9 (interactive).</span> The three diagnostics over time, for the CFD reference and the rCFD replay, each with and without heat loss: the mean temperature $T_\text{mean}$, the height of the heat $CoG_y$, and the temperature spread $\delta T_\text{mean}$. In the first panel the heat-loss curve sits below its adiabatic twin, and that gap <em>is</em> the cooling, much wider for CFD than for rCFD. $CoG_y$ barely moves (heat loss hardly shifts where the warm fluid sits), while $\delta T_\text{mean}$ drops. The spread runs higher for CFD than for rCFD the whole way, because the resolved flow keeps sharper temperature gradients that the replay smooths out. Hover for values; click a legend entry to toggle that case.</figcaption>
 </figure>
 
 <style>
@@ -2001,7 +2001,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       <div class="lmp-g"><div class="lab">Heat height CoG<sub>y</sub></div><div class="val" id="lmpCog">—</div><div class="unit">mm</div></div>
     </div>
   </div>
-  <figcaption><span class="label">Figure 9 (playback).</span> Scrub or play the timeline to watch the three diagnostics evolve, read straight from the same data as Figure 9. For the CFD case the spread δT<sub>mean</sub> was only saved at the end of the run, so it stays blank until you reach t = 600 s.</figcaption>
+  <figcaption><span class="label">Figure 9 (playback).</span> Scrub or play the timeline to watch the three diagnostics evolve, read straight from the same data as Figure 9. Both cases now read right across the run, including the spread δT<sub>mean</sub>.</figcaption>
 </figure>
 
 <script>
@@ -2020,8 +2020,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       elT.textContent='t = '+Math.round(d.t[i])+' s';
       elTm.textContent=fmt(caseSel==='rcfd'? d.rcfd_h8[i] : d.cfd_h8[i],2);
       elCog.textContent=fmt(caseSel==='rcfd'? d.rcfd_h8_cog[i] : d.cfd_h8_cog[i],1);
-      if(caseSel==='rcfd'){ elDt.textContent=fmt(d.rcfd_h8_dt[i],2); }
-      else { elDt.textContent = (i>=n-1) ? fmt(d.cfd_h8_dt_end,2) : '— (end only)'; }
+      elDt.textContent = fmt(caseSel==='rcfd'? d.rcfd_h8_dt[i] : d.cfd_h8_dt[i], 2);
     }
     function stop(){ if(timer){ clearInterval(timer); timer=null; play.textContent='▶ Play'; } }
     function step(){ var v=+range.value; if(v>=n-1){ stop(); return; } v++; range.value=String(v); render(v); }
@@ -2359,16 +2358,15 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
         hovertemplate:'<b>rCFD adiabatic</b><br>CoG=%{y:.2f} mm<extra></extra>' },
       { x:d.t, y:d.rcfd_h8_cog,   legendgroup:'rh', showlegend:false, line:{color:tc.accent, width:2.4, dash:solid}, xaxis:'x2', yaxis:'y2',
         hovertemplate:'<b>rCFD heat loss</b><br>CoG=%{y:.2f} mm<extra></extra>' },
-      // Panel 3 — delta-T_mean (K): rCFD full series + CFD end-state markers
+      // Panel 3 — temperature spread δT_mean (K): rCFD + CFD full series
       { x:d.t, y:d.rcfd_adia_dt, legendgroup:'ra', showlegend:false, line:{color:tc.accent, width:1.8, dash}, xaxis:'x3', yaxis:'y3',
         hovertemplate:'<b>rCFD adiabatic</b><br>δT=%{y:.2f} K<extra></extra>' },
       { x:d.t, y:d.rcfd_h8_dt,   legendgroup:'rh', showlegend:false, line:{color:tc.accent, width:2.4, dash:solid}, xaxis:'x3', yaxis:'y3',
         hovertemplate:'<b>rCFD heat loss</b><br>δT=%{y:.2f} K<extra></extra>' },
-      { x:[600,600], y:[d.cfd_adia_dt_end,d.cfd_h8_dt_end], mode:'markers+text', showlegend:false,
-        marker:{color:tc.cfd, size:11, symbol:['circle-open','circle']},
-        text:['CFD adiabatic','CFD heat loss'], textposition:'middle left', textfont:{size:10, color:tc.cfd}, cliponaxis:false,
-        xaxis:'x3', yaxis:'y3',
-        hovertemplate:'<b>CFD δT (end state)</b><br>%{y:.2f} K<extra></extra>' }
+      { x:d.t, y:d.cfd_adia_dt,  legendgroup:'ca', showlegend:false, line:{color:tc.cfd, width:2.2, dash}, xaxis:'x3', yaxis:'y3',
+        hovertemplate:'<b>CFD adiabatic</b><br>δT=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.cfd_h8_dt,    legendgroup:'ch', showlegend:false, line:{color:tc.cfd, width:2.6, dash:solid}, xaxis:'x3', yaxis:'y3',
+        hovertemplate:'<b>CFD heat loss</b><br>δT=%{y:.2f} K<extra></extra>' }
     ];
     const layout = {
       grid:{ rows:1, columns:3, pattern:'independent', xgap:0.08 },
@@ -2381,8 +2379,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       annotations:[
         { text:'<b>Mean temperature</b>',       x:0.145, xref:'paper', y:1.07, yref:'paper', xanchor:'center', showarrow:false, font:{size:12.5,color:tc.accent} },
         { text:'<b>Heat centre of gravity</b>', x:0.5,   xref:'paper', y:1.07, yref:'paper', xanchor:'center', showarrow:false, font:{size:12.5,color:tc.accent} },
-        { text:'<b>Temperature spread</b>',      x:0.855, xref:'paper', y:1.07, yref:'paper', xanchor:'center', showarrow:false, font:{size:12.5,color:tc.accent} },
-        { text:'end of run', x:600, xref:'x3', y:19.3, yref:'y3', xanchor:'right', showarrow:false, font:{size:10,color:tc.cfd} }
+        { text:'<b>Temperature spread</b>',      x:0.855, xref:'paper', y:1.07, yref:'paper', xanchor:'center', showarrow:false, font:{size:12.5,color:tc.accent} }
       ],
       legend:{ orientation:'h', x:0.5, xanchor:'center', y:-0.2, font:{size:11,color:tc.text}, bgcolor:'rgba(0,0,0,0)' },
       margin:{ t:50, b:78, l:55, r:16 },
