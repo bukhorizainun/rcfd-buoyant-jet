@@ -2021,6 +2021,12 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       elTm.textContent=fmt(caseSel==='rcfd'? d.rcfd_h8[i] : d.cfd_h8[i],2);
       elCog.textContent=fmt(caseSel==='rcfd'? d.rcfd_h8_cog[i] : d.cfd_h8_cog[i],1);
       elDt.textContent = fmt(caseSel==='rcfd'? d.rcfd_h8_dt[i] : d.cfd_h8_dt[i], 2);
+      // move the time marker on the Figure 9 plot (all three panels)
+      var tt=d.t[i]; window._step2PlayT=tt;
+      var gd=document.getElementById('plotHeatGap');
+      if(gd && gd._fullLayout && window.Plotly){
+        try{ window.Plotly.relayout(gd, {'shapes[0].x0':tt,'shapes[0].x1':tt,'shapes[1].x0':tt,'shapes[1].x1':tt,'shapes[2].x0':tt,'shapes[2].x1':tt}); }catch(e){}
+      }
     }
     function stop(){ if(timer){ clearInterval(timer); timer=null; play.textContent='▶ Play'; } }
     function step(){ var v=+range.value; if(v>=n-1){ stop(); return; } v++; range.value=String(v); render(v); }
@@ -2368,8 +2374,14 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       { x:d.t, y:d.cfd_h8_dt,    legendgroup:'ch', showlegend:false, line:{color:tc.cfd, width:2.6, dash:solid}, xaxis:'x3', yaxis:'y3',
         hovertemplate:'<b>CFD heat loss</b><br>δT=%{y:.2f} K<extra></extra>' }
     ];
+    const tm = (window._step2PlayT != null) ? window._step2PlayT : 600;  // playback time marker
     const layout = {
       grid:{ rows:1, columns:3, pattern:'independent', xgap:0.08 },
+      shapes:[
+        { type:'line', xref:'x',  yref:'y domain',  x0:tm, x1:tm, y0:0, y1:1, line:{color:tc.text, width:1.4, dash:'dot'}, opacity:0.5, layer:'above' },
+        { type:'line', xref:'x2', yref:'y2 domain', x0:tm, x1:tm, y0:0, y1:1, line:{color:tc.text, width:1.4, dash:'dot'}, opacity:0.5, layer:'above' },
+        { type:'line', xref:'x3', yref:'y3 domain', x0:tm, x1:tm, y0:0, y1:1, line:{color:tc.text, width:1.4, dash:'dot'}, opacity:0.5, layer:'above' }
+      ],
       xaxis:{ domain:[0,0.29],     title:{text:'Time (s)'}, range:[0,600], gridcolor:tc.grid, zeroline:false, color:tc.text },
       yaxis:{ title:{text:'T<sub>mean</sub> (K)'}, range:[293,321], gridcolor:tc.grid, zeroline:false, color:tc.text },
       xaxis2:{ domain:[0.355,0.645], title:{text:'Time (s)'}, range:[0,600], gridcolor:tc.grid, zeroline:false, color:tc.text },
