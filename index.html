@@ -2235,6 +2235,30 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <figcaption><span class="label">Figure 9e (interactive).</span> The same heat-loss case in CFD (left) and rCFD (right): the temperature field, 293&ndash;333 K. Play runs both at once and the slider stops them together. The CFD keeps a sharp line between the warm top and the cold bottom, while the rCFD replay smooths it out, because the face-swap step adds extra mixing on top of the saved flow. The cooling itself is small in the field view: about 1.5 K in CFD and 0.4 K in rCFD, only a few percent of the 40 K colour range, so the eye cannot pick it out. The $\Delta T$ view below shows it more clearly.</figcaption>
 </figure>
 
+<p><strong>The same comparison in a colour-blind-friendly scale.</strong> The clips above use the rainbow (jet) scale that Fluent draws by default. Rainbow is familiar, but it has two known drawbacks: it is hard to read for colour-vision deficiency, and it adds bright bands (around green and yellow) that the eye reads as edges even where the temperature changes smoothly. The pair below shows the very same fields in <em>inferno</em>, a sequential scale where brightness simply rises with temperature, so the warm top is light and the cold bottom is dark, with no colour to tell apart and no false edges. Only the colour mapping changes; the physics is identical.</p>
+
+<figure class="wide">
+  <div class="syncp" data-syncp>
+    <div class="syncp-bar">
+      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
+      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
+      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
+      <span class="syncp-pct">0%</span>
+    </div>
+    <div class="syncp-grid">
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/CFD_heatloss_field_inferno.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">CFD (resolved)</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_heatloss_field_inferno.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">rCFD (replay)</div>
+      </div>
+    </div>
+  </div>
+  <figcaption><span class="label">Figure 9e (inferno).</span> The same heat-loss temperature field as above, in the sequential inferno scale (293&ndash;333 K): light is warm, dark is cold. The CFD (left) keeps a sharper warm cap while the rCFD replay (right) smears it, the same point the rainbow view makes, but readable without having to tell colours apart.</figcaption>
+</figure>
+
 <p>In the field view the two runs look almost the same, because the cooling is small next to the 40 K difference between the warm top and the cold bottom. To pull the heat loss out, we look at $\Delta T$: for each cell we subtract the no-loss run from the heat-loss run at the same time, $\Delta T(t) = T_\text{heat loss}(t) - T_\text{no loss}(t)$. On the CFD side that is the heat-loss run minus the adiabatic run; on the rCFD side the replay carries the difference directly. White means the two runs agree, blue means the heat-loss run is cooler, and both panels use the same $\pm1.5$ K scale, so we can read one against the other.</p>
 
 <figure class="wide">
