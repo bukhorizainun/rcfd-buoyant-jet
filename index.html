@@ -220,7 +220,7 @@
       <span><strong>Mochamad Bukhori Zainun</strong> — k12438440</span>
       <span>Supervisor: <strong>Prof. Stefan Pirker</strong></span>
       <span>Department of Particulate Flow Modelling, JKU Linz</span>
-      <span>May 2026</span>
+      <span>June 2026</span>
     </div>
   </div>
 </header>
@@ -229,7 +229,7 @@
 
 <div class="tldr">
   <h3>TL;DR</h3>
-  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$).</p>
+  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$). Step 2 then lets the tank lose heat at the top and tests how far the reused adiabatic database stretches: at a physical $h = 8$ the replay captures only about a quarter of the cooling the full CFD shows, because it cannot reproduce the cooling-driven flow it never recorded. A field-based local diffusivity, read straight from the database, reproduces the hand-tuned $f_{sd} = 0.5$ with no tuning at all.</p>
   <button class="quick-tour-trigger" id="quickTourBtn" type="button"
           title="Auto-scroll through the five key figures (~60 s)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -240,7 +240,7 @@
   </button>
 </div>
 
-<p>This page brings together Step 1a (the workflow) and Step 1b (the parameter sweep). It explains the buoyant-jet problem, how rCFD works, what each $f_{sd}$ value does to the temperature field, and what we would suggest for Step 2.</p>
+<p>This page brings together Step 1 (the workflow and the $f_{sd}$ sweep) and Step 2 (heat loss). It explains the buoyant-jet problem, how rCFD works, what each $f_{sd}$ value does to the temperature field, how a field-based local diffusivity replaces the hand-tuned $f_{sd}$, and how far the reused database holds up once the tank loses heat.</p>
 
 <!-- =========================================================== -->
 <div class="part-divider" id="part-step1">
