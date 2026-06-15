@@ -1457,7 +1457,16 @@
 </table>
 </div>
 
-<p>So local diffusion reaches the right level on its own, with no $f_{sd}$ to set by hand: it picks out the same effective mixing as $f_{sd} = 0.5$, the value §6 kept as best for $CoG_y$. We come back to local diffusion under heat loss in §14.</p>
+<p>So local diffusion reaches the right level on its own, with no $f_{sd}$ to set by hand: it picks out the same effective mixing as $f_{sd} = 0.5$, the value §6 kept as best for $CoG_y$.</p>
+
+<p>The single number $f_{sd}$ hides what local diffusion actually does. Figure 7c shows the field it reads from the database instead: a diffusivity for every cell, none of it set by hand. The mixing is strong along the warm jet and through the rising plume in the middle of the tank, and weak in the still corners. Averaged over the tank it comes out near $f_{sd} = 0.5$, which is why the two agree in Figure 7b, but it is clearly not one constant.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_kappa_eff.png" alt="Local diffusivity field: strong along the jet and plume, weak in the corners" style="max-width:540px;display:block;margin:0 auto;">
+  <figcaption><span class="label">Figure 7c.</span> The per-cell local diffusivity $\kappa_\text{eff}$ the database carries, read at run time with no tuning (mid-plane slice). It is high along the warm jet and the rising plume, where the flow mixes the temperature most, and low in the still corners. The hand-tuned $f_{sd} = 0.5$ replaces this whole field with one constant; local diffusion keeps the spatial detail.</figcaption>
+</figure>
+
+<p>We come back to local diffusion under heat loss in §14.</p>
 
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step2">
