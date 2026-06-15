@@ -1380,13 +1380,13 @@
 
 <h3 id="localdiff-step1">9.3 — A physical alternative to the $f_{sd}$ knob: local diffusion</h3>
 
-<p>In §6 we picked $f_{sd}$ by hand and kept the value that fit the CFD reference best. There is a more physical option that needs no tuning. Instead of one global number, rCFD can read a diffusion value for every cell straight from the database (<code>local_diff_on = 1</code>). This per-cell value comes from the second moment of the propagator, as in Lumetzberger et al. <a href="#ref-lumetzberger2025">[3]</a> and Abbasi et al. <a href="#ref-abbasi2020">[5]</a>. The database has to store this field while it is being prepared, so it needs its own field-based build. We made one and ran it without heat loss, next to the global face-swap on the same database. That way the only difference between the two curves is how the diffusion is set: per cell, or by a single $f_{sd}$.</p>
+<p>In §6 we picked $f_{sd}$ by hand and kept the value that fit the CFD reference best. There is a more physical option that needs no tuning. Instead of one global number, rCFD can read a diffusion value for every cell straight from the database (<code>local_diff_on = 1</code>). This per-cell value comes from the second moment of the propagator, as in Lumetzberger et al. <a href="#ref-lumetzberger2025">[3]</a> and Abbasi et al. <a href="#ref-abbasi2020">[5]</a>. The database has to store this field while it is being prepared, so it needs its own field-based build. We built one and ran it without heat loss, then put the result next to the §6 hand-tuned $f_{sd}$ sweep. If the database-derived diffusion is sound, the no-tuning local curve should land on one of the hand-tuned $f_{sd}$ values.</p>
 
 <figure class="wide" id="localDiffFigure">
   <div id="plotLocalDiff" style="width:100%; min-height:400px;">
     <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
   </div>
-  <figcaption><span class="label">Figure 7b (interactive).</span> Adiabatic comparison on the same field-based database: mean temperature $T_\text{mean}(t)$ (left) and the thermal centre of gravity $CoG_y(t)$ (right), for the CFD reference (black), the global face-swap (blue, dashed), and local diffusion (green). The two rCFD curves almost overlap for the whole run, which is what this comparison is about. Both go above the CFD reference while the jet is warm and settle a little below it after the jet turns cold, ending about 1.7 K under the CFD, the same level as the §6 sweep. Hover for values; click a legend entry to show or hide a trace.</figcaption>
+  <figcaption><span class="label">Figure 7b (interactive).</span> Adiabatic comparison: mean temperature $T_\text{mean}(t)$ (left) and the thermal centre of gravity $CoG_y(t)$ (right), for the CFD reference (black), the hand-tuned global face-swap at $f_{sd} = 0.375, 0.5, 0.75$ (blue dashed), and the no-tuning local diffusion (green). The local curve lands on the $f_{sd} = 0.5$ line and sits between the $0.375$ and $0.75$ ones. Hover for values; click a legend entry to show or hide a trace.</figcaption>
 </figure>
 
 <script>
@@ -1402,17 +1402,25 @@
     if (typeof Plotly==='undefined' || !window.localDiffTraces) return setTimeout(draw,90);
     var d=window.localDiffTraces, c=tc(), dash='dash';
     var T=[
-      { x:d.t, y:d.cfd,    name:'CFD reference',    legendgroup:'cfd', line:{color:c.cfd,width:2.4}, xaxis:'x', yaxis:'y',
+      { x:d.t, y:d.cfd,   name:'CFD reference', legendgroup:'cfd', line:{color:c.cfd,width:2.4}, xaxis:'x', yaxis:'y',
         hovertemplate:'CFD<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
-      { x:d.t, y:d.global, name:'global face-swap', legendgroup:'g', line:{color:c.accent,width:2,dash:dash}, xaxis:'x', yaxis:'y',
-        hovertemplate:'global<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
-      { x:d.t, y:d.local,  name:'local diffusion',  legendgroup:'l', line:{color:c.local,width:2.2}, xaxis:'x', yaxis:'y',
+      { x:d.t, y:d.g0375, name:'global f<sub>sd</sub>=0.375', legendgroup:'g0', line:{color:'#9ecae1',width:1.8,dash:dash}, xaxis:'x', yaxis:'y',
+        hovertemplate:'f<sub>sd</sub>=0.375<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.g05,   name:'global f<sub>sd</sub>=0.5', legendgroup:'g5', line:{color:c.accent,width:1.8,dash:dash}, xaxis:'x', yaxis:'y',
+        hovertemplate:'f<sub>sd</sub>=0.5<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.g075,  name:'global f<sub>sd</sub>=0.75', legendgroup:'g7', line:{color:'#08519c',width:1.8,dash:dash}, xaxis:'x', yaxis:'y',
+        hovertemplate:'f<sub>sd</sub>=0.75<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.local, name:'local diffusion (no tuning)', legendgroup:'l', line:{color:c.local,width:2.8}, xaxis:'x', yaxis:'y',
         hovertemplate:'local<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
-      { x:d.t, y:d.cfd_cog,    legendgroup:'cfd', showlegend:false, line:{color:c.cfd,width:2.4}, xaxis:'x2', yaxis:'y2',
+      { x:d.t, y:d.cfd_cog,   legendgroup:'cfd', showlegend:false, line:{color:c.cfd,width:2.4}, xaxis:'x2', yaxis:'y2',
         hovertemplate:'CFD<br>CoG=%{y:.2f} mm<extra></extra>' },
-      { x:d.t, y:d.global_cog, legendgroup:'g', showlegend:false, line:{color:c.accent,width:2,dash:dash}, xaxis:'x2', yaxis:'y2',
-        hovertemplate:'global<br>CoG=%{y:.2f} mm<extra></extra>' },
-      { x:d.t, y:d.local_cog,  legendgroup:'l', showlegend:false, line:{color:c.local,width:2.2}, xaxis:'x2', yaxis:'y2',
+      { x:d.t, y:d.g0375_cog, legendgroup:'g0', showlegend:false, line:{color:'#9ecae1',width:1.8,dash:dash}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'f<sub>sd</sub>=0.375<br>CoG=%{y:.2f} mm<extra></extra>' },
+      { x:d.t, y:d.g05_cog,   legendgroup:'g5', showlegend:false, line:{color:c.accent,width:1.8,dash:dash}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'f<sub>sd</sub>=0.5<br>CoG=%{y:.2f} mm<extra></extra>' },
+      { x:d.t, y:d.g075_cog,  legendgroup:'g7', showlegend:false, line:{color:'#08519c',width:1.8,dash:dash}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'f<sub>sd</sub>=0.75<br>CoG=%{y:.2f} mm<extra></extra>' },
+      { x:d.t, y:d.local_cog, legendgroup:'l', showlegend:false, line:{color:c.local,width:2.8}, xaxis:'x2', yaxis:'y2',
         hovertemplate:'local<br>CoG=%{y:.2f} mm<extra></extra>' }
     ];
     var layout={
@@ -1432,7 +1440,7 @@
 })();
 </script>
 
-<p>The two rCFD curves sit on top of each other. At the end of the run local diffusion gives $T_\text{mean} = 307.49$ K and the global face-swap gives the same $307.49$ K, matching to three decimals, with $CoG_y$ at $38.5$ mm for both. Reading the diffusion straight from the database gives the same result as the hand-tuned $f_{sd}$, but without any value to set by hand. This is the Step-1 result: local diffusion can replace the manual sweep.</p>
+<p>The no-tuning local diffusion lands right on the hand-tuned $f_{sd} = 0.5$ curve. At the end of the run it gives $T_\text{mean} = 307.49$ K, the same as $f_{sd} = 0.5$ (the two stay within $0.02$ K of each other for the whole run), and it sits between $f_{sd} = 0.375$ ($307.83$ K) and $f_{sd} = 0.75$ ($306.91$ K). So the diffusivity the database carries on its own matches the value we had to pick by hand in §6. This is the Step-1 result: local diffusion can replace the manual sweep.</p>
 
 <div class="table-wrap">
 <table>
@@ -1441,13 +1449,15 @@
 </thead>
 <tbody>
 <tr><td>CFD reference</td><td class="num">309.16</td><td class="num">38.5</td><td class="num">—</td></tr>
-<tr><td>global face-swap (600-frame DB)</td><td class="num">307.49</td><td class="num">38.5</td><td class="num">−1.67</td></tr>
-<tr><td>local diffusion (600-frame DB)</td><td class="num">307.49</td><td class="num">38.5</td><td class="num">−1.67</td></tr>
+<tr><td>global face-swap $f_{sd}=0.375$</td><td class="num">307.83</td><td class="num">38.5</td><td class="num">−1.33</td></tr>
+<tr><td>global face-swap $f_{sd}=0.5$</td><td class="num">307.49</td><td class="num">38.5</td><td class="num">−1.67</td></tr>
+<tr><td>global face-swap $f_{sd}=0.75$</td><td class="num">306.91</td><td class="num">38.4</td><td class="num">−2.25</td></tr>
+<tr><td>local diffusion (no tuning)</td><td class="num">307.49</td><td class="num">38.5</td><td class="num">−1.67</td></tr>
 </tbody>
 </table>
 </div>
 
-<p>The level lines up with the $600$-frame sweep in §6: both rCFD curves end about $1.7$ K below the CFD reference, the same as the hand-tuned $f_{sd}$ sweep. So local diffusion reaches the right level on its own, with no frame-count penalty and no $f_{sd}$ to set by hand. We come back to local diffusion under heat loss in §14.</p>
+<p>So local diffusion reaches the right level on its own, with no $f_{sd}$ to set by hand: it picks out the same effective mixing as $f_{sd} = 0.5$, the value §6 kept as best for $CoG_y$. We come back to local diffusion under heat loss in §14.</p>
 
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step2">
