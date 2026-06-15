@@ -1982,6 +1982,8 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <h2 id="heatgap">12 — rCFD vs CFD: the Gap</h2>
 
+<p>One check before the comparison. With the loss switched off ($h = 0$), the replay gives back the Step 1 result exactly: $T_\text{mean}$ and $CoG_y$ match the no-loss run with no difference, and $Q_\text{wall}$ stays at zero the whole time. So any cooling we see below comes only from the heat-loss term, not from a side effect of the code. The balance accounting that carries that term is checked separately in the $h$-sweep (§13), where it closes to about $0.03\%$.</p>
+
 <p>Now the cheap side. We kept the existing <em>adiabatic</em> C2C database from Step 1 (no rebuild) and simply added the heat-loss source term to the replay. Because the absolute rCFD temperature already carries a small replay bias from Step 1, the fair thing to compare is the <em>cooling itself</em>, i.e. how much each method drops when heat loss is turned on:</p>
 
 <figure class="wide" id="heatGapFigure">
