@@ -1449,6 +1449,7 @@
 </thead>
 <tbody>
 <tr><td>CFD reference</td><td class="num">309.16</td><td class="num">38.5</td><td class="num">—</td></tr>
+<tr><td>no diffusion (advection only)</td><td class="num">308.90</td><td class="num">38.6</td><td class="num">−0.26</td></tr>
 <tr><td>global face-swap $f_{sd}=0.375$</td><td class="num">307.83</td><td class="num">38.5</td><td class="num">−1.33</td></tr>
 <tr><td>global face-swap $f_{sd}=0.5$</td><td class="num">307.49</td><td class="num">38.5</td><td class="num">−1.67</td></tr>
 <tr><td>global face-swap $f_{sd}=0.75$</td><td class="num">306.91</td><td class="num">38.4</td><td class="num">−2.25</td></tr>
@@ -1456,6 +1457,8 @@
 </tbody>
 </table>
 </div>
+
+<p>To see how much the field is doing, we also ran the replay with every diffusion model switched off, so heat moves by the recorded flow alone. The tank then ends at $308.90$ K. The database's local field brings this down to $307.49$ K, the same level as the hand-tuned $f_{sd} = 0.5$. So the field is not idle: on its own it adds about $1.4$ K of mixing, and it lands on the value §6 had to find by hand.</p>
 
 <p>So local diffusion reaches the right level on its own, with no $f_{sd}$ to set by hand: it picks out the same effective mixing as $f_{sd} = 0.5$, the value §6 kept as best for $CoG_y$.</p>
 
@@ -2355,14 +2358,16 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <div class="table-wrap">
 <table>
 <thead>
-<tr><th>$T_\text{mean}$ at end (K)</th><th class="num">local diffusion</th><th class="num">global face-swap</th></tr>
+<tr><th>$T_\text{mean}$ at end (K)</th><th class="num">no diffusion</th><th class="num">local diffusion</th><th class="num">global face-swap</th></tr>
 </thead>
 <tbody>
-<tr><td>adiabatic</td><td class="num">307.49</td><td class="num">307.49</td></tr>
-<tr><td>heat loss ($h=8$)</td><td class="num">307.14</td><td class="num">307.14</td></tr>
+<tr><td>adiabatic</td><td class="num">308.90</td><td class="num">307.49</td><td class="num">307.49</td></tr>
+<tr><td>heat loss ($h=8$)</td><td class="num">308.48</td><td class="num">307.14</td><td class="num">307.14</td></tr>
 </tbody>
 </table>
 </div>
+
+<p>The first column is the same replay with the diffusion model switched off. Turning it on, by local diffusion or by the global face-swap, lowers $T_\text{mean}$ by about $1.4$ K from that baseline in both cases. So the diffusion model is active and doing real work.</p>
 
 <p>Both with and without heat loss, local diffusion and the global face-swap come out <em>identical</em>, with the same $T_\text{mean}$, $CoG_y$, and $\delta T_\text{mean}$ (the cooling is $0.36$ K either way). That makes sense once you look at what local diffusion is. It comes from the second moment of the propagator, $k^{(2c)}$, in Lumetzberger et al. <a href="#ref-lumetzberger2025">[3]</a>, a per-cell measure of how far cell content spreads, which sets a local diffusion coefficient. So it controls how heat smears out locally and cleans up the numerical smoothing inside the flow we already have. What it cannot do is invent the missing down-flow vectors, since the sinking cooled parcels live in a flow field that was never recorded. The local diffusivity field itself (Figure 7c) is the <em>same</em> under heat loss as in the adiabatic case, because it is read from the same recorded flow: the frozen database cannot hand the heat-loss run a diffusivity, or a flow, that adapts to the cooling. Switching the diffusion model only rearranges heat within a frozen flow; it cannot add a flow pattern that is not there. So local diffusion is a useful refinement, because it lets us drop the hand-tuned $f_{sd}$ knob for something physical, but it does not close the heat-loss gap.</p>
 
