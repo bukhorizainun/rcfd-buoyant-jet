@@ -1968,6 +1968,13 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <figcaption><span class="label">Figure 8c.</span> The CFD reference with heat loss, played over the whole run. Press Play, or drag the slider to stop at any moment. Left: the temperature field (293&ndash;333 K). Warm light water collects on top of cold water and a sharp layer forms between them, the stratification the tank builds up. Right: velocity pathlines coloured by speed (0&ndash;0.05 m/s). The jet comes in at mid-height and the water turns over in a slow loop. This is the flow pattern the rCFD replay has to stand in for.</figcaption>
 </figure>
 
+<figure class="wide">
+  <video autoplay loop muted playsinline controls preload="metadata" poster="assets/figures/fig_topo_adia_vs_hl.png" style="max-width:980px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/cfd_topo_adia_vs_hl.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 8d.</span> How much does heat loss change the flow itself? Left: the adiabatic flow. Middle: the flow with heat loss, both at $h = 8$, streamlines coloured by speed (0&ndash;0.05 m/s). The two look almost the same: at this gentle loss the velocity field stays close to the adiabatic one, which is what lets us reuse the adiabatic database. Right: their difference (heat loss &minus; adiabatic), with blue marking extra downflow. It picks out the small overturning the cooling adds near the surface, a few mm/s at its strongest, about a fifth of the jet speed. Small, but it is exactly the kind of cooling-driven flow the frozen replay cannot make.</figcaption>
+</figure>
+
 <div class="table-wrap">
 <table>
 <thead>
