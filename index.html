@@ -1878,7 +1878,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       <div class="tl-r-h" id="tlRH">h = 100 W/m²K</div>
       <div class="tl-r-note" id="tlRNote">Stronger-than-physical reference, used so the gap is clearly visible; the full CFD was re-run here too.</div>
       <div class="tl-r-row"><span class="lab">rCFD cooling (measured)</span><span class="val" id="tlRcfd">ΔT = 3.03 K</span></div>
-      <div class="tl-r-row" id="tlRowCfd"><span class="lab">CFD reference (truth)</span><span class="val cfd" id="tlCfd">ΔT = 9.05 K</span></div>
+      <div class="tl-r-row" id="tlRowCfd"><span class="lab">CFD reference (truth)</span><span class="val cfd" id="tlCfd">ΔT = 9.79 K</span></div>
     </div>
   </div>
 
@@ -1916,7 +1916,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
     Rcfd.textContent = 'ΔT = ' + m.cool.toFixed(2) + ' K';
     // CFD ground truth was measured at the physical h = 8 and at the stronger reference h = 100
     if (h===8){ RowCfd.style.display=''; Cfd.textContent='ΔT = 1.45 K'; }
-    else if (h===100){ RowCfd.style.display=''; Cfd.textContent='ΔT = 9.05 K'; }
+    else if (h===100){ RowCfd.style.display=''; Cfd.textContent='ΔT = 9.79 K'; }
     else { RowCfd.style.display='none'; }
   }
   btns.forEach(function(b){ b.addEventListener('click', function(){ setH(+b.getAttribute('data-h')); }); });
@@ -1970,10 +1970,10 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 </figure>
 
 <figure class="wide">
-  <video autoplay loop muted playsinline controls preload="metadata" poster="assets/figures/fig_topo_adia_vs_hl.png" style="max-width:980px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-    <source src="assets/videos/cfd_topo_adia_vs_hl.mp4" type="video/mp4">
+  <video autoplay loop muted playsinline controls preload="metadata" poster="assets/figures/fig_topo_adia_vs_hl_h100.png" style="max-width:980px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/cfd_topo_adia_vs_hl_h100.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 8d.</span> How much does heat loss change the flow itself? Left: the adiabatic flow. Middle: the flow with heat loss, both at $h = 8$, streamlines coloured by speed (0&ndash;0.05 m/s). The two look almost the same: at this gentle loss the velocity field stays close to the adiabatic one, which is what lets us reuse the adiabatic database. Right: their difference (heat loss &minus; adiabatic), with blue marking extra downflow. It picks out the small overturning the cooling adds near the surface, a few mm/s at its strongest, about a fifth of the jet speed. Small, but it is exactly the kind of cooling-driven flow the frozen replay cannot make. At the stronger $h = 100$ we use as the reference here, that overturning is far larger, and the frozen replay misses correspondingly more of it (§12).</figcaption>
+  <figcaption><span class="label">Figure 8d.</span> How much does strong heat loss change the flow itself? Left: the adiabatic flow. Middle: the flow with heat loss at $h = 100$, streamlines coloured by speed (0&ndash;0.05 m/s). Right: their difference (heat loss &minus; adiabatic), where blue marks extra downflow. At the gentle physical $h = 8$ the two flows are almost identical, and that is what lets us reuse the adiabatic database at all. At $h = 100$ the difference is large: the cooled surface water turns heavy and sinks, which sets up an overturning loop the sealed run never had. This is the cooling-driven flow the frozen replay cannot make, and it is the main reason the replay misses most of the heat loss (§12).</figcaption>
 </figure>
 
 <div class="table-wrap">
@@ -1982,14 +1982,14 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <tr><th>Case</th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$CoG_y$ (m)</th><th class="num">$\delta T_\text{mean}$ (K)</th></tr>
 </thead>
 <tbody>
-<tr><td>CFD — adiabatic</td><td class="num">309.47</td><td class="num">0.0385</td><td class="num">18.56</td></tr>
-<tr><td>CFD — heat loss ($h=100$)</td><td class="num">300.42</td><td class="num">0.0380</td><td class="num">8.33</td></tr>
-<tr class="best"><td>difference</td><td class="num">−9.05</td><td class="num">−0.0005</td><td class="num">−10.22</td></tr>
+<tr><td>CFD — adiabatic</td><td class="num">309.28</td><td class="num">0.0385</td><td class="num">18.45</td></tr>
+<tr><td>CFD — heat loss ($h=100$)</td><td class="num">299.49</td><td class="num">0.0379</td><td class="num">7.32</td></tr>
+<tr class="best"><td>difference</td><td class="num">−9.79</td><td class="num">−0.0006</td><td class="num">−11.13</td></tr>
 </tbody>
 </table>
 </div>
 
-<p>So in the real CFD, strong heat loss cools the tank by about <strong>9.05 K</strong> at $t = 600$ s and also makes the field <em>much more even</em> ($\delta T_\text{mean}$ drops by 10.22 K): cooling the warm top pulls the surface back toward the bulk. $CoG_y$ barely moves. This 9.05 K is the number rCFD has to hit. (For reference, the gentle physical $h = 8$ cools by only about 1.45 K; turning $h$ up is what makes the effect, and the gap below, easy to see.)</p>
+<p>So in the real CFD, strong heat loss cools the tank by about <strong>9.79 K</strong> at $t = 600$ s, and it also makes the field <em>much more even</em>: $\delta T_\text{mean}$ drops by 11.13 K, because cooling the warm top pulls the surface back toward the bulk. $CoG_y$ hardly moves. This 9.79 K is the number rCFD has to match. (At the gentle physical $h = 8$ the tank cools by only about 1.45 K. Turning $h$ up is what makes the cooling, and the gap below, easy to see.)</p>
 
 <h2 id="heatgap">12 — rCFD vs CFD: the Gap</h2>
 
@@ -2056,9 +2056,9 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
     function render(i){
       i=Math.max(0,Math.min(n-1,i|0));
       elT.textContent='t = '+Math.round(d.t[i])+' s';
-      elTm.textContent=fmt(caseSel==='rcfd'? d.rcfd_h8[i] : d.cfd_h8[i],2);
-      elCog.textContent=fmt(caseSel==='rcfd'? d.rcfd_h8_cog[i] : d.cfd_h8_cog[i],1);
-      elDt.textContent = fmt(caseSel==='rcfd'? d.rcfd_h8_dt[i] : d.cfd_h8_dt[i], 2);
+      elTm.textContent=fmt(caseSel==='rcfd'? d.rcfd_h100[i] : d.cfd_h100[i],2);
+      elCog.textContent=fmt(caseSel==='rcfd'? d.rcfd_h100_cog[i] : d.cfd_h100_cog[i],1);
+      elDt.textContent = fmt(caseSel==='rcfd'? d.rcfd_h100_dt[i] : d.cfd_h100_dt[i], 2);
       // move the time marker on the Figure 9 plot (all three panels)
       var tt=d.t[i]; window._step2PlayT=tt;
       var gd=document.getElementById('plotHeatGap');
@@ -2095,27 +2095,20 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <tr><th>Method</th><th>Case</th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$CoG_y$ (mm)</th><th class="num">$\delta T_\text{mean}$ (K)</th></tr>
 </thead>
 <tbody>
-<tr><td>CFD</td><td>adiabatic</td><td class="num">309.47</td><td class="num">38.5</td><td class="num">18.56</td></tr>
-<tr><td>CFD</td><td>heat loss ($h=100$)</td><td class="num">300.42</td><td class="num">38.0</td><td class="num">8.33</td></tr>
+<tr><td>CFD</td><td>adiabatic</td><td class="num">309.28</td><td class="num">38.5</td><td class="num">18.45</td></tr>
+<tr><td>CFD</td><td>heat loss ($h=100$)</td><td class="num">299.49</td><td class="num">37.9</td><td class="num">7.32</td></tr>
 <tr><td>rCFD</td><td>adiabatic</td><td class="num">307.49</td><td class="num">38.5</td><td class="num">14.35</td></tr>
-<tr><td>rCFD</td><td>heat loss ($h=100$)</td><td class="num">304.46</td><td class="num">38.4</td><td class="num">11.00</td></tr>
+<tr><td>rCFD</td><td>heat loss ($h=100$)</td><td class="num">304.46</td><td class="num">38.2</td><td class="num">10.78</td></tr>
 </tbody>
 </table>
 </div>
 
-<p>Heat loss lowers the spread $\delta T_\text{mean}$ by about $10.2$ K in CFD but only about $3.3$ K in rCFD, again roughly a third. rCFD's spread is also lower overall ($\approx 14$ K vs $\approx 18$ K adiabatic), because the frozen replay plus the global face-swap smooths the field more than the resolved CFD does. $CoG_y$ hardly moves in either, which fits a loss that only touches a thin top layer.</p>
+<p>Heat loss lowers the spread $\delta T_\text{mean}$ by about $11.1$ K in CFD but only about $3.6$ K in rCFD, again roughly a third. The rCFD spread is also lower overall ($\approx 14$ K against $\approx 18$ K adiabatic), because the frozen replay and the global face-swap smooth the field more than the resolved CFD does. $CoG_y$ hardly moves in either case, which fits a loss that only touches a thin top layer.</p>
 
 <div class="keybox">
   <h4>The key Step-2 result</h4>
-  <p>The reused adiabatic database captures only about <strong>a third</strong> of the real heat loss: at $h = 100$ rCFD cools by <strong>3.03 K</strong> against the CFD's <strong>9.05 K</strong> (a ratio of ≈ 0.33), both read at $t = 600$ s. The same ordering shows up in $\delta T_\text{mean}$, where rCFD picks up only about a third of the CFD change. (At the gentle physical $h = 8$ the same gap is even wider, rCFD 0.36 K against CFD 1.45 K, a ratio of ≈ 0.25, but the cooling there is so small it is hard to see; turning $h$ up makes the shortfall plain.)</p>
+  <p>The reused adiabatic database captures only about <strong>a third</strong> of the real heat loss: at $h = 100$ rCFD cools by <strong>3.03 K</strong> against the CFD's <strong>9.79 K</strong> (a ratio of ≈ 0.31), both read at $t = 600$ s. The same ordering shows up in $\delta T_\text{mean}$, where rCFD picks up only about a third of the CFD change. (At the gentle physical $h = 8$ the gap is even wider, rCFD 0.36 K against CFD 1.45 K, a ratio of ≈ 0.25, but the cooling there is so small it is hard to see; turning $h$ up makes the shortfall plain.)</p>
 </div>
-
-<figure class="wide">
-  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:480px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-    <source src="assets/videos/rCFD_Tfield_h100.mp4" type="video/mp4">
-  </video>
-  <figcaption><span class="label">Figure 8e.</span> The rCFD replay at $h = 100$, temperature field only (293&ndash;333 K, same colour scale as the CFD reference in Figure 8c). There is no separate flow panel here: the rCFD flow is the frozen adiabatic field, the same for any $h$, so it would just repeat the adiabatic loop. Next to the CFD reference, the cooling stays shallow, a thin cooled skin forms at the surface but the cold cap never deepens, because the frozen flow cannot sink the cooled water and bring warm water up to be cooled in turn. That missing overturning is the advection gap, now plain at the stronger $h$.</figcaption>
-</figure>
 
 <p>Why does it fall so far short, with roughly <strong>two-thirds</strong> of the heat loss missing? Because we reused the adiabatic database from Step 1, the fluid flow in the replay is completely <em>frozen</em>: it only knows the motion that was recorded with the lid closed. In the real CFD, once the water at the top cools it gets heavier and sinks, and warm water rises to take its place. This is the convective overturning loop from Figure 8, and it keeps feeding warm fluid to the surface, so the heat loss keeps going. The replay does not contain that loop, because nothing was cooling when the database was recorded. So in the replay the top water cools in place: the surface difference $T_\text{top} - T_\infty$ shrinks, and the loss slows down. The missing piece is a <em>flow pattern</em>, not a diffusion setting, so we call it an <strong>advection gap</strong>. It fits how rCFD splits transport in the first place: the recorded shifts carry the advection, while diffusion only adds the small-scale mixing on top <a href="#ref-abbasi2020">[5]</a>. The Step-1 replay bias (~1.7 K on the absolute level) accounts for only a small part of the gap; the frozen flow is the main cause. This is the limit of reusing an adiabatic database and adding a source term on top, and it is the result Step 2 was meant to show. It is also a known soft spot of the method: applied to heat transfer in a fluidised bed, transport-based rCFD smeared out the sharp, localised heat-transfer layer that the flow drives <a href="#ref-pirker2018">[2]</a>. Our under-captured cold cap is the buoyant-jet version of the same difficulty, reproducing a localised, flow-driven thermal structure on a frozen flow.</p>
 
@@ -2166,13 +2159,13 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <p>It helps to read the shortfall as a test of database reuse, not just a heat-loss result. The recurrence database was recorded once, from the adiabatic flow, and Step 2 reuses it under a boundary condition it never saw. The roughly two-thirds shortfall at $h = 100$ (wider at the gentle $h = 8$) is then a direct measure of how far that one database stretches: the physics it did record (the advection in the shift maps) still carries over, while the physics it never recorded (the cooling-driven down-flow) cannot appear no matter how the source term is tuned. So the number to keep from Step 2 is not the cooling itself but how much of it a reused adiabatic database can recover, which is the question Step 3 takes up with purpose-built databases.</p>
 </div>
 
-<p>The shortfall is not a fixed offset; it grows as the run goes on. The figure below tracks the cooling itself over time at the physical $h = 8$: how much each method has cooled relative to its own adiabatic baseline.</p>
+<p>The shortfall is not a fixed offset; it grows as the run goes on. The figure below tracks the cooling itself over time at $h = 100$: how much each method has cooled relative to its own adiabatic baseline.</p>
 
 <figure class="wide" id="errGrowthFigure">
   <div id="plotErrGrowth" style="width:100%; min-height:380px;">
     <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
   </div>
-  <figcaption><span class="label">Figure 9c (interactive).</span> How the cooling gap grows at $h = 8$. The CFD reference (black) keeps cooling because the overturning loop keeps feeding warm fluid to the surface; the rCFD replay (blue) flattens early because its flow is frozen. The shaded band between them is the shortfall, the part of the heat loss the reused adiabatic database cannot reproduce, and it widens with time. Shown for the gentle physical $h = 8$ over the common $t = 600$ s window; the stronger $h = 100$ reference case, where the same gap is much larger, is in §11&ndash;12.</figcaption>
+  <figcaption><span class="label">Figure 9c (interactive).</span> How the cooling gap grows at $h = 100$. The CFD reference (black) keeps cooling because the overturning loop keeps feeding warm fluid to the surface; the rCFD replay (blue) flattens early because its flow is frozen. The shaded band between them is the shortfall, the part of the heat loss the reused adiabatic database cannot reproduce, and it widens with time. By $t = 600$ s the CFD has cooled by about 9.8 K while the replay reaches only 3.0 K, so the band is roughly two-thirds of the total.</figcaption>
 </figure>
 
 <script>
@@ -2198,7 +2191,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       yaxis:{ title:{text:'cooling ΔT<sub>mean</sub> (K)'}, rangemode:'tozero', gridcolor:c.grid, zeroline:false, color:c.text },
       legend:{ orientation:'h', x:0.5, xanchor:'center', y:-0.22, font:{size:11,color:c.text}, bgcolor:'rgba(0,0,0,0)' },
       margin:{ t:16, b:70, l:62, r:16 }, hovermode:'x unified',
-      annotations:[{ x:470, y:0.62, xref:'x', yref:'y', text:'shortfall', showarrow:false, font:{size:12, color:'#c0392b'} }],
+      annotations:[{ x:470, y:4.6, xref:'x', yref:'y', text:'shortfall', showarrow:false, font:{size:12, color:'#c0392b'} }],
       paper_bgcolor:c.bg, plot_bgcolor:c.bg, font:{family:'Inter, sans-serif', size:12, color:c.text }
     };
     layout.uirevision='err-growth';
@@ -2211,97 +2204,16 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <h3 id="rcfd-heatloss-anim">12.1 — Watching it happen</h3>
 
-<p>This clip is the rCFD heat-loss replay, shown as the temperature field (293–333 K): warm water gathers at the top and cold stays below, like the sealed tank in Step 1. The heat loss is there, but it is far too small to see against the 40 K spread between the warm top and the cold bottom. To bring it out we compare the run against the no-loss run a little further down, the $\Delta T$ view.</p>
+<p>Figure 8c showed the CFD reference under heat loss. Here is the rCFD replay of the same case, drawn the same way: temperature on the left, flow on the right. Setting the two clips next to each other is the quickest way to see what the replay keeps and what it loses.</p>
 
 <figure class="wide">
-  <div class="syncp" data-syncp>
-    <div class="syncp-bar">
-      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
-      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
-      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
-      <span class="syncp-pct">0%</span>
-    </div>
-    <div class="syncp-grid">
-      <div class="syncp-cell wide">
-        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rcfd_heatloss_field.mp4" type="video/mp4"></video>
-        <div class="syncp-lab">Temperature field (293&ndash;333 K)</div>
-      </div>
-    </div>
-  </div>
-  <figcaption><span class="label">Figure 9d.</span> The rCFD heat-loss replay, temperature field (293&ndash;333 K). Warm water sits on top, cold below. The heat loss is there but too small to spot against the 40 K top-to-bottom spread, which is why we turn to the $\Delta T$ view below.</figcaption>
+  <video autoplay loop muted playsinline controls preload="metadata" poster="assets/figures/fig_rcfd_tpath_h100.png" style="max-width:980px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/rCFD_Tpath_h100.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 9d.</span> The rCFD replay with heat loss at $h = 100$, in the same view as the CFD reference (Figure 8c). Left: the temperature field (293&ndash;333 K). Right: the flow, coloured by speed (0&ndash;0.05 m/s). Put it next to Figure 8c and two things stand out. The warm cap is softer here, because the face-swap step mixes a little extra on top of the saved flow, so the sharp line the CFD holds gets smoothed. And the flow on the right is frozen: it is the steady adiabatic loop recorded in Step 1, the same for any $h$. It never picks up the cooling-driven downflow the CFD develops, which is why the replay misses about two-thirds of the heat loss.</figcaption>
 </figure>
 
-<p>So far Step 2 has shown the rCFD side on its own. The player below puts it next to the real CFD: the same heat-loss case, run both ways. Press Play to run them together, or drag the slider to pause both at the same moment.</p>
-
-<figure class="wide">
-  <div class="syncp" data-syncp>
-    <div class="syncp-bar">
-      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
-      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
-      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
-      <span class="syncp-pct">0%</span>
-    </div>
-    <div class="syncp-grid">
-      <div class="syncp-cell">
-        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/CFD_heatloss_fieldonly.mp4" type="video/mp4"></video>
-        <div class="syncp-lab">CFD (resolved)</div>
-      </div>
-      <div class="syncp-cell">
-        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_heatloss_fieldonly.mp4" type="video/mp4"></video>
-        <div class="syncp-lab">rCFD (replay)</div>
-      </div>
-    </div>
-  </div>
-  <figcaption><span class="label">Figure 9e (interactive).</span> The same heat-loss case in CFD (left) and rCFD (right): the temperature field, 293&ndash;333 K. Play runs both at once and the slider stops them together. The CFD keeps a sharp line between the warm top and the cold bottom, while the rCFD replay smooths it out, because the face-swap step adds extra mixing on top of the saved flow. The cooling itself is small in the field view: about 1.5 K in CFD and 0.4 K in rCFD, only a few percent of the 40 K colour range, so the eye cannot pick it out. The $\Delta T$ view below shows it more clearly.</figcaption>
-</figure>
-
-<p><strong>The same comparison in a colour-blind-friendly scale.</strong> The clips above use the rainbow (jet) scale that Fluent draws by default. Rainbow is familiar, but it has two known drawbacks: it is hard to read for colour-vision deficiency, and it adds bright bands (around green and yellow) that the eye reads as edges even where the temperature changes smoothly. The pair below shows the very same fields in <em>inferno</em>, a sequential scale where brightness simply rises with temperature, so the warm top is light and the cold bottom is dark, with no colour to tell apart and no false edges. Only the colour mapping changes; the physics is identical.</p>
-
-<figure class="wide">
-  <div class="syncp" data-syncp>
-    <div class="syncp-bar">
-      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
-      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
-      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
-      <span class="syncp-pct">0%</span>
-    </div>
-    <div class="syncp-grid">
-      <div class="syncp-cell">
-        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/CFD_heatloss_field_inferno.mp4" type="video/mp4"></video>
-        <div class="syncp-lab">CFD (resolved)</div>
-      </div>
-      <div class="syncp-cell">
-        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_heatloss_field_inferno.mp4" type="video/mp4"></video>
-        <div class="syncp-lab">rCFD (replay)</div>
-      </div>
-    </div>
-  </div>
-  <figcaption><span class="label">Figure 9e (inferno).</span> The same heat-loss temperature field as above, in the sequential inferno scale (293&ndash;333 K): light is warm, dark is cold. The CFD (left) keeps a sharper warm cap while the rCFD replay (right) smears it, the same point the rainbow view makes, but readable without having to tell colours apart.</figcaption>
-</figure>
-
-<p>In the field view the two runs look almost the same, because the cooling is small next to the 40 K difference between the warm top and the cold bottom. To pull the heat loss out, we look at $\Delta T$: for each cell we subtract the no-loss run from the heat-loss run at the same time, $\Delta T(t) = T_\text{heat loss}(t) - T_\text{no loss}(t)$. On the CFD side that is the heat-loss run minus the adiabatic run; on the rCFD side the replay carries the difference directly. White means the two runs agree, blue means the heat-loss run is cooler, and both panels use the same $\pm1.5$ K scale, so we can read one against the other.</p>
-
-<figure class="wide">
-  <div class="syncp" data-syncp>
-    <div class="syncp-bar">
-      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
-      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
-      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
-      <span class="syncp-pct">0%</span>
-    </div>
-    <div class="syncp-grid">
-      <div class="syncp-cell">
-        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/cfd_heatloss_deltaT.mp4" type="video/mp4"></video>
-        <div class="syncp-lab">CFD (resolved)</div>
-      </div>
-      <div class="syncp-cell">
-        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rcfd_heatloss_deltaT.mp4" type="video/mp4"></video>
-        <div class="syncp-lab">rCFD (replay)</div>
-      </div>
-    </div>
-  </div>
-  <figcaption><span class="label">Figure 9f.</span> The heat-loss effect $\Delta T = $ (with loss) $-$ (without), for CFD (left) and rCFD (right) on the same scale ($\pm1.5$ K, white = no change, blue = cooling). In the CFD the cold cap is darker and reaches deeper into the tank. In the rCFD it stays thin and close to the surface, because the frozen flow cannot carry the cooled water down. This is the ~25% capture seen directly: the same effect, much weaker in the replay.</figcaption>
-</figure>
+<p>That frozen flow is the whole story. With the loop fixed, the replay cannot let the cooled surface water sink and bring warm water up to be cooled in turn, so the cold cap never deepens the way it does in the CFD. The two-thirds of the cooling that goes missing is exactly that absent overturning, here as a picture rather than a number.</p>
 
 <script>
 (function(){
@@ -2340,7 +2252,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <div id="plotHsweep" style="width:100%; min-height:380px;">
     <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
   </div>
-  <figcaption><span class="label">Figure 10 (interactive).</span> rCFD cooling against the heat-transfer coefficient $h$. The response is monotonic and smooth, but slightly <em>sub-linear</em> (it saturates): doubling $h$ less than doubles the cooling, because as the top cools the surface difference $T_\text{top}-T_\infty$ that drives the loss shrinks. The black marker is the CFD reference at the physical $h = 8$ (1.45 K): rCFD only reaches that much cooling at around $h \approx 40$. We have since re-run the full CFD at $h = 100$ as well, where it cools by 9.05 K (§11&ndash;12) while rCFD reaches only 3.03 K. So the gap is not an artefact of the tiny physical value: it persists, now with CFD ground truth, at strong cooling. Turning $h$ up is still not a fix, it over-drives the surface sink rather than restoring the missing overturning flow.</figcaption>
+  <figcaption><span class="label">Figure 10 (interactive).</span> rCFD cooling against the heat-transfer coefficient $h$. The response is monotonic and smooth, but slightly <em>sub-linear</em> (it saturates): doubling $h$ less than doubles the cooling, because as the top cools the surface difference $T_\text{top}-T_\infty$ that drives the loss shrinks. The black marker is the CFD reference at the physical $h = 8$ (1.45 K): rCFD only reaches that much cooling at around $h \approx 40$. We have since re-run the full CFD at $h = 100$ as well, where it cools by 9.79 K (§11&ndash;12) while rCFD reaches only 3.03 K. So the gap is not an artefact of the tiny physical value: it persists, now with CFD ground truth, at strong cooling. Turning $h$ up is still not a fix, it over-drives the surface sink rather than restoring the missing overturning flow.</figcaption>
 </figure>
 
 <div class="table-wrap">
@@ -2361,7 +2273,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <figure class="wide">
   <img src="assets/figures/fig_step2_balance.png" alt="rCFD heat-loss sweep over time: mean temperature, cooling, cumulative energy lost, and wall heat-loss rate">
-  <figcaption><span class="label">Figure 11.</span> The heat-loss sweep over time, for $h = 8, 50, 100, 200$ W/m²K. Top row: the mean temperature $T_\text{mean}$ and the cooling $\Delta T_\text{mean}$ against the adiabatic baseline (the black line is the CFD truth at $h=8$; the full CFD has since also been run at $h=100$, giving 9.05 K, §11&ndash;12). Bottom row: the cumulative energy removed $\int Q_\text{wall}\,dt$ and the wall heat-loss rate $Q_\text{wall}(t)$. Both grow smoothly with $h$ (sub-linearly, as the cooling saturates), and the energy booked out matches the global balance to within $\approx 0.03\%$, the check that the local sink is carried correctly through the heat balance.</figcaption>
+  <figcaption><span class="label">Figure 11.</span> The heat-loss sweep over time, for $h = 8, 50, 100, 200$ W/m²K. Top row: the mean temperature $T_\text{mean}$ and the cooling $\Delta T_\text{mean}$ against the adiabatic baseline (the black line is the CFD truth at $h=8$; the full CFD has since also been run at $h=100$, giving 9.79 K, §11&ndash;12). Bottom row: the cumulative energy removed $\int Q_\text{wall}\,dt$ and the wall heat-loss rate $Q_\text{wall}(t)$. Both grow smoothly with $h$ (sub-linearly, as the cooling saturates), and the energy booked out matches the global balance to within $\approx 0.03\%$, the check that the local sink is carried correctly through the heat balance.</figcaption>
 </figure>
 
 <p>Two things to read off this. The model is well-behaved, with no runaway and no sign that the balance belt is cancelling the loss. And rCFD under-predicts at every $h$ where we have a CFD reference, both the physical $h = 8$ and the stronger $h = 100$; a much larger $h$ would be needed to make the reused database match reality, but that would be papering over the missing flow with an unphysical coefficient, not a real fix.</p>
@@ -2416,29 +2328,29 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       // Panel 1 — T_mean (these four define the shared legend)
       { x:d.t, y:d.cfd_adia,  name:'CFD — adiabatic',  legendgroup:'ca', line:{color:tc.cfd,    width:2.2, dash}, xaxis:'x', yaxis:'y',
         hovertemplate:'<b>CFD adiabatic</b><br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
-      { x:d.t, y:d.cfd_h8,    name:'CFD — heat loss',  legendgroup:'ch', line:{color:tc.cfd,    width:2.6, dash:solid}, xaxis:'x', yaxis:'y',
+      { x:d.t, y:d.cfd_h100,    name:'CFD — heat loss',  legendgroup:'ch', line:{color:tc.cfd,    width:2.6, dash:solid}, xaxis:'x', yaxis:'y',
         hovertemplate:'<b>CFD heat loss</b><br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
       { x:d.t, y:d.rcfd_adia, name:'rCFD — adiabatic', legendgroup:'ra', line:{color:tc.accent, width:1.8, dash}, xaxis:'x', yaxis:'y',
         hovertemplate:'<b>rCFD adiabatic</b><br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
-      { x:d.t, y:d.rcfd_h8,   name:'rCFD — heat loss', legendgroup:'rh', line:{color:tc.accent, width:2.4, dash:solid}, xaxis:'x', yaxis:'y',
+      { x:d.t, y:d.rcfd_h100,   name:'rCFD — heat loss', legendgroup:'rh', line:{color:tc.accent, width:2.4, dash:solid}, xaxis:'x', yaxis:'y',
         hovertemplate:'<b>rCFD heat loss</b><br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
       // Panel 2 — CoG_y (mm)
       { x:d.t, y:d.cfd_adia_cog,  legendgroup:'ca', showlegend:false, line:{color:tc.cfd,    width:2.2, dash}, xaxis:'x2', yaxis:'y2',
         hovertemplate:'<b>CFD adiabatic</b><br>CoG=%{y:.2f} mm<extra></extra>' },
-      { x:d.t, y:d.cfd_h8_cog,    legendgroup:'ch', showlegend:false, line:{color:tc.cfd,    width:2.6, dash:solid}, xaxis:'x2', yaxis:'y2',
+      { x:d.t, y:d.cfd_h100_cog,    legendgroup:'ch', showlegend:false, line:{color:tc.cfd,    width:2.6, dash:solid}, xaxis:'x2', yaxis:'y2',
         hovertemplate:'<b>CFD heat loss</b><br>CoG=%{y:.2f} mm<extra></extra>' },
       { x:d.t, y:d.rcfd_adia_cog, legendgroup:'ra', showlegend:false, line:{color:tc.accent, width:1.8, dash}, xaxis:'x2', yaxis:'y2',
         hovertemplate:'<b>rCFD adiabatic</b><br>CoG=%{y:.2f} mm<extra></extra>' },
-      { x:d.t, y:d.rcfd_h8_cog,   legendgroup:'rh', showlegend:false, line:{color:tc.accent, width:2.4, dash:solid}, xaxis:'x2', yaxis:'y2',
+      { x:d.t, y:d.rcfd_h100_cog,   legendgroup:'rh', showlegend:false, line:{color:tc.accent, width:2.4, dash:solid}, xaxis:'x2', yaxis:'y2',
         hovertemplate:'<b>rCFD heat loss</b><br>CoG=%{y:.2f} mm<extra></extra>' },
       // Panel 3 — temperature spread δT_mean (K): rCFD + CFD full series
       { x:d.t, y:d.rcfd_adia_dt, legendgroup:'ra', showlegend:false, line:{color:tc.accent, width:1.8, dash}, xaxis:'x3', yaxis:'y3',
         hovertemplate:'<b>rCFD adiabatic</b><br>δT=%{y:.2f} K<extra></extra>' },
-      { x:d.t, y:d.rcfd_h8_dt,   legendgroup:'rh', showlegend:false, line:{color:tc.accent, width:2.4, dash:solid}, xaxis:'x3', yaxis:'y3',
+      { x:d.t, y:d.rcfd_h100_dt,   legendgroup:'rh', showlegend:false, line:{color:tc.accent, width:2.4, dash:solid}, xaxis:'x3', yaxis:'y3',
         hovertemplate:'<b>rCFD heat loss</b><br>δT=%{y:.2f} K<extra></extra>' },
       { x:d.t, y:d.cfd_adia_dt,  legendgroup:'ca', showlegend:false, line:{color:tc.cfd, width:2.2, dash}, xaxis:'x3', yaxis:'y3',
         hovertemplate:'<b>CFD adiabatic</b><br>δT=%{y:.2f} K<extra></extra>' },
-      { x:d.t, y:d.cfd_h8_dt,    legendgroup:'ch', showlegend:false, line:{color:tc.cfd, width:2.6, dash:solid}, xaxis:'x3', yaxis:'y3',
+      { x:d.t, y:d.cfd_h100_dt,    legendgroup:'ch', showlegend:false, line:{color:tc.cfd, width:2.6, dash:solid}, xaxis:'x3', yaxis:'y3',
         hovertemplate:'<b>CFD heat loss</b><br>δT=%{y:.2f} K<extra></extra>' }
     ];
     const tm = (window._step2PlayT != null) ? window._step2PlayT : 600;  // playback time marker
@@ -2476,7 +2388,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       { x:d.hsweep_h, y:d.hsweep_cool, mode:'lines+markers', name:'rCFD cooling',
         line:{color:tc.accent, width:2.4}, marker:{color:tc.accent, size:9},
         hovertemplate:'<b>rCFD</b><br>h=%{x} W/m²K<br>cooling=%{y:.2f} K<extra></extra>' },
-      { x:[8,100], y:[1.45,9.05], mode:'markers', name:'CFD reference (truth)',
+      { x:[8,100], y:[1.45,9.79], mode:'markers', name:'CFD reference (truth)',
         marker:{color:tc.cfd, size:13, symbol:'star'},
         hovertemplate:'<b>CFD reference</b><br>h=%{x} W/m²K<br>cooling=%{y:.2f} K<extra></extra>' }
     ];
@@ -2485,7 +2397,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
       yaxis:{ title:{text:'heat-loss cooling  ΔT  (K)'}, range:[0,10], gridcolor:tc.grid, zeroline:false, color:tc.text },
       annotations:[
         { text:'physical value', x:8, y:0.36, ax:34, ay:-30, font:{size:11,color:tc.text}, arrowcolor:tc.text, arrowwidth:1 },
-        { text:'CFD truth (9.05 K)', x:100, y:9.05, ax:0, ay:-24, font:{size:11,color:tc.cfd}, arrowcolor:tc.cfd, arrowwidth:1 },
+        { text:'CFD truth (9.79 K)', x:100, y:9.79, ax:0, ay:-24, font:{size:11,color:tc.cfd}, arrowcolor:tc.cfd, arrowwidth:1 },
         { text:'gap', x:100, y:6.0, xanchor:'center', showarrow:false, font:{size:12,color:'#c0392b'} }
       ],
       legend:{ orientation:'h', x:0.5, xanchor:'center', y:-0.22, font:{size:11,color:tc.text}, bgcolor:'rgba(0,0,0,0)' },
@@ -2536,7 +2448,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <p style="margin-top:0"><strong>Directions we are considering:</strong></p>
   <ul>
     <li><strong>Non-adiabatic rebuild.</strong> Rebuild the C2C database from a CFD that already has heat loss, so the cooling-driven down-flows are recorded. The hope would be that the Step-2 gap largely closes, at the price of a database tied to one condition.</li>
-    <li><strong>Adiabatic vs non-adiabatic, side by side.</strong> Run the same heat-loss replay on both databases and compare against the CFD reference (1.45 K at $h = 8$, 9.05 K at $h = 100$), to see how much the rebuild actually buys.</li>
+    <li><strong>Adiabatic vs non-adiabatic, side by side.</strong> Run the same heat-loss replay on both databases and compare against the CFD reference (1.45 K at $h = 8$, 9.79 K at $h = 100$), to see how much the rebuild actually buys.</li>
     <li><strong>How far does one database stretch?</strong> Try a database built at one condition on neighbouring conditions, to get a feel for where "reuse" stops being good enough.</li>
   </ul>
   <p style="margin-bottom:0; color:var(--ink-soft); font-style:italic;">Not started yet; these are proposed directions only, and any results will be added here as the work is done.</p>
