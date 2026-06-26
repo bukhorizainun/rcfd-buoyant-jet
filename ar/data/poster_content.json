@@ -103,12 +103,33 @@
   "comparison": {
     "title": "CFD vs rCFD replay",
     "subtitle": "Drag the divider to compare",
-    "left": { "label": "Full CFD", "video": "assets/videos/cfd_reference.mp4" },
-    "right": { "label": "rCFD · f_sd = 0.5", "video": "assets/videos/rcfd_replay.mp4" },
-    "metrics": [
-      { "label": "Compute time", "cfd": "569 min", "rcfd": "2.2 min", "win": "~263× faster" },
-      { "label": "CoG accuracy", "cfd": "reference", "rcfd": "0.069 mm RMSE", "win": "matched" },
-      { "label": "Re-run a new case", "cfd": "hours", "rcfd": "minutes", "win": "near-free" }
+    "scenarios": [
+      {
+        "id": "adiabatic",
+        "label": "Adiabatic",
+        "aspect": "15 / 8",
+        "subtitle": "Sealed tank · drag the divider to compare",
+        "left": { "label": "Full CFD", "video": "assets/videos/cfd_reference.mp4" },
+        "right": { "label": "rCFD · f_sd = 0.5", "video": "assets/videos/rcfd_replay.mp4" },
+        "metrics": [
+          { "label": "Compute time", "cfd": "569 min", "rcfd": "2.2 min", "win": "~263× faster" },
+          { "label": "CoG accuracy", "cfd": "reference", "rcfd": "0.069 mm RMSE", "win": "matched" },
+          { "label": "Re-run a new case", "cfd": "hours", "rcfd": "minutes", "win": "near-free" }
+        ]
+      },
+      {
+        "id": "heatloss",
+        "label": "Heat loss · h = 100",
+        "aspect": "1 / 1",
+        "subtitle": "Wall heat loss · rCFD reuses the adiabatic database",
+        "left": { "label": "CFD · heat loss", "video": "assets/videos/cfd_heatloss_h100.mp4" },
+        "right": { "label": "rCFD · reuse adiabatic", "video": "assets/videos/rcfd_heatloss_h100.mp4" },
+        "metrics": [
+          { "label": "Cooling at t = 600 s", "cfd": "9.79 K", "rcfd": "3.03 K", "win": "~31% recovered" },
+          { "label": "Field evenness ΔδT_mean", "cfd": "−11.13 K", "rcfd": "−3.57 K", "win": "~a third" },
+          { "label": "Flow database", "cfd": "full solve", "rcfd": "reused adiabatic", "win": "advection gap" }
+        ]
+      }
     ]
   },
 
