@@ -1,59 +1,40 @@
 {
   "meta": {
-    "comment": "Interactive hotspots. (u,v) are NORMALISED poster coordinates: 0..1 from the TOP-LEFT corner of poster.jpg. They drive both the AR anchors (mapped onto the tracked image plane) and the on-screen Demo Mode. The values below target the v6 poster layout (3 columns under the header/hero). Tweak (u,v) to line each dot up with your printed poster. Optional 'labelDir' (down|up|left|right, default down) sets which side the text label sits so neighbouring labels do not overlap.",
-    "posterAspect": 0.707
+    "comment": "Interactive hotspots. (u,v) are NORMALISED poster coordinates: 0..1 from the TOP-LEFT corner of poster.jpg. They drive both the AR anchors (mapped onto the tracked image plane) and the on-screen Demo Mode. The values below target the LANDSCAPE MSc poster (26SS-K12438440 …Buoyant_Jet_Flow). Each point sits on a real poster section; tweak (u,v) to line a dot up with your printed copy. Optional 'labelDir' (down|up|left|right, default down) sets which side the text label sits so neighbouring labels do not overlap.",
+    "posterAspect": 0.667
   },
 
   "hotspots": [
     {
-      "id": "geometry",
-      "label": "Test case",
-      "u": 0.150,
-      "v": 0.520,
+      "id": "method",
+      "label": "Test case & mesh",
+      "u": 0.120,
+      "v": 0.560,
       "labelDir": "down",
       "color": "#36d1ff",
-      "body": "A closed rectangular water tank (about 7.5 cm tall) at 293 K with a small warm jet entering at mid-height. The warm jet is lighter than the surrounding water, so buoyancy lifts it and a vertical thermal layer builds up under the ceiling.",
-      "diagram": "geometry",
+      "body": "A closed water tank (about 7.5 cm tall) at 293 K with a small warm jet entering at mid-height. The warm jet is lighter than the surrounding water, so buoyancy lifts it and a vertical thermal layer builds under the ceiling. A structured mesh of 1 mm cubic cells (~85,625) keeps the rCFD cell-to-cell shift maps clean; with Re ≈ 100 the jet is laminar (Fluent 2022 R2, Windows 11).",
+      "diagram": "mesh",
       "stats": [
         { "k": "Tank height", "v": "7.5 cm" },
         { "k": "Inlet", "v": "5 × 5 mm" },
-        { "k": "Base temp", "v": "293 K" }
-      ],
-      "topic": "geometry",
-      "subs": [
-        { "label": "Why this shape?", "id": "geometry" },
-        { "label": "What is the buoyancy effect?", "id": "buoyancy" },
-        { "label": "What if the diameter changes?", "id": "diameter" }
-      ]
-    },
-    {
-      "id": "setup",
-      "label": "Setup & mesh",
-      "u": 0.160,
-      "v": 0.800,
-      "labelDir": "up",
-      "color": "#7c4dff",
-      "body": "A structured mesh of 1 mm cubic cells (~85,625) fills the tank. Regular cells keep the scheme stable and let the cell-to-cell (C2C) shift maps of rCFD be defined cleanly on every face. With Re ≈ 100 the jet is laminar, so a laminar solver fits — run in Fluent 2022 R2 on Windows 11.",
-      "diagram": "mesh",
-      "stats": [
         { "k": "Cells", "v": "≈ 85,625" },
-        { "k": "Cell size", "v": "1 mm" },
         { "k": "Re", "v": "≈ 100 (laminar)" }
       ],
       "topic": "mesh",
       "subs": [
-        { "label": "Explain mesh quality", "id": "mesh" },
-        { "label": "Is the flow laminar or turbulent?", "id": "reynolds" }
+        { "label": "What is the buoyancy effect?", "id": "buoyancy" },
+        { "label": "Is the flow laminar or turbulent?", "id": "reynolds" },
+        { "label": "Explain mesh quality", "id": "mesh" }
       ]
     },
     {
       "id": "workflow",
       "label": "rCFD workflow",
-      "u": 0.500,
-      "v": 0.400,
-      "labelDir": "down",
+      "u": 0.130,
+      "v": 0.360,
+      "labelDir": "up",
       "color": "#36d1ff",
-      "body": "Recurrence CFD runs the expensive flow solve once and records the recurring cell-to-cell (C2C) shift patterns. The cheap replay loop then repeats 600× to transport temperature — with no Navier–Stokes solve during replay. That is the source of the ~263× speed-up.",
+      "body": "Recurrence CFD runs the expensive flow solve once and records the recurring cell-to-cell (C2C) shift patterns. The cheap replay loop then repeats to transport temperature — with no Navier–Stokes solve during replay. That is the source of the ~263× speed-up.",
       "stats": [
         { "k": "Speed-up", "v": "~263×" },
         { "k": "Replay episodes", "v": "600" }
@@ -66,35 +47,17 @@
       ]
     },
     {
-      "id": "mixing",
-      "label": "Mixing — f_sd",
-      "u": 0.500,
-      "v": 0.665,
-      "labelDir": "up",
-      "color": "#ffb02e",
-      "body": "A pure C2C shift moves heat but does not mix it, leaving sharp interfaces. The face-swap operator restores the missing mixing across every internal face; its single parameter f_sd sets how strongly. It is mass- and energy-conservative, with a 1/8 stability cap that splits strong mixing into inner sweeps.",
-      "diagram": "boundary",
-      "stats": [
-        { "k": "f_sd range", "v": "[0, 3]" },
-        { "k": "Best (CoG)", "v": "0.500" }
-      ],
-      "topic": "facecswap",
-      "subs": [
-        { "label": "What is face-swap diffusion?", "id": "facecswap" },
-        { "label": "Why is the best f_sd metric-dependent?", "id": "fsd_metric" }
-      ]
-    },
-    {
       "id": "results",
-      "label": "Adiabatic results",
-      "u": 0.840,
-      "v": 0.450,
-      "labelDir": "down",
+      "label": "Adiabatic result",
+      "u": 0.405,
+      "v": 0.290,
+      "labelDir": "up",
       "color": "#ff4d6d",
-      "body": "rCFD reproduces the CFD temperature field across the full 600 s at a small fraction of the cost. The rising warm plume, the recirculation vortices and the stratified layer are all captured. The best mixing strength is metric-dependent: f_sd = 0.500 gives the lowest centre-of-gravity error.",
+      "body": "rCFD reproduces the CFD temperature field across the full 600 s at a small fraction of the cost. The rising warm plume, the recirculation vortices and the stratified layer are all captured. The best mixing strength is metric-dependent: f_sd = 0.000 for the mean temperature, f_sd = 0.500 for the thermal centre of gravity (CoG RMSE 0.069 mm).",
       "image": "assets/images/contour.png",
       "stats": [
-        { "k": "Best f_sd", "v": "0.500" },
+        { "k": "Best f_sd (CoG)", "v": "0.500" },
+        { "k": "Error", "v": "≈ 1%" },
         { "k": "Speed-up", "v": "~263×" }
       ],
       "topic": "findings",
@@ -106,23 +69,61 @@
     },
     {
       "id": "heatloss",
-      "label": "Wall heat loss",
+      "label": "Heat loss applied",
       "u": 0.840,
-      "v": 0.730,
-      "labelDir": "up",
+      "v": 0.330,
+      "labelDir": "down",
       "color": "#ff7849",
-      "body": "Letting the top surface lose heat, q = h(T − T∞) with h ≈ 8 W/m²K, stress-tests the reuse idea. Replaying the reused adiabatic database cools the tank by only 0.36 K, against 1.45 K in the full CFD — about 24%. The frozen replay misses the buoyancy-driven overturning that keeps fresh warm fluid at the cooled surface.",
-      "image": "assets/images/cooling.png",
+      "body": "The top surface is allowed to lose heat, q = h(T − T∞). The physical value for water to still air is gentle (h ≈ 8 W/m²K), so a stronger h = 100 is used as the reference case to make the cooling easy to see. On the CFD side it is a Fluent source on the energy equation; on the rCFD side the same Newton cooling is applied to the transported scalar, both booked in the energy balance.",
       "stats": [
-        { "k": "CFD cooling", "v": "1.45 K" },
-        { "k": "rCFD cooling", "v": "0.36 K" },
-        { "k": "Recovered", "v": "~24%" }
+        { "k": "Reference h", "v": "100 W/m²K" },
+        { "k": "Physical h", "v": "≈ 8 W/m²K" },
+        { "k": "T∞", "v": "293 K" }
       ],
       "topic": "heatloss",
       "subs": [
-        { "label": "How is wall heat loss modelled?", "id": "heatloss" },
+        { "label": "How does wall heat loss change things?", "id": "heatloss" },
         { "label": "Why does rCFD under-predict the cooling?", "id": "frozen" },
+        { "label": "What are T_mean and CoG?", "id": "diagnostics" }
+      ]
+    },
+    {
+      "id": "keydiscovery",
+      "label": "Key discovery · ~31%",
+      "u": 0.235,
+      "v": 0.690,
+      "labelDir": "right",
+      "color": "#ffb02e",
+      "body": "The reused adiabatic database captures only about a third of the real heat loss. At the reference case h = 100 the rCFD replay cools by 3.03 K against the full CFD's 9.79 K (a ratio of ≈ 0.31), both read at t = 600 s. So roughly two-thirds of the cooling is missing. (At the gentle physical h = 8 the gap is wider still, 0.36 K vs 1.45 K ≈ 0.25, but the cooling there is hard to see.)",
+      "stats": [
+        { "k": "CFD cooling", "v": "9.79 K" },
+        { "k": "rCFD cooling", "v": "3.03 K" },
+        { "k": "Recovered", "v": "≈ 31%" }
+      ],
+      "topic": "frozen",
+      "subs": [
+        { "label": "Why does rCFD under-predict the cooling?", "id": "frozen" },
+        { "label": "How is wall heat loss modelled?", "id": "heatloss" },
         { "label": "Why is CoG the key metric here?", "id": "diagnostics" }
+      ]
+    },
+    {
+      "id": "whyfails",
+      "label": "Why it fails",
+      "u": 0.575,
+      "v": 0.620,
+      "labelDir": "up",
+      "color": "#ff7849",
+      "body": "Because the replay reuses the adiabatic database, its flow is frozen: it only knows the motion recorded with the lid closed. In the real CFD the cooled surface water turns heavy and sinks, setting up an overturning loop that keeps feeding warm fluid to the surface, so the loss stays strong. The frozen replay has no such loop, so the top cools in place and the loss fades. The missing piece is a flow pattern, not a diffusion setting — an advection gap.",
+      "stats": [
+        { "k": "Missing", "v": "~2/3 of cooling" },
+        { "k": "Cause", "v": "frozen flow" },
+        { "k": "Gap type", "v": "advective" }
+      ],
+      "topic": "frozen",
+      "subs": [
+        { "label": "Why does rCFD under-predict the cooling?", "id": "frozen" },
+        { "label": "How does wall heat loss change things?", "id": "heatloss" }
       ]
     }
   ]

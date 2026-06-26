@@ -374,7 +374,6 @@ async function openModel3D() {
     });
     if (STATE.viewer3d.setFieldMode) STATE.viewer3d.setFieldMode(m3dMode);
     // re-apply any toggle state to the freshly created viewer
-    if (STATE.viewer3d.setSource) STATE.viewer3d.setSource(m3dSource);
     STATE.viewer3d.setGlyphs($("#m3dGlyphs").classList.contains("on"));
     STATE.viewer3d.setSlice($("#m3dSliceBtn").classList.contains("on"));
     STATE.viewer3d.setSliceHeight(Number($("#m3dSliceRange").value) / 100);
@@ -389,7 +388,7 @@ async function openModel3D() {
 }
 
 /* ---- Feature 2: scientific field selector + legend + parameters ---- */
-let m3dMode = 0, m3dSource = "model", m3dUIBuilt = false;
+let m3dMode = 0, m3dUIBuilt = false;
 function buildModel3DUI() {
   if (m3dUIBuilt) return;
   m3dUIBuilt = true;
@@ -398,16 +397,6 @@ function buildModel3DUI() {
     const b = el("button", { class: "m3d-mode" + (i === 0 ? " on" : ""), type: "button", "data-mode": String(i) }, esc(m.label));
     b.addEventListener("click", () => setFieldMode(i));
     modes.appendChild(b);
-  });
-
-  // Field-source toggle: clean analytic Model (default) vs the real rCFD field.
-  // Delegated and keyed on [data-src] (not a class) so it keeps working even if
-  // the markup/class changes or the browser caches mismatched index.html/app.js
-  // versions — a common cause of a toggle that looks fine but won't tap.
-  const srcGroup = $("#m3dSource");
-  if (srcGroup) srcGroup.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-src]");
-    if (b && srcGroup.contains(b)) setSource(b.dataset.src);
   });
 
   $("#m3dParams").innerHTML = [
@@ -474,24 +463,12 @@ function setFieldMode(i) {
   astroDuck.recordMode(i);                       // achievement: all 3D fields
   astroDuck.update3DGuide(FIELD_MODES[i].label); // refresh guide line if shown
 }
-function setSource(src) {
-  m3dSource = src === "real" ? "real" : "model";
-  $$("#m3dSource [data-src]").forEach((b) => {
-    const on = b.dataset.src === m3dSource;
-    b.classList.toggle("on", on);
-    b.setAttribute("aria-pressed", String(on));
-  });
-  if (STATE.viewer3d && STATE.viewer3d.setSource) STATE.viewer3d.setSource(m3dSource);
-  applyLegend(m3dMode);   // keep the legend provenance honest (rCFD field ↔ analytic model)
-}
 function applyLegend(i) {
   const m = FIELD_MODES[i];
   $("#m3dCbar").style.background = legendGradient(m.cmap);
   $("#m3dTicks").innerHTML = (m.ticks || []).map((t) => `<span>${esc(t)}</span>`).join("");
-  // in Model mode every layer comes from the analytic laminar field, so don't
-  // keep claiming "rCFD field" — state the real provenance instead.
-  const prov = m3dSource === "model" ? "model · analytic laminar" : m.prov;
-  $("#m3dLegName").innerHTML = esc(m.label) + ` <em>· ${esc(prov)}</em>`;
+  // every layer comes from the analytic laminar model — state that provenance.
+  $("#m3dLegName").innerHTML = esc(m.label) + ` <em>· model · analytic laminar</em>`;
 }
 
 function applyTime() {

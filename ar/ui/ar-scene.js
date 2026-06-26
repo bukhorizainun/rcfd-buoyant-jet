@@ -30,6 +30,30 @@ function labelGeom(dir, labelW) {
   }
 }
 
+/* Overlay a live CFD|rCFD field clip exactly on a printed poster figure.
+ * o = { u0,u1,v0,v1 (normalised panel rect), src (#asset), tag, color }. */
+function liveFigure(anchor, aspect, o) {
+  const cx = (o.u0 + o.u1) / 2 - 0.5;
+  const cy = (0.5 - (o.v0 + o.v1) / 2) * aspect;
+  const w = o.u1 - o.u0;
+  const h = (o.v1 - o.v0) * aspect;
+  // glow frame behind
+  anchor.appendChild(el("a-plane", { width: String(w + 0.012), height: String(h + 0.012),
+    position: `${cx} ${cy} 0.009`, material: `color: ${o.color}; opacity: 0.55; shader: flat` }));
+  // opaque dark backing so the printed figure does not bleed through the clip
+  anchor.appendChild(el("a-plane", { width: String(w + 0.003), height: String(h + 0.003),
+    position: `${cx} ${cy} 0.011`, material: "color: #05070f; opacity: 1; shader: flat" }));
+  // the live video, sized to the panel
+  anchor.appendChild(el("a-video", { src: o.src, width: String(w), height: String(h),
+    position: `${cx} ${cy} 0.013` }));
+  // small LIVE tag in the top-left corner
+  const tx = cx - w / 2 + 0.03, ty = cy + h / 2 - 0.013;
+  anchor.appendChild(el("a-plane", { width: "0.05", height: "0.019",
+    position: `${tx} ${ty} 0.014`, material: `color: ${o.color}; opacity: 0.92; shader: flat` }));
+  anchor.appendChild(el("a-text", { value: o.tag, color: "#05070f", width: "0.46", align: "center",
+    position: `${tx} ${ty} 0.015`, baseline: "center" }));
+}
+
 export async function startARScene(opts = {}) {
   onFirstFoundCb = opts.onFirstFound || null;
   onErrorCb = opts.onError || null;
@@ -55,10 +79,13 @@ function buildARScene() {
   });
 
   const assets = el("a-assets");
-  const vid = el("video", { id: "arCfdVideo", src: PATHS.cfdVideo, preload: "auto",
-    loop: "", muted: "", playsinline: "", "webkit-playsinline": "", crossorigin: "anonymous" });
-  vid.muted = true;
-  assets.appendChild(vid);
+  // the two combined CFD|rCFD case clips that animate over the poster's figures
+  [["arAdiaVideo", PATHS.adiaLive], ["arHlVideo", PATHS.hlLive]].forEach(([id, src]) => {
+    const v = el("video", { id, src, preload: "auto",
+      loop: "", muted: "", playsinline: "", "webkit-playsinline": "", crossorigin: "anonymous" });
+    v.muted = true;
+    assets.appendChild(v);
+  });
   scene.appendChild(assets);
 
   // No A-Frame cursor/raycaster here: inside a MindAR scene its click events
@@ -76,29 +103,21 @@ function buildARScene() {
     material: "color: #05070f; opacity: 0.82; shader: flat" }));
   anchor.appendChild(el("a-text", { value: "Buoyant Jet Flow · rCFD", align: "center", color: "#36d1ff",
     width: "1.15", position: `0 ${titleY + 0.015} 0.01`, baseline: "center" }));
-  anchor.appendChild(el("a-text", { value: "tap the glowing points to explore",
+  anchor.appendChild(el("a-text", { value: "tap the glowing points · the two case figures are live",
     align: "center", color: "#cdd7ee", width: "0.9", position: `0 ${titleY - 0.024} 0.01`, baseline: "center" }));
 
-  // small "LIVE CFD" monitor top-right
-  const vidW = 0.34, vidH = vidW * 0.5;
-  const vx = 0.5 - vidW / 2 - 0.03, vy = top - vidH / 2 - 0.03;
-  anchor.appendChild(el("a-plane", { width: String(vidW + 0.025), height: String(vidH + 0.06),
-    position: `${vx} ${vy} 0.008`, material: "color: #0a1530; opacity: 0.7; shader: flat" }));
-  anchor.appendChild(el("a-text", { value: "LIVE CFD", color: "#36d1ff", width: "0.9", align: "center",
-    position: `${vx} ${vy + vidH / 2 + 0.018} 0.012` }));
-  anchor.appendChild(el("a-video", { src: "#arCfdVideo", width: String(vidW), height: String(vidH),
-    position: `${vx} ${vy} 0.012` }));
-
-  // floating scientific parameters (Feature 6) — anchored bottom-right
-  const px = 0.30, py = -0.20;
-  anchor.appendChild(el("a-plane", { width: "0.38", height: "0.18", position: `${px} ${py} 0.006`,
-    material: "color: #05070f; opacity: 0.8; shader: flat" }));
-  anchor.appendChild(el("a-text", { value: "CASE PARAMETERS", color: "#36d1ff", width: "0.62",
-    align: "center", position: `${px} ${py + 0.066} 0.01`, baseline: "center" }));
-  ["Re ~ 100   laminar", "Ri ~ 1   (g B dT D / U^2)", "dT = 40 K   (333 / 293 K)",
-    "U = 0.02 m/s   inlet 5x5 mm"].forEach((t, i) => {
-    anchor.appendChild(el("a-text", { value: t, color: "#cdd7ee", width: "0.66", align: "center",
-      position: `${px} ${py + 0.034 - i * 0.034} 0.01`, baseline: "center" }));
+  // Bring the poster's two printed case figures to life: overlay the matching
+  // CFD|rCFD field animations exactly on the printed panels. Rects are measured
+  // from the landscape poster (normalised u from left, v from top); see
+  // assets/videos/{adia_live,heatloss_live}.mp4 (left half = CFD, right = rCFD).
+  // x = u-0.5 ; y = (0.5-v)*aspect ; w = nw ; h = nh*aspect.
+  liveFigure(anchor, aspect, {
+    u0: 0.4575, u1: 0.6468, v0: 0.4104, v1: 0.5479,
+    src: "#arAdiaVideo", tag: "LIVE", color: "#36d1ff",   // adiabatic: it works
+  });
+  liveFigure(anchor, aspect, {
+    u0: 0.4740, u1: 0.6567, v0: 0.6419, v1: 0.7754,
+    src: "#arHlVideo", tag: "LIVE", color: "#ff7849",     // heat loss: why it fails
   });
 
   // hotspots
@@ -218,8 +237,10 @@ function onArTap(clientX, clientY, target) {
 function onTargetFound() {
   targetVisible = true;
   $("#scanHint").classList.add("hidden");
-  const v = document.getElementById("arCfdVideo");
-  if (v) { v.muted = true; v.play().catch(() => {}); }
+  ["arAdiaVideo", "arHlVideo"].forEach((id) => {
+    const v = document.getElementById(id);
+    if (v) { v.muted = true; v.play().catch(() => {}); }
+  });
   showBanner();
   if (!infoShownOnce) {
     infoShownOnce = true;
@@ -232,8 +253,10 @@ function onTargetFound() {
 function onTargetLost() {
   targetVisible = false;
   $("#scanHint").classList.remove("hidden");
-  const v = document.getElementById("arCfdVideo");
-  if (v) v.pause();
+  ["arAdiaVideo", "arHlVideo"].forEach((id) => {
+    const v = document.getElementById(id);
+    if (v) v.pause();
+  });
 }
 
 function showBanner() {

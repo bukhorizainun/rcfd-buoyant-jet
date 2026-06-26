@@ -12,21 +12,22 @@
  * CFD reference) — no placeholders. Pure DOM/SVG, no heavy dependencies.
  */
 
-const T_INF       = 293;     // ambient room temperature (K)
-const CFD_COOL_H8 = 1.45;    // CFD reference cooling at the physical h = 8 (K)
-const COOL_MAX    = 4.45;    // rCFD cooling at h = 200 (top of sweep) — scaling
+const T_INF        = 293;     // ambient room temperature (K)
+const COOL_MAX     = 4.45;    // rCFD cooling at h = 200 (top of sweep) — scaling
 
 // rCFD wall-heat-loss sweep (measured). cool = ΔT_mean against the adiabatic
-// baseline; energy = ∫Q_wall dt (J); qmax = peak wall heat-loss rate (W).
+// baseline; energy = ∫Q_wall dt (J); qmax = peak wall heat-loss rate (W). 'cfd'
+// is the full-CFD reference cooling, measured only at the physical h = 8 and the
+// reference case h = 100.
 const CASES = [
   { h: 0,   label: "Adiabatic", cool: 0.00, tend: 307.49, energy: 0,    qmax: 0.00 },
-  { h: 8,   label: "h = 8",     cool: 0.36, tend: 307.14, energy: 179,  qmax: 0.34, physical: true },
+  { h: 8,   label: "h = 8",     cool: 0.36, tend: 307.14, energy: 179,  qmax: 0.34, physical: true, cfd: 1.45 },
   { h: 50,  label: "h = 50",    cool: 1.85, tend: 305.64, energy: 966,  qmax: 1.94 },
-  { h: 100, label: "h = 100",   cool: 3.03, tend: 304.46, energy: 1680, qmax: 3.57 },
+  { h: 100, label: "h = 100",   cool: 3.03, tend: 304.46, energy: 1680, qmax: 3.57, reference: true, cfd: 9.79 },
   { h: 200, label: "h = 200",   cool: 4.45, tend: 303.04, energy: 2707, qmax: 6.33 },
 ];
 
-let built = false, idx = 1, ir = false;
+let built = false, idx = 3, ir = false;   // open on the reference case h = 100
 
 export function renderHeatLab() {
   const host = document.getElementById("heatLabBody");
@@ -130,10 +131,10 @@ function template() {
     </figure>
 
     <div class="hlab-read">
-      <div class="hlab-g"><span class="lab">Cooling &Delta;T</span><span class="val" id="hlabCool">0.36</span><span class="unit">K vs adiabatic</span></div>
-      <div class="hlab-g"><span class="lab">Energy removed</span><span class="val" id="hlabEnergy">179</span><span class="unit">J over the run</span></div>
-      <div class="hlab-g"><span class="lab">Peak wall flux</span><span class="val" id="hlabQ">0.34</span><span class="unit">W</span></div>
-      <div class="hlab-g"><span class="lab">T<sub>mean</sub> at end</span><span class="val" id="hlabTend">307.14</span><span class="unit">K</span></div>
+      <div class="hlab-g"><span class="lab">Cooling &Delta;T</span><span class="val" id="hlabCool">3.03</span><span class="unit">K vs adiabatic</span></div>
+      <div class="hlab-g"><span class="lab">Energy removed</span><span class="val" id="hlabEnergy">1680</span><span class="unit">J over the run</span></div>
+      <div class="hlab-g"><span class="lab">Peak wall flux</span><span class="val" id="hlabQ">3.57</span><span class="unit">W</span></div>
+      <div class="hlab-g"><span class="lab">T<sub>mean</sub> at end</span><span class="val" id="hlabTend">304.46</span><span class="unit">K</span></div>
     </div>
   </div>
 
@@ -141,10 +142,11 @@ function template() {
 
   <div class="hlab-key">
     <h4>The key Step-2 result</h4>
-    <p>At the only physical value, <b>h = 8</b>, the reused <em>adiabatic</em> database recovers just
-    <b>~24%</b> of the real cooling: rCFD <b>0.36 K</b> against the CFD reference <b>1.45 K</b>.
-    The missing piece is the cooling-driven down-flow — a flow pattern the database never recorded,
-    not a diffusion setting.</p>
+    <p>The physical value (<b>h = 8</b>) is gentle, so we turn it up to <b>h = 100</b> as the reference case.
+    There the reused <em>adiabatic</em> database recovers only about <b>a third</b> of the real cooling:
+    rCFD <b>3.03 K</b> against the CFD reference <b>9.79 K</b> (≈ 0.31) — so about two-thirds is missing.
+    The missing piece is the cooling-driven down-flow, a flow pattern the database never recorded,
+    not a diffusion setting. (At the gentle physical h = 8 the gap is wider still, 0.36 K vs 1.45 K ≈ 0.25.)</p>
   </div>`;
 }
 
@@ -197,11 +199,14 @@ function update() {
   if (note) {
     if (c.h === 0) {
       note.innerHTML = "Sealed tank — no wall loss. This is the Step-1 adiabatic baseline every case is measured against.";
+    } else if (c.reference) {
+      const pct = Math.round((c.cool / c.cfd) * 100);
+      note.innerHTML = `Reference case. rCFD cools <b>${c.cool.toFixed(2)} K</b>, but the CFD reference loses <b>${c.cfd} K</b> — only about <b>${pct}%</b> recovered, so roughly two-thirds is missing.`;
     } else if (c.physical) {
-      const pct = Math.round((c.cool / CFD_COOL_H8) * 100);
-      note.innerHTML = `Physical value. rCFD cools <b>${c.cool.toFixed(2)} K</b>, but the CFD reference loses <b>${CFD_COOL_H8} K</b> — only about <b>${pct}%</b> recovered.`;
+      const pct = Math.round((c.cool / c.cfd) * 100);
+      note.innerHTML = `Physical value (water to still air), but the cooling is tiny: rCFD <b>${c.cool.toFixed(2)} K</b> vs CFD <b>${c.cfd} K</b> — about <b>${pct}%</b> recovered. We use h = 100 as the reference so the gap is easy to see.`;
     } else {
-      note.innerHTML = `A what-if, not physical. rCFD reaches the CFD's real cooling (1.45 K) only near <b>h &asymp; 40</b> — another view of the four-times shortfall.`;
+      note.innerHTML = `A what-if, not physical, with no CFD reference run. Shown only to trace how the rCFD cooling scales with h.`;
     }
   }
 }

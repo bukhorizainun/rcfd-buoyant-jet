@@ -17,12 +17,8 @@ import { createJetField, makeLOD } from "./simulation/jet-gpu.js";
 import { createStreamlines } from "./simulation/streamlines.js";
 import { createGlyphs } from "./simulation/glyphs.js";
 import { createSlice } from "./simulation/slice.js";
-import { loadRealField } from "./simulation/cfd-field.js";
 
-const FOOT = {
-  real: "Streamlines · glyphs · slice · particles — all from the real rCFD field (Fluent replay, 85k cells)",
-  model: "Analytic laminar model — clean two-vortex topology (model, not solver data)",
-};
+const FOOT_MODEL = "Analytic laminar model — clean two-vortex topology (model, not solver data)";
 
 export async function createViewer(host, opts = {}) {
   const onMode = opts.onMode || (() => {});
@@ -84,9 +80,6 @@ export async function createViewer(host, opts = {}) {
   let slice = null;       // interactive cross-section plane (toggle)
   let backdropMat = null; // real-CFD field backdrop material (time-scrub)
   let lod = null;         // frame-rate governor for the jet
-  let realField = null;   // real CFD sampler (Real/Model toggle)
-  let fieldTex = null;    // its GPU advection texture (built once, reused on toggle)
-  let source = "model";   // default 'model' = clean analytic laminar · 'real' = rCFD data (toggle)
 
   const haveGLB = opts.glb ? await fileExists(opts.glb) : false;
   let built = false;
@@ -101,19 +94,16 @@ export async function createViewer(host, opts = {}) {
     } catch (e) { /* fall through to the live scene */ }
   }
   if (!built) {
-    // the REAL CFD velocity + temperature field (Fluent export), if available
-    realField = await loadRealField("data/cfd_field.json", { w: 1.6, h: 1.6, d: 1.0 });
-    const live = buildLiveScene(root, opts.cfdVideo || null, realField);
+    // clean analytic laminar model (two-vortex topology) — the only field source
+    const live = buildLiveScene(root, opts.cfdVideo || null);
     fieldVideo = live.video;
     jet = live.jet;
     streams = live.streams;
     glyphs = live.glyphs;
     slice = live.slice;
     backdropMat = live.backdrop;
-    fieldTex = live.fieldTex;
     lod = makeLOD(jet, { target: 52, min: 1600 });
-    onMode(FOOT.model);   // default view is the clean analytic model
-
+    onMode(FOOT_MODEL);
   }
 
   /* ---- resize + auto-fit (handles tall portrait canvases) ---- */
@@ -160,30 +150,9 @@ export async function createViewer(host, opts = {}) {
     if (slice) slice.setMode(m);
   }
 
-  // Real/Model toggle: 'real' drives every dynamic layer from the rCFD field;
-  // 'model' swaps in the analytic laminar model (clean two-vortex topology) by
-  // passing null fields — the sub-modules already fall back to jet-field.js.
-  function setSource(src) {
-    const next = src === "model" ? "model" : "real";
-    if (next === source) return;     // already in this mode — skip the rebuild
-    source = next;
-    const f = source === "real" ? realField : null;   // null → analytic model
-    if (streams) streams.setField(f);
-    if (glyphs) glyphs.setField(f);
-    if (slice) slice.setField(f);
-    if (jet) {
-      jet.setField(f ? fieldTex : null, realField ? realField.umax : 0.03);
-      // long flowing streaks for the slow real field, shorter for the fast model
-      jet.setAlpha(source === "real" ? 0.72 : 1.0);
-      jet.setTrail(source === "real" ? 0.22 : 0.10);
-    }
-    onMode(source === "real" && realField ? FOOT.real : FOOT.model);
-  }
-
   /* ---- disposer ---- */
   return {
     setFieldMode,
-    setSource,
     setGlyphs(on) { if (glyphs) glyphs.setVisible(on); },
     setSlice(on) { if (slice) slice.setVisible(on); },
     setSliceHeight(f) { if (slice) slice.setHeight(f); },
@@ -245,26 +214,7 @@ function frameObject(obj, root) {
  * cfd_reference.mp4, kept as real data), and the shared GPU laminar-jet
  * engine as the dynamic, orbitable foreground. Returns { video, jet }.
  * ------------------------------------------------------------------- */
-/* Encode the real CFD field (u, v, T) into an RGBA texture the plume's vertex
- * shader advects through: R,G = velocity (0..1, decoded with umax), B = T(norm),
- * A = speed(norm). */
-function buildFieldTexture(d) {
-  const { nx, ny, u, v, T, Tlo, Thi, umax } = d;
-  const arr = new Uint8Array(nx * ny * 4);
-  const b = (val) => (val < 0 ? 0 : val > 255 ? 255 : Math.round(val));
-  for (let i = 0; i < nx * ny; i++) {
-    arr[i * 4]     = b((u[i] / (2 * umax) + 0.5) * 255);
-    arr[i * 4 + 1] = b((v[i] / (2 * umax) + 0.5) * 255);
-    arr[i * 4 + 2] = b(((T[i] - Tlo) / (Thi - Tlo)) * 255);
-    arr[i * 4 + 3] = b(Math.min(1, Math.hypot(u[i], v[i]) / umax) * 255);
-  }
-  const tex = new THREE.DataTexture(arr, nx, ny, THREE.RGBAFormat);
-  tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
-  tex.needsUpdate = true;
-  return tex;
-}
-
-function buildLiveScene(root, videoUrl, realField) {
+function buildLiveScene(root, videoUrl) {
   const TANK = { w: 1.6, h: 1.6, d: 1.0 };
 
   // faint glass tank + glowing cyan edges
@@ -316,23 +266,18 @@ function buildLiveScene(root, videoUrl, realField) {
     root.add(plane);
   }
 
-  // Default view = the clean analytic MODEL (reads like the Flow panel). The
-  // real rCFD field is still loaded — its advection texture is built once here so
-  // the Real/Model toggle (setSource('real')) can swap it in; setSource also
-  // lengthens the trail + raises alpha there so the slow real field reads as
-  // flowing arcs instead of a static tangle.
-  const fieldTex = realField ? buildFieldTexture(realField.data) : null;
+  // The clean analytic laminar MODEL (reads like the Flow panel) is the only
+  // field source — clear two-vortex topology with flowing comet-streaks.
   const jet = createJetField({
     tank: TANK, count: 5200, size: 22,
-    alpha: 1.0, trail: 0.10,        // model defaults; setSource adjusts for real
+    alpha: 1.0, trail: 0.10,
   });
   root.add(jet.object);
 
-  // animated laminar streamlines (flow direction + the two vortices). Built on
-  // the analytic model by default; setSource('real') rebuilds them on the real
-  // field. A single crisp plane on the symmetry plane (nZ:1) so the two counter-
-  // rotating vortices read cleanly face-on, demoted to a faint GUIDE (opacity
-  // 0.45) since the flowing comet-streaks are the hero that reveal the circulation.
+  // animated laminar streamlines (flow direction + the two vortices) on the
+  // analytic model. A single crisp plane on the symmetry plane (nZ:1) so the two
+  // counter-rotating vortices read cleanly face-on, demoted to a faint GUIDE
+  // (opacity 0.45) since the flowing comet-streaks reveal the circulation.
   const streams = createStreamlines({ tank: TANK, field: null, nZ: 1, opacity: 0.45 });
   root.add(streams.object);
 
@@ -352,7 +297,7 @@ function buildLiveScene(root, videoUrl, realField) {
   axes.position.set(-TANK.w / 2 - 0.12, -TANK.h / 2, -TANK.d / 2);
   root.add(axes);
 
-  return { video, jet, streams, glyphs, slice, backdrop: backdropMat, fieldTex };
+  return { video, jet, streams, glyphs, slice, backdrop: backdropMat };
 }
 
 /* The buoyant-jet plume itself is the shared GPU engine in

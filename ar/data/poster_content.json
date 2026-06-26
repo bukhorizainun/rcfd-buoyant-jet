@@ -17,7 +17,7 @@
     "Scientific Visualization"
   ],
 
-  "abstract": "A short CFD run records the recurring flow patterns of a laminar buoyant jet in a closed water tank. Recurrence-CFD (rCFD) then replays those patterns to transport the temperature field at a fraction of the cost, with a face-swap diffusion operator (parameter f_sd) restoring the missing mixing. Switching on wall heat loss then stress-tests the idea: replaying the reused adiabatic database recovers only about a quarter of the true cooling, quantifying where the reuse assumption breaks.",
+  "abstract": "A short CFD run records the recurring flow patterns of a laminar buoyant jet in a closed water tank. Recurrence-CFD (rCFD) then replays those patterns to transport the temperature field at a fraction of the cost, with a face-swap diffusion operator (parameter f_sd) restoring the missing mixing. Switching on wall heat loss then stress-tests the idea: at the reference case h = 100, replaying the reused adiabatic database recovers only about a third of the true cooling, quantifying where the reuse assumption breaks.",
 
   "detectionBanner": {
     "line1": "Poster Detected",
@@ -37,8 +37,8 @@
       { "label": "Simulation Time", "value": "600 s", "note": "warm inlet on until t = 315 s", "icon": "clock" },
       { "label": "Mesh Cell Size", "value": "1 mm", "note": "≈ 85,625 structured cubic cells", "icon": "grid" },
       { "label": "Best f_sd (CoG)", "value": "0.500", "note": "lowest centre-of-gravity error · 0.069 mm", "icon": "target" },
-      { "label": "Wall heat-transfer h", "value": "≈ 8 W/m²K", "note": "gentle top-surface loss, q = h(T−T∞)", "icon": "temp" },
-      { "label": "Heat-loss recovered", "value": "≈ 24%", "note": "rCFD 0.36 K vs CFD 1.45 K cooling", "icon": "target" }
+      { "label": "Wall heat-transfer h", "value": "100 W/m²K", "note": "reference case · physical h ≈ 8, q = h(T−T∞)", "icon": "temp" },
+      { "label": "Heat-loss recovered", "value": "≈ 31%", "note": "rCFD 3.03 K vs CFD 9.79 K cooling (h=100)", "icon": "target" }
     ]
   },
 
@@ -67,7 +67,7 @@
         "items": [
           "rCFD reproduces the 600 s buoyant-jet temperature transport from one short CFD run, ~263× faster.",
           "Adiabatic: best mixing strength is metric-dependent — f_sd = 0.000 for mean temperature, f_sd = 0.500 for the thermal centre of gravity (CoG RMSE 0.069 mm).",
-          "Wall heat loss: replaying the reused adiabatic database recovers only ~24% of the true cooling (rCFD 0.36 K vs CFD 1.45 K)."
+          "Wall heat loss: at the reference case h = 100, replaying the reused adiabatic database recovers only about a third of the true cooling (rCFD 3.03 K vs CFD 9.79 K)."
         ]
       },
       {
@@ -83,8 +83,8 @@
         "heading": "Wall heat loss — a stress test",
         "icon": "heat",
         "items": [
-          "A gentle top-surface sink q = h(T−T∞), h ≈ 8 W/m²K, is added as a balance-registered source term.",
-          "The full CFD cools by 1.45 K; the frozen adiabatic replay cools only 0.36 K — it misses the buoyancy-driven overturning that keeps fresh warm fluid at the cooled surface.",
+          "A top-surface sink q = h(T−T∞) is added as a balance-registered source term; the physical value is gentle (h ≈ 8 W/m²K), so a stronger h = 100 is used as the reference case to make the cooling visible.",
+          "At h = 100 the full CFD cools by 9.79 K; the frozen adiabatic replay cools only 3.03 K — it misses the buoyancy-driven overturning that keeps fresh warm fluid at the cooled surface.",
           "The shortfall is advective, motivating a non-adiabatic (or multi-regime) database rather than reusing the adiabatic one."
         ]
       },

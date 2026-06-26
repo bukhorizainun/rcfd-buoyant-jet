@@ -116,7 +116,7 @@
       "id": "heatloss",
       "question": "What about wall heat loss?",
       "keywords": ["heat loss", "heatloss", "wall", "cooling", "next", "outlook", "adiabatic"],
-      "answer": "Letting the top surface lose heat, q = h(T − T∞) with h ≈ 8 W/m²K, stress-tests the reuse idea. Replaying the reused adiabatic database cools the tank by only 0.36 K against 1.45 K in the full CFD (~24%): the frozen replay misses the buoyancy-driven overturning that keeps warm fluid at the surface. The fix is to record a non-adiabatic database rather than reuse the adiabatic one."
+      "answer": "Letting the top surface lose heat, q = h(T − T∞), stress-tests the reuse idea. The physical value is gentle (h ≈ 8 W/m²K), so a stronger h = 100 is used as the reference case. At h = 100 the reused adiabatic database cools the tank by only 3.03 K against 9.79 K in the full CFD (about a third): the frozen replay misses the buoyancy-driven overturning that keeps warm fluid at the surface. The fix is to record a non-adiabatic database rather than reuse the adiabatic one."
     }
   ]
 }

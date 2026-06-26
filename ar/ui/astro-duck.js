@@ -58,7 +58,7 @@ export function mountWelcome() {
     <div class="ad-figure">${duckSVG()}</div>
     <div class="ad-bubble">
       <b>Astro&nbsp;Duck</b>
-      Welcome aboard — I'm your buoyant-jet co-pilot. Let's go chase some vortices.
+      Hello guys — I'm your buoyant-jet co-pilot. Let's go chase some vortices.
     </div>`;
   card.appendChild(node);
   requestAnimationFrame(() => node.classList.add("show"));
@@ -101,7 +101,7 @@ const TOUR = {
   workflow: "Here's the trick: record the flow once, then replay it. No re-solving, no sweat.",
   mixing:   "One knob — f_sd. It puts back the mixing the shift forgets. Watch the trade-off.",
   results:  "~263× faster, and the best f_sd depends on what you measure. Rather elegant, no?",
-  heatloss: "Now the gauntlet: add wall heat loss and my frozen replay catches only ~24% of the cooling.",
+  heatloss: "Now the gauntlet: turn wall heat loss up to h = 100 and my frozen replay catches only about a third of the cooling.",
 };
 
 function ensureGuide() {
@@ -278,7 +278,7 @@ const TALK = [
   { k: "Problem",       say: "The problem: full CFD of long, slow heat transport is wasteful — the flow repeats within ~30 s while the temperature evolves for 600 s." },
   { k: "Method",        say: "The method: recurrence CFD. Record the flow once as cell-to-cell shift maps, then replay them to transport heat — no Navier–Stokes during replay.", panel: "model3d" },
   { k: "Results",       say: "Results: rCFD reproduces the field ~263× faster; the best mixing f_sd is metric-dependent — 0.000 for mean temperature, 0.500 for stratification.", panel: "comparison" },
-  { k: "Contributions", say: "Contribution: a Windows/Fluent port, a characterised f_sd, and a wall-heat-loss stress test that quantifies the reuse limit — rCFD recovers ~24% of the cooling.", panel: "insights" },
+  { k: "Contributions", say: "Contribution: a Windows/Fluent port, a characterised f_sd, and a wall-heat-loss stress test that quantifies the reuse limit — at h = 100 rCFD recovers only about a third of the cooling.", panel: "insights" },
   { k: "Future work",   say: "Future work: record a non-adiabatic (or multi-regime) database so the replay carries the cooling-driven overturning the frozen one misses.", panel: "dashboard" },
 ];
 let talkStep = 0, talkHooks = null, talkTimer = null;

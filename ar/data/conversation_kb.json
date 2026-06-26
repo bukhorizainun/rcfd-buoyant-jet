@@ -4,7 +4,7 @@
     "version": 2
   },
 
-  "greeting": "Hello, researcher — I'm Astro Duck. Ask me anything about buoyancy, vortices, recurrence CFD, or wall heat loss, and I'll explain it in layers. Tap “Ask more” for the maths, an analogy, or a deeper take.",
+  "greeting": "Hello guys — I'm Astro Duck. Ask me anything about buoyancy, vortices, recurrence CFD, or wall heat loss, and I'll explain it in layers. Tap “Ask more” for the maths, an analogy, or a deeper take.",
   "fallback": "I don't have that in my local knowledge base yet. Try: buoyancy, vortex formation, the Reynolds number, rCFD, face-swap diffusion (f_sd), the speed-up, or wall heat loss.",
   "suggestions": [
     "Why does a vortex form?",
@@ -236,13 +236,13 @@
     {
       "id": "heatloss",
       "title": "Wall heat loss",
-      "keywords": ["heat loss", "heatloss", "wall", "cooling", "sink", "q wall", "ambient", "lose heat", "non-adiabatic", "adiabatic", "next", "outlook"],
-      "short": "Letting the top surface lose heat tests the reuse idea: replaying the reused adiabatic database recovers only about a quarter of the true cooling.",
-      "physical": "Real tanks leak heat. A gentle loss at the warm top surface, q = h(T − T∞) with h ≈ 8 W/m²K, slowly cools the tank. How fast depends on keeping warm fluid at the surface — which is exactly what the live flow does and a frozen replay does not.",
-      "cfd": "It is modelled as a balance-registered sink in the thin top cell layer (kept inside the energy balance). The full CFD cools 1.45 K; the rCFD replay on the reused adiabatic C2C database cools only 0.36 K — a recovery of ~24%. CoG_y barely moves, while the heterogeneity δT_mean drops as the warm top is pulled toward the bulk.",
+      "keywords": ["heat loss", "heatloss", "wall", "cooling", "sink", "q wall", "ambient", "lose heat", "non-adiabatic", "adiabatic", "next", "outlook", "h 100", "h=100"],
+      "short": "Letting the top surface lose heat tests the reuse idea: at the reference case h = 100, replaying the reused adiabatic database recovers only about a third of the true cooling.",
+      "physical": "Real tanks leak heat. The loss is q = h(T − T∞); for water to still air the physical value is gentle (h ≈ 8 W/m²K), so we turn the dial up to h = 100 as a reference case to make the cooling easy to see. How fast it cools depends on keeping warm fluid at the surface — which is exactly what the live flow does and a frozen replay does not.",
+      "cfd": "It is modelled as a balance-registered sink in the thin top cell layer (kept inside the energy balance). At h = 100 the full CFD cools 9.79 K; the rCFD replay on the reused adiabatic C2C database cools only 3.03 K — a recovery of about a third (≈ 0.31). CoG_y barely moves, while the heterogeneity δT_mean drops by 11.13 K as the warm top is pulled toward the bulk. (At the gentle physical h = 8 the gap is wider still, 0.36 K vs 1.45 K ≈ 0.25, but the cooling is too small to see.)",
       "more": {
         "deeper": "Reusing the adiabatic database is cheap (no rebuild) but freezes a flow recorded without cooling, so the buoyancy-driven overturning that refreshes the surface is missing. The gap is therefore advective, not a diffusion-tuning issue.",
-        "math": "Energy balance gains a sink: dE/dt = −∫_top h (T − T∞) dA, registered through the rCFD balance source so the safety belt does not cancel it. We compare it as a difference of differences: cooling = T_adiabatic − T_heatloss for each method.",
+        "math": "Cooling ratio at h = 100 ≈ 3.03 / 9.79 ≈ 0.31. The energy balance gains a sink dE/dt = −∫_top h (T − T∞) dA, registered through the rCFD balance source so the safety belt does not cancel it. We compare it as a difference of differences: cooling = T_adiabatic − T_heatloss for each method.",
         "analogy": "An insulated thermos (adiabatic) versus an ordinary cup that cools through its top — except here we try to predict the cup using a recording made of the thermos."
       },
       "followup": { "text": "Why does rCFD under-predict the cooling?", "id": "frozen" },
@@ -251,13 +251,13 @@
     {
       "id": "frozen",
       "title": "Why the frozen replay under-predicts cooling",
-      "keywords": ["frozen", "under-predict", "underpredict", "shortfall", "why less", "advective", "overturning", "reuse", "why 24"],
-      "short": "The replay reuses a flow recorded with no heat loss, so it never carries the down-draft that keeps warm fluid at the cooled surface — the loss fades and rCFD recovers only ~24%.",
+      "keywords": ["frozen", "under-predict", "underpredict", "shortfall", "why less", "advective", "overturning", "reuse", "why a third", "two-thirds"],
+      "short": "The replay reuses a flow recorded with no heat loss, so it never carries the down-draft that keeps warm fluid at the cooled surface — the loss fades and rCFD recovers only about a third of the cooling.",
       "physical": "In the real CFD, cooled surface fluid sinks and is replaced by fresh warm fluid, so the surface stays warm and the loss stays strong. The frozen replay just lets the top cool in place: the surface temperature difference shrinks and the loss dies away.",
-      "cfd": "Both methods use the same sink law, so the difference is purely the flow. The reused adiabatic C2C database has no cooling-driven overturning to advect heat back to the surface, so rCFD's 0.36 K sits far below the CFD's 1.45 K.",
+      "cfd": "Both methods use the same sink law, so the difference is purely the flow. The reused adiabatic C2C database has no cooling-driven overturning to advect heat back to the surface, so at h = 100 rCFD's 3.03 K sits far below the CFD's 9.79 K — about two-thirds of the cooling is missing.",
       "more": {
         "deeper": "This quantifies the limit of the 'record once, reuse the database' shortcut for a coupled problem: it holds while the added physics barely perturbs the flow, and breaks once the new physics changes the flow itself. The cure is a non-adiabatic (or multi-regime) database.",
-        "math": "Cooling ratio ≈ 0.36 / 1.45 ≈ 0.24. The adiabatic replay bias (~1.7 K baseline gap) explains only a small part; the dominant cause is the missing advective feedback.",
+        "math": "Cooling ratio ≈ 3.03 / 9.79 ≈ 0.31 at h = 100 (≈ 0.25 at the gentle h = 8). The adiabatic replay bias (~1.7 K baseline gap) explains only a small part; the dominant cause is the missing advective feedback.",
         "analogy": "Like predicting how fast a stirred pot cools from a video of an unstirred one — the stirring is exactly what keeps the heat coming to the surface."
       },
       "followup": { "text": "Why is CoG the key metric here?", "id": "diagnostics" },
