@@ -47,27 +47,6 @@
       ]
     },
     {
-      "id": "results",
-      "label": "Adiabatic result",
-      "u": 0.405,
-      "v": 0.290,
-      "labelDir": "up",
-      "color": "#ff4d6d",
-      "body": "rCFD reproduces the CFD temperature field across the full 600 s at a small fraction of the cost. The rising warm plume, the recirculation vortices and the stratified layer are all captured. The best mixing strength is metric-dependent: f_sd = 0.000 for the mean temperature, f_sd = 0.500 for the thermal centre of gravity (CoG RMSE 0.069 mm).",
-      "image": "assets/images/contour.png",
-      "stats": [
-        { "k": "Best f_sd (CoG)", "v": "0.500" },
-        { "k": "Error", "v": "≈ 1%" },
-        { "k": "Speed-up", "v": "~263×" }
-      ],
-      "topic": "findings",
-      "subs": [
-        { "label": "Why is the best f_sd metric-dependent?", "id": "fsd_metric" },
-        { "label": "Why are the vortices asymmetric?", "id": "vortex_asymmetry" },
-        { "label": "How much faster is rCFD?", "id": "speedup" }
-      ]
-    },
-    {
       "id": "heatloss",
       "label": "Heat loss applied",
       "u": 0.840,
@@ -105,25 +84,6 @@
         { "label": "Why does rCFD under-predict the cooling?", "id": "frozen" },
         { "label": "How is wall heat loss modelled?", "id": "heatloss" },
         { "label": "Why is CoG the key metric here?", "id": "diagnostics" }
-      ]
-    },
-    {
-      "id": "whyfails",
-      "label": "Why it fails",
-      "u": 0.575,
-      "v": 0.620,
-      "labelDir": "up",
-      "color": "#ff7849",
-      "body": "Because the replay reuses the adiabatic database, its flow is frozen: it only knows the motion recorded with the lid closed. In the real CFD the cooled surface water turns heavy and sinks, setting up an overturning loop that keeps feeding warm fluid to the surface, so the loss stays strong. The frozen replay has no such loop, so the top cools in place and the loss fades. The missing piece is a flow pattern, not a diffusion setting — an advection gap.",
-      "stats": [
-        { "k": "Missing", "v": "~2/3 of cooling" },
-        { "k": "Cause", "v": "frozen flow" },
-        { "k": "Gap type", "v": "advective" }
-      ],
-      "topic": "frozen",
-      "subs": [
-        { "label": "Why does rCFD under-predict the cooling?", "id": "frozen" },
-        { "label": "How does wall heat loss change things?", "id": "heatloss" }
       ]
     }
   ]

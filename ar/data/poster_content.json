@@ -120,7 +120,7 @@
       {
         "id": "heatloss",
         "label": "Heat loss · h = 100",
-        "aspect": "1 / 1",
+        "aspect": "15 / 8",
         "subtitle": "Wall heat loss · rCFD reuses the adiabatic database",
         "left": { "label": "CFD · heat loss", "video": "assets/videos/cfd_heatloss_h100.mp4" },
         "right": { "label": "rCFD · reuse adiabatic", "video": "assets/videos/rcfd_heatloss_h100.mp4" },

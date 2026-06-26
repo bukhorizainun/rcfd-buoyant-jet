@@ -30,28 +30,29 @@ function labelGeom(dir, labelW) {
   }
 }
 
-/* Overlay a live CFD|rCFD field clip exactly on a printed poster figure.
- * o = { u0,u1,v0,v1 (normalised panel rect), src (#asset), tag, color }. */
-function liveFigure(anchor, aspect, o) {
-  const cx = (o.u0 + o.u1) / 2 - 0.5;
-  const cy = (0.5 - (o.v0 + o.v1) / 2) * aspect;
-  const w = o.u1 - o.u0;
-  const h = (o.v1 - o.v0) * aspect;
-  // glow frame behind
-  anchor.appendChild(el("a-plane", { width: String(w + 0.012), height: String(h + 0.012),
-    position: `${cx} ${cy} 0.009`, material: `color: ${o.color}; opacity: 0.55; shader: flat` }));
-  // opaque dark backing so the printed figure does not bleed through the clip
-  anchor.appendChild(el("a-plane", { width: String(w + 0.003), height: String(h + 0.003),
-    position: `${cx} ${cy} 0.011`, material: "color: #05070f; opacity: 1; shader: flat" }));
-  // the live video, sized to the panel
-  anchor.appendChild(el("a-video", { src: o.src, width: String(w), height: String(h),
-    position: `${cx} ${cy} 0.013` }));
-  // small LIVE tag in the top-left corner
-  const tx = cx - w / 2 + 0.03, ty = cy + h / 2 - 0.013;
-  anchor.appendChild(el("a-plane", { width: "0.05", height: "0.019",
-    position: `${tx} ${ty} 0.014`, material: `color: ${o.color}; opacity: 0.92; shader: flat` }));
-  anchor.appendChild(el("a-text", { value: o.tag, color: "#05070f", width: "0.46", align: "center",
-    position: `${tx} ${ty} 0.015`, baseline: "center" }));
+/* A floating "LIVE CFD" monitor that hovers beside the poster, showing the full
+ * CFD recording (tank + floor) for one case. o = { cx, cy, w, src, label, color }.
+ * The 600x320 (15:8) clip keeps the same look as the printed simulation. */
+function liveMonitor(anchor, o) {
+  const w = o.w, vh = w / 1.875;            // video is 600x320 (15:8)
+  const cx = o.cx, vidY = o.cy;
+  const headY = vidY + vh / 2 + 0.028;      // header label above the video
+  const cardTop = headY + 0.026, cardBot = vidY - vh / 2 - 0.014;
+  const cardCy = (cardTop + cardBot) / 2, cardH = cardTop - cardBot;
+
+  // glow border + dark card backdrop
+  anchor.appendChild(el("a-plane", { width: String(w + 0.032), height: String(cardH + 0.022),
+    position: `${cx} ${cardCy} 0.004`, material: `color: ${o.color}; opacity: 0.5; shader: flat` }));
+  anchor.appendChild(el("a-plane", { width: String(w + 0.022), height: String(cardH + 0.012),
+    position: `${cx} ${cardCy} 0.006`, material: "color: #060a16; opacity: 0.95; shader: flat" }));
+  // header: a small live dot + the case label
+  anchor.appendChild(el("a-circle", { radius: "0.008", position: `${cx - w / 2 + 0.02} ${headY} 0.012`,
+    material: `color: ${o.color}; shader: flat` }));
+  anchor.appendChild(el("a-text", { value: o.label, color: o.color, width: "0.95", align: "center",
+    position: `${cx} ${headY} 0.012`, baseline: "center" }));
+  // the live CFD recording
+  anchor.appendChild(el("a-video", { src: o.src, width: String(w), height: String(vh),
+    position: `${cx} ${vidY} 0.012` }));
 }
 
 export async function startARScene(opts = {}) {
@@ -79,10 +80,10 @@ function buildARScene() {
   });
 
   const assets = el("a-assets");
-  // the two combined CFD|rCFD case clips that animate over the poster's figures
+  // the two full CFD recordings shown in the floating LIVE CFD monitors
   [["arAdiaVideo", PATHS.adiaLive], ["arHlVideo", PATHS.hlLive]].forEach(([id, src]) => {
     const v = el("video", { id, src, preload: "auto",
-      loop: "", muted: "", playsinline: "", "webkit-playsinline": "", crossorigin: "anonymous" });
+      loop: "", muted: "", autoplay: "", playsinline: "", "webkit-playsinline": "", crossorigin: "anonymous" });
     v.muted = true;
     assets.appendChild(v);
   });
@@ -103,22 +104,16 @@ function buildARScene() {
     material: "color: #05070f; opacity: 0.82; shader: flat" }));
   anchor.appendChild(el("a-text", { value: "Buoyant Jet Flow · rCFD", align: "center", color: "#36d1ff",
     width: "1.15", position: `0 ${titleY + 0.015} 0.01`, baseline: "center" }));
-  anchor.appendChild(el("a-text", { value: "tap the glowing points · the two case figures are live",
+  anchor.appendChild(el("a-text", { value: "tap the glowing points · live CFD plays beside the poster",
     align: "center", color: "#cdd7ee", width: "0.9", position: `0 ${titleY - 0.024} 0.01`, baseline: "center" }));
 
-  // Bring the poster's two printed case figures to life: overlay the matching
-  // CFD|rCFD field animations exactly on the printed panels. Rects are measured
-  // from the landscape poster (normalised u from left, v from top); see
-  // assets/videos/{adia_live,heatloss_live}.mp4 (left half = CFD, right = rCFD).
-  // x = u-0.5 ; y = (0.5-v)*aspect ; w = nw ; h = nh*aspect.
-  liveFigure(anchor, aspect, {
-    u0: 0.4575, u1: 0.6468, v0: 0.4104, v1: 0.5479,
-    src: "#arAdiaVideo", tag: "LIVE", color: "#36d1ff",   // adiabatic: it works
-  });
-  liveFigure(anchor, aspect, {
-    u0: 0.4740, u1: 0.6567, v0: 0.6419, v1: 0.7754,
-    src: "#arHlVideo", tag: "LIVE", color: "#ff7849",     // heat loss: why it fails
-  });
+  // Two floating "LIVE CFD" monitors beside the poster (full recording, tank +
+  // floor) — the adiabatic CFD run and the wall-heat-loss CFD run. They hover
+  // just off the right edge so they never cover the printed figures.
+  liveMonitor(anchor, { cx: 0.68, cy: 0.11, w: 0.34,
+    src: "#arAdiaVideo", label: "LIVE CFD · Adiabatic", color: "#36d1ff" });
+  liveMonitor(anchor, { cx: 0.68, cy: -0.20, w: 0.34,
+    src: "#arHlVideo", label: "LIVE CFD · Heat loss h=100", color: "#ff7849" });
 
   // hotspots
   STATE.hotspots.hotspots.forEach((h) => {
@@ -234,13 +229,20 @@ function onArTap(clientX, clientY, target) {
   if (h) openPopup(h);
 }
 
-function onTargetFound() {
-  targetVisible = true;
-  $("#scanHint").classList.add("hidden");
+function playLiveVideos() {
   ["arAdiaVideo", "arHlVideo"].forEach((id) => {
     const v = document.getElementById(id);
     if (v) { v.muted = true; v.play().catch(() => {}); }
   });
+}
+
+function onTargetFound() {
+  targetVisible = true;
+  $("#scanHint").classList.add("hidden");
+  // mobile can defer autoplay until the clips are ready — retry a couple of times
+  playLiveVideos();
+  setTimeout(playLiveVideos, 250);
+  setTimeout(playLiveVideos, 800);
   showBanner();
   if (!infoShownOnce) {
     infoShownOnce = true;
