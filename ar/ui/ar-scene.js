@@ -96,16 +96,10 @@ function buildARScene() {
   }));
 
   const anchor = el("a-entity", { "mindar-image-target": "targetIndex: 0", id: "arAnchor" });
-  const top = aspect / 2;
 
-  // anchored title chip — floats clear above the poster's own printed title
-  const titleY = top + 0.085;
-  anchor.appendChild(el("a-plane", { width: "0.74", height: "0.092", position: `0 ${titleY} 0.005`,
-    material: "color: #05070f; opacity: 0.82; shader: flat" }));
-  anchor.appendChild(el("a-text", { value: "Buoyant Jet Flow · rCFD", align: "center", color: "#36d1ff",
-    width: "1.15", position: `0 ${titleY + 0.015} 0.01`, baseline: "center" }));
-  anchor.appendChild(el("a-text", { value: "tap the glowing points · live CFD plays beside the poster",
-    align: "center", color: "#cdd7ee", width: "0.9", position: `0 ${titleY - 0.024} 0.01`, baseline: "center" }));
+  // No anchored title/instruction chip here: the poster already prints its own
+  // title, and the "tap the glowing points" hint is shown as a toast on first
+  // detection (onTargetFound) — a floating chip only overlapped the printed title.
 
   // Two floating "LIVE CFD" monitors beside the poster (full recording, tank +
   // floor) — the adiabatic CFD run and the wall-heat-loss CFD run. They hover
