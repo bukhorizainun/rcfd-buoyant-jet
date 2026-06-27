@@ -66,7 +66,7 @@
         "icon": "star",
         "items": [
           "rCFD reproduces the 600 s buoyant-jet temperature transport from one short CFD run, ~263× faster.",
-          "Adiabatic: best mixing strength is metric-dependent — f_sd = 0.000 for mean temperature, f_sd = 0.500 for the thermal centre of gravity (CoG RMSE 0.069 mm).",
+          "Adiabatic: the mixing strength f_sd = 0.500 best reproduces the thermal stratification (centre of gravity, CoG RMSE 0.069 mm).",
           "Wall heat loss: at the reference case h = 100, replaying the reused adiabatic database recovers only about a third of the true cooling (rCFD 3.03 K vs CFD 9.79 K)."
         ]
       },

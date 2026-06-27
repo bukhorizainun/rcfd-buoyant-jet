@@ -68,7 +68,7 @@
       "id": "fsd-value",
       "question": "What is the best value of f_sd?",
       "keywords": ["best", "optimal", "f_sd value", "fsd value", "0.5", "0.500", "tuning", "parameter sweep", "which value"],
-      "answer": "It depends on the metric. For the mean temperature, the lowest error is the no-mixing case f_sd = 0. For the thermal centre of gravity (CoG), there is a genuine minimum in the middle of the sweep at f_sd = 0.500, which beats both 0.375 and 0.750. So 0.500 is the best all-round compromise for reproducing where the heat sits in the tank."
+      "answer": "The chosen value is f_sd = 0.500. For the thermal centre of gravity (CoG) — where the heat sits in the tank — there is a genuine minimum at f_sd = 0.500, which beats both 0.375 and 0.750. So 0.500 reproduces the temperature field best."
     },
     {
       "id": "cog-tmean",

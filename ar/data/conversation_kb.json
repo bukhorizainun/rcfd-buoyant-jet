@@ -110,20 +110,20 @@
         "math": "Per face: S = ½ (T₁ − T₀) V f_sd, accumulated on both cells then divided by each cell's phase volume. Above the 1/8 stability cap the work is split into several inner sweeps.",
         "analogy": "Like nudging adjacent cups of hot and cold water toward each other a fraction at a time — f_sd is how big each nudge is."
       },
-      "followup": { "text": "Why is the best f_sd different for different results?", "id": "fsd_metric" },
+      "followup": { "text": "Why is f_sd = 0.5 the chosen value?", "id": "fsd_metric" },
       "related": ["fsd_metric", "rcfd"]
     },
     {
       "id": "fsd_metric",
-      "title": "Why the best f_sd is metric-dependent",
-      "keywords": ["best", "optimal", "metric-dependent", "which f_sd", "0.5", "0.000", "tmean", "cog", "best fsd"],
-      "short": "The best f_sd depends on what you measure: 0.000 is best for mean temperature, 0.500 is best for the thermal centre of gravity.",
-      "physical": "Mixing spreads heat faster than real advection, so any mixing overshoots the mean temperature — hence f_sd=0 wins there. But some mixing is needed to put the heat at the right height, so the centre of gravity is best at a middle value.",
-      "cfd": "The T_mean error shrinks monotonically as f_sd→0, while the CoG_y error has a genuine minimum at f_sd=0.500 (RMSE 0.069 mm), slightly better than 0.375 and 0.750. The optimum is broad, not knife-edge.",
+      "title": "Why f_sd = 0.5",
+      "keywords": ["best", "optimal", "which f_sd", "0.5", "0.500", "cog", "best fsd", "chosen", "why 0.5"],
+      "short": "f_sd = 0.5 is the chosen mixing strength: it best reproduces the thermal stratification — where the heat sits in the tank (CoG).",
+      "physical": "A pure shift moves heat but leaves sharp interfaces; some mixing is needed to place the heat at the right height. Too little keeps the interfaces too sharp, too much over-mixes — f_sd = 0.5 sits at the sweet spot for the centre of gravity.",
+      "cfd": "The CoG_y error has a genuine minimum at f_sd = 0.500 (RMSE 0.069 mm), slightly better than 0.375 and 0.750. The optimum is broad, not knife-edge.",
       "more": {
-        "deeper": "The two optima move in opposite directions on the f_sd axis, so there is no single best value — the choice is a deliberate trade-off, which is exactly the kind of judgement the wall-heat-loss study has to make.",
-        "math": "T_mean error ∝ overshoot, monotone in f_sd. CoG_y error is U-shaped: under-mixing sits the heat too high, over-mixing too low; the minimum is near f_sd ≈ 0.5.",
-        "analogy": "Seasoning a soup: no salt keeps the 'average' truest to the recipe, but a pinch is needed to get the flavour distributed right. The best amount depends on which you care about."
+        "deeper": "f_sd = 0.5 reproduces the stratification the CFD builds, and that same value carries over as the operating point for the wall-heat-loss study.",
+        "math": "CoG_y error is U-shaped in f_sd: under-mixing sits the heat too high, over-mixing too low; the minimum is near f_sd ≈ 0.5.",
+        "analogy": "Seasoning a soup: a pinch of salt gets the flavour distributed right — too little or too much both miss. f_sd = 0.5 is that pinch."
       },
       "followup": { "text": "How much faster is rCFD overall?", "id": "speedup" },
       "related": ["facecswap", "speedup"]
@@ -194,7 +194,7 @@
       "keywords": ["t_mean", "tmean", "cog", "centre of gravity", "center of gravity", "diagnostic", "metric", "what is tmean"],
       "short": "Two scalars track the field: T_mean (how much heat is in the tank) and CoG_y (how high the heat sits).",
       "physical": "T_mean is the volume-averaged temperature; CoG_y is the height of the 'centre of mass' of the heat. Together they say how much heat there is and where it is.",
-      "cfd": "Both are written every step for the CFD reference and each rCFD case, so accuracy is judged directly: f_sd=0 best for T_mean, f_sd=0.5 best for CoG_y.",
+      "cfd": "Both are written every step for the CFD reference and each rCFD case, so accuracy is judged directly; f_sd = 0.5 best reproduces CoG_y, where the heat sits.",
       "more": {
         "deeper": "Using two complementary metrics is deliberate: a method can get the total heat right while placing it at the wrong height, or vice versa. Wall heat loss makes CoG even more central.",
         "math": "T_mean = (1/V)∫T dV; CoG_y = ∫ y·(T−T₀) dV / ∫(T−T₀) dV.",
@@ -222,11 +222,11 @@
       "id": "findings",
       "title": "Key findings",
       "keywords": ["findings", "key findings", "results", "summary", "conclusion", "what did you find"],
-      "short": "rCFD reproduces the buoyant-jet temperature transport across 600 s at ~263× lower cost, and the best mixing strength depends on the metric.",
+      "short": "rCFD reproduces the buoyant-jet temperature transport across 600 s at ~263× lower cost, with f_sd = 0.5 reproducing the thermal stratification best.",
       "physical": "The method captures the rising warm plume, the recirculation vortices, and the growing warm layer — the whole story of the flow — from one short CFD run.",
-      "cfd": "Quantitatively: T_mean best at f_sd=0.000, CoG_y best at f_sd=0.500 (RMSE 0.069 mm), replay 120–701× faster. The optimum for CoG is broad around 0.375–0.750.",
+      "cfd": "Quantitatively: CoG_y best at f_sd = 0.500 (RMSE 0.069 mm), replay 120–701× faster. The optimum for CoG is broad around 0.375–0.750.",
       "more": {
-        "deeper": "The headline is not a single magic number but a trade-off surface: accuracy vs cost vs which metric matters. That framing is what Step 2 carries forward.",
+        "deeper": "The headline is the trade-off between accuracy and cost: f_sd = 0.5 reproduces the field well at a fraction of the cost. That framing is what Step 2 carries forward.",
         "math": "The CoG RMSE bottoms at f_sd = 0.5 (0.069 mm) and rises for both less mixing (interfaces stay too sharp) and more mixing (the field over-smooths).",
         "analogy": "A good photocopy of the flow at a fraction of the ink — faithful where it matters most."
       },

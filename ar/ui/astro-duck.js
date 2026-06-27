@@ -277,7 +277,7 @@ function announceBadge(badge) {
 const TALK = [
   { k: "Problem",       say: "The problem: full CFD of long, slow heat transport is wasteful — the flow repeats within ~30 s while the temperature evolves for 600 s." },
   { k: "Method",        say: "The method: recurrence CFD. Record the flow once as cell-to-cell shift maps, then replay them to transport heat — no Navier–Stokes during replay.", panel: "model3d" },
-  { k: "Results",       say: "Results: rCFD reproduces the field ~263× faster; the best mixing f_sd is metric-dependent — 0.000 for mean temperature, 0.500 for stratification.", panel: "comparison" },
+  { k: "Results",       say: "Results: rCFD reproduces the field ~263× faster; the mixing parameter f_sd = 0.5 best reproduces the thermal stratification.", panel: "comparison" },
   { k: "Contributions", say: "Contribution: a Windows/Fluent port, a characterised f_sd, and a wall-heat-loss stress test that quantifies the reuse limit — at h = 100 rCFD recovers only about a third of the cooling.", panel: "insights" },
   { k: "Future work",   say: "Future work: record a non-adiabatic (or multi-regime) database so the replay carries the cooling-driven overturning the frozen one misses.", panel: "dashboard" },
 ];

@@ -8,12 +8,12 @@
     {
       "id": "method",
       "label": "Test case & mesh",
-      "u": 0.120,
-      "v": 0.560,
-      "labelDir": "down",
+      "u": 0.110,
+      "v": 0.550,
+      "labelDir": "up",
       "color": "#36d1ff",
-      "body": "A closed water tank (about 7.5 cm tall) at 293 K with a small warm jet entering at mid-height. The warm jet is lighter than the surrounding water, so buoyancy lifts it and a vertical thermal layer builds under the ceiling. A structured mesh of 1 mm cubic cells (~85,625) keeps the rCFD cell-to-cell shift maps clean; with Re ≈ 100 the jet is laminar (Fluent 2022 R2, Windows 11).",
-      "diagram": "mesh",
+      "body": "A closed water tank (about 7.5 cm tall) at 293 K with a small warm jet entering at mid-height through a 5 × 5 mm inlet and leaving through a pressure outlet on the far wall. The warm jet is lighter than the surrounding water, so buoyancy lifts it and a vertical thermal layer builds under the ceiling. A structured mesh of 1 mm cubic cells (~85,625) keeps the rCFD cell-to-cell shift maps clean; with Re ≈ 100 the jet is laminar (Fluent 2022 R2, Windows 11).",
+      "diagram": "boundary",
       "stats": [
         { "k": "Tank height", "v": "7.5 cm" },
         { "k": "Inlet", "v": "5 × 5 mm" },
@@ -69,8 +69,8 @@
     {
       "id": "keydiscovery",
       "label": "Key discovery · ~31%",
-      "u": 0.235,
-      "v": 0.690,
+      "u": 0.330,
+      "v": 0.700,
       "labelDir": "right",
       "color": "#ffb02e",
       "body": "The reused adiabatic database captures only about a third of the real heat loss. At the reference case h = 100 the rCFD replay cools by 3.03 K against the full CFD's 9.79 K (a ratio of ≈ 0.31), both read at t = 600 s. So roughly two-thirds of the cooling is missing. (At the gentle physical h = 8 the gap is wider still, 0.36 K vs 1.45 K ≈ 0.25, but the cooling there is hard to see.)",
