@@ -15,6 +15,9 @@ let onErrorCb = null;
 let arScene = null;
 let arAnchor = null;
 let tapWired = false;
+let dragWired = false;
+let dragState = null;     // { entity, offset:{x,y}, z } while a monitor is grabbed
+let dragJustEnded = 0;    // timestamp; suppresses the tap that follows a drag
 
 /* Where a hotspot's label box + transparent tap target sit relative to the dot.
  * Lets neighbouring hotspots push their labels to different sides so the text
@@ -35,24 +38,33 @@ function labelGeom(dir, labelW) {
  * The 600x320 (15:8) clip keeps the same look as the printed simulation. */
 function liveMonitor(anchor, o) {
   const w = o.w, vh = w / 1.875;            // video is 600x320 (15:8)
-  const cx = o.cx, vidY = o.cy;
-  const headY = vidY + vh / 2 + 0.028;      // header label above the video
-  const cardTop = headY + 0.026, cardBot = vidY - vh / 2 - 0.014;
+  const headY = vh / 2 + 0.028;             // header label above the video (group-local)
+  const cardTop = headY + 0.026, cardBot = -(vh / 2 + 0.014);
   const cardCy = (cardTop + cardBot) / 2, cardH = cardTop - cardBot;
 
+  // The whole monitor lives in one draggable group, placed at (cx, cy); every
+  // part is positioned relative to that centre so a drag slides them together
+  // (see enableDragMove). It starts beside the poster but can be moved anywhere.
+  const g = el("a-entity", { class: "draggable", position: `${o.cx} ${o.cy} 0` });
+
   // glow border + dark card backdrop
-  anchor.appendChild(el("a-plane", { width: String(w + 0.032), height: String(cardH + 0.022),
-    position: `${cx} ${cardCy} 0.004`, material: `color: ${o.color}; opacity: 0.5; shader: flat` }));
-  anchor.appendChild(el("a-plane", { width: String(w + 0.022), height: String(cardH + 0.012),
-    position: `${cx} ${cardCy} 0.006`, material: "color: #060a16; opacity: 0.95; shader: flat" }));
+  g.appendChild(el("a-plane", { width: String(w + 0.032), height: String(cardH + 0.022),
+    position: `0 ${cardCy} 0.004`, material: `color: ${o.color}; opacity: 0.5; shader: flat` }));
+  g.appendChild(el("a-plane", { width: String(w + 0.022), height: String(cardH + 0.012),
+    position: `0 ${cardCy} 0.006`, material: "color: #060a16; opacity: 0.95; shader: flat" }));
   // header: a small live dot + the case label
-  anchor.appendChild(el("a-circle", { radius: "0.008", position: `${cx - w / 2 + 0.02} ${headY} 0.012`,
+  g.appendChild(el("a-circle", { radius: "0.008", position: `${-w / 2 + 0.02} ${headY} 0.012`,
     material: `color: ${o.color}; shader: flat` }));
-  anchor.appendChild(el("a-text", { value: o.label, color: o.color, width: "0.95", align: "center",
-    position: `${cx} ${headY} 0.012`, baseline: "center" }));
+  g.appendChild(el("a-text", { value: o.label, color: o.color, width: "0.95", align: "center",
+    position: `0 ${headY} 0.012`, baseline: "center" }));
   // the live CFD recording
-  anchor.appendChild(el("a-video", { src: o.src, width: String(w), height: String(vh),
-    position: `${cx} ${vidY} 0.012` }));
+  g.appendChild(el("a-video", { src: o.src, width: String(w), height: String(vh),
+    position: "0 0 0.012" }));
+  // tiny hint so the viewer knows the monitor can be repositioned
+  g.appendChild(el("a-text", { value: "drag to move", color: "#7f93b4", width: "0.7", align: "center",
+    position: `0 ${cardBot - 0.018} 0.012`, baseline: "center" }));
+
+  anchor.appendChild(g);
 }
 
 export async function startARScene(opts = {}) {
@@ -155,6 +167,7 @@ function buildARScene() {
   arScene = scene;
   arAnchor = anchor;
   enableTapToExplore();
+  enableDragMove();
 
   scene.addEventListener("arError", () => { if (onErrorCb) onErrorCb(); });
   scene.addEventListener("loaded", () => { STATE.arReady = true; });
@@ -186,8 +199,108 @@ function enableTapToExplore() {
   }, true);
 }
 
+/* Drag-to-move for the floating LIVE CFD monitors. A grab is a raycast against
+ * any ".draggable" group's mesh; while held, each move raycasts the poster plane
+ * (the anchor's local z = 0) and slides the group so it tracks the finger,
+ * keeping the original grab offset so it never jumps. Wired once; reads the live
+ * scene through the module refs, same as the tap handler. */
+function enableDragMove() {
+  if (dragWired) return;
+  dragWired = true;
+
+  const ctx = () => {
+    const THREE = window.AFRAME && window.AFRAME.THREE;
+    const canvas = arScene && (arScene.canvas || (arScene.renderer && arScene.renderer.domElement));
+    const cam = arScene && arScene.camera;
+    if (!THREE || !canvas || !cam) return null;
+    return { THREE, canvas, cam, rect: canvas.getBoundingClientRect() };
+  };
+  const rayFor = (c, clientX, clientY) => {
+    const ndc = new c.THREE.Vector2(
+      ((clientX - c.rect.left) / c.rect.width) * 2 - 1,
+      -((clientY - c.rect.top) / c.rect.height) * 2 + 1);
+    const ray = new c.THREE.Raycaster();
+    ray.setFromCamera(ndc, c.cam);
+    return ray;
+  };
+
+  const start = (clientX, clientY, target, ev) => {
+    if (!targetVisible || !arScene || !arAnchor) return;
+    if (STATE.activePanel) return;
+    if (!$("#popup").classList.contains("hidden")) return;
+    if (target && target.closest &&
+        target.closest("#hud, #dock, .panel, .popup, #start, #infoLayer, #model3d, #errorScreen, button, a, input"))
+      return;
+    const c = ctx();
+    if (!c) return;
+    const ray = rayFor(c, clientX, clientY);
+
+    let grabbed = null, grabHit = null;
+    arAnchor.querySelectorAll(".draggable").forEach((e) => {
+      if (grabbed) return;
+      const hits = ray.intersectObject(e.object3D, true);
+      if (hits.length) { grabbed = e; grabHit = hits[0].point.clone(); }
+    });
+    if (!grabbed) return;
+
+    const localHit = arAnchor.object3D.worldToLocal(grabHit);
+    const p = grabbed.object3D.position;
+    dragState = { entity: grabbed, offset: { x: p.x - localHit.x, y: p.y - localHit.y }, z: p.z };
+    if (ev && ev.cancelable) ev.preventDefault();
+  };
+
+  const move = (clientX, clientY, ev) => {
+    if (!dragState) return;
+    const c = ctx();
+    if (!c) return;
+    const ray = rayFor(c, clientX, clientY);
+
+    // poster plane through the anchor origin, normal = anchor local +Z
+    arAnchor.object3D.updateWorldMatrix(true, false);
+    const origin = new c.THREE.Vector3();
+    const normal = new c.THREE.Vector3(0, 0, 1);
+    arAnchor.object3D.getWorldPosition(origin);
+    normal.transformDirection(arAnchor.object3D.matrixWorld);
+    const plane = new c.THREE.Plane().setFromNormalAndCoplanarPoint(normal, origin);
+
+    const hit = new c.THREE.Vector3();
+    if (!ray.ray.intersectPlane(plane, hit)) return;
+    const local = arAnchor.object3D.worldToLocal(hit);
+    dragState.entity.object3D.position.set(
+      local.x + dragState.offset.x, local.y + dragState.offset.y, dragState.z);
+    if (ev && ev.cancelable) ev.preventDefault();
+  };
+
+  const end = () => { if (dragState) { dragState = null; dragJustEnded = Date.now(); } };
+
+  window.addEventListener("touchstart", (e) => {
+    if (!e.touches || !e.touches.length) return;
+    const t = e.touches[0];
+    start(t.clientX, t.clientY, e.target, e);
+  }, { passive: false, capture: true });
+  window.addEventListener("touchmove", (e) => {
+    if (!dragState || !e.touches || !e.touches.length) return;
+    const t = e.touches[0];
+    move(t.clientX, t.clientY, e);
+  }, { passive: false, capture: true });
+  window.addEventListener("touchend", end, { passive: true, capture: true });
+  window.addEventListener("touchcancel", end, { passive: true, capture: true });
+
+  // desktop / mouse fallback (ignore synthetic touch-pointers)
+  window.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch") return;
+    start(e.clientX, e.clientY, e.target, e);
+  }, true);
+  window.addEventListener("pointermove", (e) => {
+    if (e.pointerType === "touch") return;
+    move(e.clientX, e.clientY, e);
+  }, true);
+  window.addEventListener("pointerup", (e) => { if (e.pointerType !== "touch") end(); }, true);
+}
+
 function onArTap(clientX, clientY, target) {
   if (!targetVisible || !arScene || !arAnchor) return;
+  if (dragState || Date.now() - dragJustEnded < 400) return;  // it was a drag, not a tap
   if (STATE.activePanel) return;
   if (!$("#popup").classList.contains("hidden")) return;
   // Ignore taps on the app chrome so dock/HUD/panels keep their own behaviour.
@@ -268,6 +381,7 @@ export function resetARScene() {
   bannerShown = false;
   infoShownOnce = false;
   targetVisible = false;
+  dragState = null;
   arScene = null;
   arAnchor = null;
   const stage = $("#arStage");
