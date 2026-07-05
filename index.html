@@ -178,6 +178,7 @@
       <li><a href="#visual">Visual Comparison</a></li>
       <li><a href="#discussion">Discussion</a></li>
       <li><a href="#localdiff-step1">Diffusivity from the Database</a></li>
+      <li><a href="#negdiff">Sharpening the Front (concept)</a></li>
     </ol>
   </details>
 
@@ -221,7 +222,7 @@
       <span><strong>Mochamad Bukhori Zainun</strong> — k12438440</span>
       <span>Supervisor: <strong>Prof. Stefan Pirker</strong></span>
       <span>Department of Particulate Flow Modelling, JKU Linz</span>
-      <span>June 2026</span>
+      <span>July 2026</span>
     </div>
   </div>
 </header>
@@ -230,7 +231,7 @@
 
 <div class="tldr">
   <h3>TL;DR</h3>
-  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$). Step 2 then lets the tank lose heat at the top and tests how far the reused adiabatic database stretches: at the physical $h = 8$, and more visibly at a stronger $h = 100$, the replay captures only about a third of the cooling the full CFD shows, because it cannot reproduce the cooling-driven flow it never recorded. A field-based local diffusivity, read straight from the database, reproduces the hand-tuned $f_{sd} = 0.5$ with no tuning at all.</p>
+  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$). Step 2 then lets the tank lose heat at the top and tests how far the reused adiabatic database stretches: at the physical $h = 8$, and more visibly at a stronger $h = 100$, the replay captures only about a third of the cooling the full CFD shows, because it cannot reproduce the cooling-driven flow it never recorded. A field-based local diffusivity, read straight from the database, reproduces the hand-tuned $f_{sd} = 0.5$ with no tuning at all. As a next refinement we outline, at concept stage, a bounded negative diffusivity that would sharpen the thermal front the replay currently smears, with an overshoot guard borrowed from flux-corrected transport (§9.4).</p>
   <button class="quick-tour-trigger" id="quickTourBtn" type="button"
           title="Auto-scroll through the five key figures (~60 s)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1476,6 +1477,57 @@
 
 <p>We come back to local diffusion under heat loss in §14.</p>
 
+<h3 id="negdiff">9.4 — Sharpening the front: a bounded negative diffusivity (concept)</h3>
+
+<p>§9.3 replaced the hand-tuned $f_{sd}$ with a value the database carries on its own. This section looks at the one thing no setting of $f_{sd}$ can give back: the sharpness of the thermal front. What follows is a concept, not a result; it is the refinement we would like to try next.</p>
+
+<p>The replay gets the mean temperature and the position of the front right, but not its thickness. Two ingredients of the transport act like a diffusion. The cell-to-cell shift map carries some numerical smearing of its own, and the face-swap step adds more of it on purpose, because some mixing is needed for the stratification to develop at the right rate. The price shows up at the interface between the warm upper bulk and the cold bottom layer. Measured over the chamber centreline at the end of the run, the CFD front is about 6 mm thick. In the replay the same front is roughly three times as wide.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_problem_t300.png" alt="CFD reference vs rCFD replay at t = 300 s: the CFD keeps a thin thermal front, the replay smears it into a wide band" style="max-width:1040px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 7d.</span> The problem, at $t = 300$ s and on the same colour scale. The CFD reference (left) keeps a thin, sharp interface between the warm bulk and the cold bottom layer. The replay at $f_{sd} = 0.5$ (right) puts the interface in the right place but smears it into a wide band.</figcaption>
+</figure>
+
+<p>This matters beyond appearance. The quantities an engineer reads off a stratified field live exactly at that front: how much of the hot layer is usable, how thick the thermocline is, when the interface reaches an outlet. A field with the right mean but a smeared front answers such questions wrongly.</p>
+
+<p>The deeper point from the §6 sweep is that no value of $f_{sd}$ can repair this. Diffusion only works in one direction: it can reduce a gradient, but it cannot rebuild one that has been washed out. Lowering $f_{sd}$ helps the mean temperature and hurts the stratification timing; raising it does the opposite. The method is missing the inverse operation. That inverse is a <strong>negative diffusivity</strong>: the same face exchange, run the other way, so that it sharpens instead of smooths. A normal diffusive exchange carries heat down the temperature gradient, from warm to cold. The sharpening step is its mirror image: it acts exactly where the exchange flux would run against the gradient, $(\nabla T) \cdot \vec{q} < 0$, and carries heat from the colder to the warmer side. Applied to a smeared front, it drains the blurred transition zone: the warm side gets warmer, the cold side gets colder, and the interface contracts back towards a step.</p>
+
+<p><strong>The overshoot guard.</strong> Left alone, this process is unstable. Pure anti-diffusion does not know when to stop: it keeps steepening until cell values pass the physical limits, producing water hotter than the inlet or colder than the initial fill. So the operator is only usable together with a rule that bounds it. The classical rule comes from Flux-Corrected Transport <a href="#ref-borisbook1973">[8]</a> <a href="#ref-zalesak1979">[9]</a>: no exchange may create a <em>new local extremum</em>. Every cell carries the minimum and maximum temperature over itself and its face neighbours, recomputed before each application. A cell that receives heat may rise at most to its local maximum; a cell that gives heat away may fall at most to its local minimum. The admissible exchange across a face is limited by these two headrooms, and the step takes only a fraction $s$ of the smaller one. A front can steepen until it is one cell wide, but no value can ever leave the range spanned by its neighbours, so no overshoot is possible by construction. The picture to keep in mind is an unsharp mask in image processing: sharpening, with a guard against halos.</p>
+
+<div class="codeblock">
+  <div class="cb-cap">Bounded negative diffusivity — one application per replay step (concept)</div>
+  <pre><code>/* stage 1: local bounds */
+for each cell i:
+    Tmin[i] = min( T[i], T[neighbours of i] )
+    Tmax[i] = max( T[i], T[neighbours of i] )
+
+/* stage 2: limited up-gradient exchange */
+for each interior face (c0, c1):
+    hot  = the warmer of c0, c1;  cold = the other
+    if T[hot] == T[cold]: skip          /* no gradient      */
+    head_hot  = Tmax[hot]  - T[hot]     /* room to rise     */
+    head_cold = T[cold] - Tmin[cold]    /* room to fall     */
+    dq = s * min(head_hot, head_cold)
+    T[hot]  += dq                       /* heat moves       */
+    T[cold] -= dq                       /*   cold -&gt; warm   */
+
+/* stage 3: hard clamp (safety net) */
+for each cell i:
+    T[i] = min( max( T[i], Tmin[i] ), Tmax[i] )</code></pre>
+</div>
+
+<p>Four properties follow directly. The step is <em>conservative</em>: every exchange is pairwise, $+dq$ on one side and $-dq$ on the other, so the total heat is untouched. It is <em>bounded</em>: stage 2 respects both headrooms and stage 3 clamps whatever remains, so no cell can leave its local neighbour range. It is <em>self-limiting</em>: at a sharp front the headrooms vanish, because each cell already sits at its local extremum, so the operator switches itself off instead of over-steepening. And it is <em>cheap</em>: two loops over faces and one over cells per application, negligible next to the replay itself.</p>
+
+<p><strong>Where it would live in the code.</strong> The rCFD library already sketches this idea. The face-swap routine in <code>src/rCFD_swap.h</code> accepts a negative swap value and carries a small <code>// neg. diff.</code> branch for it. That branch, though, bounds the exchange with the fixed limits 0 and 1, which is natural for a concentration field. Our transported temperature is stored relative to the 293 K reference and spans about 0 to 40 K, so a fixed upper bound of 1 would clip against the wrong range. The local min/max bounds of stage 1 would replace those constants.</p>
+
+<p>The attachment point is already there too. For each replay step, the run loop in <code>rCFD_library.c</code> applies the recorded shifts, then the face-swap smoothing (<code>swap_data</code>), then calls a user hook (<code>user_access_data_after_swap</code>), and only then runs the global balance correction of §4.1. That hook is exactly where a sharpening step belongs: after the smoothing it is meant to counteract, and before the balance belt, which then re-secures the global heat as a second, independent safety net. The library also exposes everything the three stages need at user level: the face pairs (<code>rcfd_get_face_c0</code>, <code>rcfd_get_face_c1</code>), the cell and face counts, and the transported data itself. The whole operator could therefore live in the user file (<code>rCFD_user_run.h</code>), behind an on/off switch, with the core solver untouched — the same place where the heat-loss source of §10.1 lives.</p>
+
+<p>One open point is the parallel run. Fluent splits the mesh into partitions, and at a partition seam a cell cannot see its neighbours on the other side, so the local bounds there would be computed from an incomplete stencil. The final clamp and the balance belt still keep the values bounded, but the seam behaviour deserves a check of its own, for example against a single-process run.</p>
+
+<p>One side effect should be expected. An anti-diffusion sharpens every gradient it sees, including the small irregularities that the replay field always carries along the front. The smoothing step normally hides them; the sharpening step will pull them out, so the front may come back thin but slightly wavy. The values stay inside their bounds in any case; the waviness is a matter of shape, and it grows with the strength. It is the same trade-off as in an unsharp mask, where sharpening also raises the grain of the image. The strength $s$ therefore plays the same role on the sharpening side as $f_{sd}$ plays on the smoothing side: the front width settles where the smearing per step and the sharpening per step balance, so $s$ is a tuning knob, to be chosen against the CFD reference — sharp enough, but not wavier than useful — rather than maximised.</p>
+
+<p>If the operator behaves as designed, the replay would gain a second, independent knob: $f_{sd}$ controls how fast the stratification develops, $s$ controls how thin the front stays. A suitable validation would replay the buoyant jet with the step off and on, and compare the temperature contours at mid-run, a vertical temperature profile through the chamber at a fixed time, and the §7 metrics ($T_\text{mean}$, $CoG_y$) against the CFD reference, together with an explicit overshoot check. That validation is the planned next step.</p>
+
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step2">
   <div class="kicker">Step 2 · in progress · robustness test</div>
@@ -2544,6 +2596,8 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <li id="ref-abbasi2020">S. Abbasi, S. Pirker and T. Lichtenegger, <span class="title">Application of recurrence CFD (rCFD) to species transport in turbulent vortex shedding</span>, Computers and Fluids <strong>196</strong>, 104348 (2020). Source of the $D_\text{rec} = D + D_\text{sgs}$ decomposition motivating the local-diffusion path.</li>
   <li id="ref-fluent2022">ANSYS Inc., <span class="title">ANSYS Fluent Theory Guide, Release 2022 R2</span>, Canonsburg, PA (2022).</li>
   <li id="ref-pfm">Particulate Flow Modelling, JKU Linz, <span class="title">rCFDreloaded source code</span>, internal repository (2026). Implementation reference for the face-swap operator (<code>src/rCFD_swap.h</code>).</li>
+  <li id="ref-borisbook1973">J. P. Boris and D. L. Book, <span class="title">Flux-Corrected Transport. I. SHASTA, a fluid transport algorithm that works</span>, Journal of Computational Physics <strong>11</strong>(1), 38–69 (1973). Origin of the no-new-extremum rule used by the sharpening concept in §9.4.</li>
+  <li id="ref-zalesak1979">S. T. Zalesak, <span class="title">Fully multidimensional Flux-Corrected Transport algorithms for fluids</span>, Journal of Computational Physics <strong>31</strong>(3), 335–362 (1979). Multidimensional form of the flux limiter.</li>
 </ol>
 </div>
 
