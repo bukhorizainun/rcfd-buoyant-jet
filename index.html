@@ -178,7 +178,7 @@
       <li><a href="#visual">Visual Comparison</a></li>
       <li><a href="#discussion">Discussion</a></li>
       <li><a href="#localdiff-step1">Diffusivity from the Database</a></li>
-      <li><a href="#negdiff">Sharpening the Front (concept)</a></li>
+      <li><a href="#negdiff">Sharpening the Front: Negative Diffusivity</a></li>
     </ol>
   </details>
 
@@ -190,6 +190,7 @@
       <li><a href="#heatgap">rCFD vs CFD: the Gap</a></li>
       <li><a href="#hsweep">Turning the Dial: h-Sweep</a></li>
       <li><a href="#localdiff">Does Local Diffusion Help?</a></li>
+      <li><a href="#negdiff-heatloss">Sharpening under Heat Loss</a></li>
       <li><a href="#rebuild">Rebuilding the Database with Heat Loss</a></li>
     </ol>
   </details>
@@ -231,7 +232,7 @@
 
 <div class="tldr">
   <h3>TL;DR</h3>
-  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$). Step 2 then lets the tank lose heat at the top and tests how far the reused adiabatic database stretches: at the physical $h = 8$, and more visibly at a stronger $h = 100$, the replay captures only about a third of the cooling the full CFD shows, because it cannot reproduce the cooling-driven flow it never recorded. A field-based local diffusivity, read straight from the database, reproduces the hand-tuned $f_{sd} = 0.5$ with no tuning at all. As a next refinement we outline, at concept stage, a bounded negative diffusivity that would sharpen the thermal front the replay currently smears, with an overshoot guard borrowed from flux-corrected transport (§9.4).</p>
+  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$). Step 2 then lets the tank lose heat at the top and tests how far the reused adiabatic database stretches: at the physical $h = 8$, and more visibly at a stronger $h = 100$, the replay captures only about a third of the cooling the full CFD shows, because it cannot reproduce the cooling-driven flow it never recorded. A field-based local diffusivity, read straight from the database, reproduces the hand-tuned $f_{sd} = 0.5$ with no tuning at all. A bounded negative diffusivity — an overshoot guard borrowed from flux-corrected transport, plus a directional weight — now sharpens the thermal front the replay used to smear: at strength $0.4$ it reproduces the CFD front width with no overshoot (§9.4). Under heat loss the same step makes the replay <em>worse</em>, which pins the remaining gap on the missing cooling-driven flow, not on the scalar transport (§14.1).</p>
   <button class="quick-tour-trigger" id="quickTourBtn" type="button"
           title="Auto-scroll through the five key figures (~60 s)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1477,9 +1478,9 @@
 
 <p>We come back to local diffusion under heat loss in §14.</p>
 
-<h3 id="negdiff">9.4 — Sharpening the front: a bounded negative diffusivity (concept)</h3>
+<h3 id="negdiff">9.4 — Sharpening the front: a bounded negative diffusivity</h3>
 
-<p>§9.3 replaced the hand-tuned $f_{sd}$ with a value the database carries on its own. This section looks at the one thing no setting of $f_{sd}$ can give back: the sharpness of the thermal front. What follows is a concept, not a result; it is the refinement we would like to try next.</p>
+<p>§9.3 replaced the hand-tuned $f_{sd}$ with a value the database carries on its own. This section looks at the one thing no setting of $f_{sd}$ can give back: the sharpness of the thermal front. It started here as a concept; it is now implemented, validated and swept, and the results are below.</p>
 
 <p>The replay gets the mean temperature and the position of the front right, but not its thickness. Two ingredients of the transport act like a diffusion. The cell-to-cell shift map carries some numerical smearing of its own, and the face-swap step adds more of it on purpose, because some mixing is needed for the stratification to develop at the right rate. The price shows up at the interface between the warm upper bulk and the cold bottom layer. Measured over the chamber centreline at the end of the run, the CFD front is about 6 mm thick. In the replay the same front is roughly three times as wide.</p>
 
@@ -1495,38 +1496,91 @@
 <p><strong>The overshoot guard.</strong> Left alone, this process is unstable. Pure anti-diffusion does not know when to stop: it keeps steepening until cell values pass the physical limits, producing water hotter than the inlet or colder than the initial fill. So the operator is only usable together with a rule that bounds it. The classical rule comes from Flux-Corrected Transport <a href="#ref-borisbook1973">[8]</a> <a href="#ref-zalesak1979">[9]</a>: no exchange may create a <em>new local extremum</em>. Every cell carries the minimum and maximum temperature over itself and its face neighbours, recomputed before each application. A cell that receives heat may rise at most to its local maximum; a cell that gives heat away may fall at most to its local minimum. The admissible exchange across a face is limited by these two headrooms, and the step takes only a fraction $s$ of the smaller one. A front can steepen until it is one cell wide, but no value can ever leave the range spanned by its neighbours, so no overshoot is possible by construction. The picture to keep in mind is an unsharp mask in image processing: sharpening, with a guard against halos.</p>
 
 <div class="codeblock">
-  <div class="cb-cap">Bounded negative diffusivity — one application per replay step (concept)</div>
+  <div class="cb-cap">Bounded negative diffusivity — one application per replay step</div>
   <pre><code>/* stage 1: local bounds */
 for each cell i:
     Tmin[i] = min( T[i], T[neighbours of i] )
     Tmax[i] = max( T[i], T[neighbours of i] )
 
-/* stage 2: limited up-gradient exchange */
+/* stage 2: limited up-gradient exchange, in energy */
 for each interior face (c0, c1):
     hot  = the warmer of c0, c1;  cold = the other
-    if T[hot] == T[cold]: skip          /* no gradient      */
-    head_hot  = Tmax[hot]  - T[hot]     /* room to rise     */
-    head_cold = T[cold] - Tmin[cold]    /* room to fall     */
-    dq = s * min(head_hot, head_cold)
-    T[hot]  += dq                       /* heat moves       */
-    T[cold] -= dq                       /*   cold -&gt; warm   */
+    if T[hot] == T[cold]: skip               /* no gradient        */
+    C_hot  = rho cp V[hot]                   /* cell heat capacity */
+    C_cold = rho cp V[cold]
+    head_hot  = C_hot  * (Tmax[hot] - T[hot])     /* J, room to rise */
+    head_cold = C_cold * (T[cold] - Tmin[cold])   /* J, room to fall */
+    dq = s * min(head_hot, head_cold)        /* moved energy       */
+    dE[hot]  += dq                           /* heat moves         */
+    dE[cold] -= dq                           /*   cold -&gt; warm     */
 
-/* stage 3: hard clamp (safety net) */
+/* stage 3: convert back and clamp (safety net) */
 for each cell i:
-    T[i] = min( max( T[i], Tmin[i] ), Tmax[i] )</code></pre>
+    T[i] += dE[i] / (rho cp V[i])
+    T[i]  = min( max( T[i], Tmin[i] ), Tmax[i] )</code></pre>
 </div>
 
-<p>Four properties follow directly. The step is <em>conservative</em>: every exchange is pairwise, $+dq$ on one side and $-dq$ on the other, so the total heat is untouched. It is <em>bounded</em>: stage 2 respects both headrooms and stage 3 clamps whatever remains, so no cell can leave its local neighbour range. It is <em>self-limiting</em>: at a sharp front the headrooms vanish, because each cell already sits at its local extremum, so the operator switches itself off instead of over-steepening. And it is <em>cheap</em>: two loops over faces and one over cells per application, negligible next to the replay itself.</p>
+<p>The head-rooms are compared as <em>energies</em>, not as temperatures: each side is weighted with the cell heat capacity $C = \rho c_p V$, and each cell converts the moved energy back with its own $C$. For equal cells this reduces to plain temperature differences; on a general mesh it matches the volume weighting of the positive face swap the step undoes. Four properties follow directly. The step is <em>conservative</em>: every exchange is pairwise, $+dq$ on one side and $-dq$ on the other, so the total heat is untouched. It is <em>bounded</em>: stage 2 respects both headrooms and stage 3 clamps whatever remains, so no cell can leave its local neighbour range. It is <em>self-limiting</em>: at a sharp front the headrooms vanish, because each cell already sits at its local extremum, so the operator switches itself off instead of over-steepening. And it is <em>cheap</em>: three loops over the mesh per application, negligible next to the replay itself.</p>
 
-<p><strong>Where it would live in the code.</strong> The rCFD library already sketches this idea. The face-swap routine in <code>src/rCFD_swap.h</code> accepts a negative swap value and carries a small <code>// neg. diff.</code> branch for it. That branch, though, bounds the exchange with the fixed limits 0 and 1, which is natural for a concentration field. Our transported temperature is stored relative to the 293 K reference and spans about 0 to 40 K, so a fixed upper bound of 1 would clip against the wrong range. The local min/max bounds of stage 1 would replace those constants.</p>
+<p><strong>Where it lives in the code.</strong> The rCFD library already sketches this idea. The face-swap routine in <code>src/rCFD_swap.h</code> accepts a negative swap value and carries a small <code>// neg. diff.</code> branch for it. That branch, though, bounds the exchange with the fixed limits 0 and 1, which is natural for a concentration field; our transported temperature spans about 0 to 40 K relative to the 293 K reference, so the local min/max bounds of stage 1 replace those constants. The operator itself lives entirely in the user file (<code>rCFD_user_run.h</code>), as the hook <code>user_access_data_after_swap</code> that the run loop calls after the face-swap smoothing and before the balance belt of §4.1 — after the smoothing it counteracts, before the safety net that re-secures the global heat. It is written through the public accessors only (<code>rcfd_get_face_c0</code>, <code>rcfd_get_face_c1</code>, cell data and volumes), sits behind an on/off switch, and with the switch off the replay reproduces the baseline bit for bit. The core solver is untouched — the same pattern as the heat-loss source of §10.1.</p>
 
-<p>The attachment point is already there too. For each replay step, the run loop in <code>rCFD_library.c</code> applies the recorded shifts, then the face-swap smoothing (<code>swap_data</code>), then calls a user hook (<code>user_access_data_after_swap</code>), and only then runs the global balance correction of §4.1. That hook is exactly where a sharpening step belongs: after the smoothing it is meant to counteract, and before the balance belt, which then re-secures the global heat as a second, independent safety net. The library also exposes everything the three stages need at user level: the face pairs (<code>rcfd_get_face_c0</code>, <code>rcfd_get_face_c1</code>), the cell and face counts, and the transported data itself. The whole operator could therefore live in the user file (<code>rCFD_user_run.h</code>), behind an on/off switch, with the core solver untouched — the same place where the heat-loss source of §10.1 lives.</p>
+<p><strong>The expected side effect, and the cure.</strong> An anti-diffusion sharpens every gradient it sees, including the small irregularities that the replay field always carries along the front. The smoothing step normally hides them; the sharpening step pulls them out, so a strong isotropic sharpening returns the front thin but saw-toothed — the same trade-off as in an unsharp mask, where sharpening also raises the grain. This is exactly what happened, and it is what the <em>direction</em> of the exchange fixes. The waviness comes from the sideways faces: they sharpen ripples along the front instead of the front itself. So the operator carries a directional weight, $\cos^2\theta$ between the cell link and the front normal: faces across the front act in full, sideways faces barely act. The normal can be prescribed (here the front is horizontal, so the vertical) or taken from the local temperature gradient, which removes the last hand-set choice; we tested both.</p>
 
-<p>One open point is the parallel run. Fluent splits the mesh into partitions, and at a partition seam a cell cannot see its neighbours on the other side, so the local bounds there would be computed from an incomplete stencil. The final clamp and the balance belt still keep the values bounded, but the seam behaviour deserves a check of its own, for example against a single-process run.</p>
+<p><strong>The sweep.</strong> All runs use the local-diffusivity base of §9.3, so the mixing comes from the database and the sharpening strength $s$ is the only free knob left. One number first: with six faces per cell, strengths $s \le 1/6$ are strictly safe — even the summed claims of all faces stay inside a cell's head-room, so the clamp can never be needed. We swept that range, continued above it to $s = 0.9$, and ran both directional forms over the moderate-to-high strengths: twenty-one replays in all, each of 600 episodes.</p>
 
-<p>One side effect should be expected. An anti-diffusion sharpens every gradient it sees, including the small irregularities that the replay field always carries along the front. The smoothing step normally hides them; the sharpening step will pull them out, so the front may come back thin but slightly wavy. The values stay inside their bounds in any case; the waviness is a matter of shape, and it grows with the strength. It is the same trade-off as in an unsharp mask, where sharpening also raises the grain of the image. The strength $s$ therefore plays the same role on the sharpening side as $f_{sd}$ plays on the smoothing side: the front width settles where the smearing per step and the sharpening per step balance, so $s$ is a tuning knob, to be chosen against the CFD reference — sharp enough, but not wavier than useful — rather than maximised.</p>
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_ld_sweep.png" alt="End-state metrics over the strength sweep: mixing-layer width, mean temperature error, and centre-of-gravity error, for the isotropic and the two directional forms" style="max-width:1040px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 7e.</span> The strength sweep on the local-diffusivity base. Left: the end-state front width against the CFD reference (dashed). Middle: the mean $T_\text{mean}$ deviation over the replay. Right: the $CoG_y$ deviation. Inside the safe range ($s \le 1/6$, dotted) the mean improves but the width barely moves. The isotropic form (blue) reaches the CFD width only at $s = 0.9$, with the roughest profile of the set. Both directional forms get there around $s = 0.4$; the prescribed vertical normal (orange) is also the most accurate on the mean, the gradient-based normal (purple) sits in between.</figcaption>
+</figure>
 
-<p>If the operator behaves as designed, the replay would gain a second, independent knob: $f_{sd}$ controls how fast the stratification develops, $s$ controls how thin the front stays. A suitable validation would replay the buoyant jet with the step off and on, and compare the temperature contours at mid-run, a vertical temperature profile through the chamber at a fixed time, and the §7 metrics ($T_\text{mean}$, $CoG_y$) against the CFD reference, together with an explicit overshoot check. That validation is the planned next step.</p>
+<p>The reading is short. Below $s = 1/6$ the operator is safe by a margin and improves the mean temperature monotonically (1.15 K down to 0.98 K against the CFD trace), but the front hardly thins: small strengths repair the mean, not the smeared front. The isotropic form buys the CFD width only at $s = 0.9$ and pays with a saw-toothed, mottled field. The directional form with the vertical normal wins on every metric at once: at $s = 0.4$ it reproduces the CFD front width (5.5 mm against 5.6 mm), more than halves the mean deviation (0.54 K against 1.15 K), and produces the <em>smoothest</em> end profile of the whole sweep — smoother than the uncorrected replay itself, because the sideways ripple-amplification is switched off. The gradient-based normal beats the isotropic form everywhere and finds the width at the same strength, but stays behind the vertical one: at a ripple, the local gradient points along the ripple's own normal, so the data-driven weight sharpens ripples as readily as the front. Where the front orientation is known, prescribing it wins. No run of the twenty-one overshoots: every end field stays inside 293–333 K, by construction.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_ld_traces.png" alt="Mean temperature and centre of gravity over the replay for the CFD reference, the base replay, the isotropic form at s = 0.9 and the directional form at s = 0.4" style="max-width:780px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 7f.</span> The same story over time. The base replay overshoots the CFD mean while the inlet is warm and falls below it in the cooling phase; the directional form at $s = 0.4$ (red) tracks the reference through both phases. The isotropic form at $s = 0.9$ (green) — the setting it needs for the width — lags during the filling phase and disturbs $CoG_y$ the most.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_ld_profiles.png" alt="End-state centreline temperature profiles: CFD reference, base replay, isotropic s = 0.9, directional s = 0.4" style="max-width:620px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 7g.</span> The end-state centreline profiles, widths in the legend. The isotropic form at $s = 0.9$ matches the CFD width but wobbles in the hot layer; the directional form at $s = 0.4$ reproduces the reference front and stays clean above it.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_montage_ld.png" alt="Contour montage: CFD reference, base replay, isotropic s = 0.9, directional s = 0.4 and 0.5, at mid-run and end of run" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 7h.</span> The pictures behind the numbers, at mid-run (top) and the end of the replay (bottom), same colour scale everywhere. The isotropic front at $s = 0.9$ is thin but saw-toothed; the directional fronts are thin <em>and</em> straight, with no scallops at either time.</figcaption>
+</figure>
+
+<figure class="wide">
+  <div class="syncp" data-syncp>
+    <div class="syncp-bar">
+      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
+      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
+      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
+      <span class="syncp-pct">0%</span>
+    </div>
+    <div class="syncp-grid">
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/CFD_reference.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">CFD reference</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_diff_05.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">replay, no sharpening</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_ld_s090_iso.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">isotropic, $s = 0.9$</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_ld_dir_s040.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">directional, $s = 0.4$</div>
+      </div>
+    </div>
+  </div>
+  <figcaption><span class="label">Figure 7i.</span> The whole replay, side by side and in sync. The base replay smears the front into a wide band; the isotropic sharpening at the strength it needs turns saw-toothed; the directional form at $s = 0.4$ keeps a thin, straight front through the whole run. Every re-run behind these clips reproduced the temperature trace of its sweep run bit for bit.</figcaption>
+</figure>
+
+<p>The replay thus gains what §9.3 promised for the smoothing side, now for the sharpening side too: the mixing comes from the database, the direction comes from the geometry (or, where unknown, the data), and one number remains — the strength. Our working point from this material is the directional form with the vertical normal at $s = 0.4$. What sharpening cannot do is a different question, and heat loss answers it in §14.1.</p>
 
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step2">
@@ -2486,6 +2540,99 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 </script>
 
 <!-- =========================================================== -->
+<h3 id="negdiff-heatloss">14.1 — Sharpening under heat loss: a clean negative result</h3>
+
+<p>§9.4 gave the replay a sharpening step that repairs the smeared front on the adiabatic case. The natural next question: does it also help under heat loss? We switched the §10 heat-loss sink on at $h = 100$, kept everything else of §9.4 — the same adiabatic local-diffusivity database, the same working point — and ran three replays: sharpening off, isotropic at $s = 0.4$, directional at $s = 0.4$. With the sharpening off, the run reproduces the heat-loss replay of the table above digit for digit ($304.46$ K), so the comparison sits on a verified base.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Run</th><th class="num">$T_\text{mean}$ at end (K)</th><th class="num">cooling captured (K)</th><th class="num">share of CFD</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, $h=100$</td><td class="num">299.49</td><td class="num">9.79</td><td class="num">100%</td></tr>
+<tr class="best"><td>replay, sharpening off</td><td class="num">304.46</td><td class="num">3.03</td><td class="num">31%</td></tr>
+<tr><td>replay + isotropic $s=0.4$</td><td class="num">306.34</td><td class="num">1.15</td><td class="num">12%</td></tr>
+<tr><td>replay + directional $s=0.4$</td><td class="num">306.21</td><td class="num">1.28</td><td class="num">13%</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The sharpening makes the heat-loss replay <em>worse</em>, not better: the captured cooling drops from 31% to 12–13%. That is a negative result, but it is the clean kind, because it says precisely where the remaining error lives.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_ld_hl_trace.png" alt="Mean temperature traces of the heat-loss trial: CFD cools far below all replays; the sharpened replays stay warmer than the plain one" style="max-width:860px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 11b.</span> The mean-temperature traces. The plain replay (blue) follows the CFD cooling part of the way down; both sharpened replays end <em>warmer</em>.</figcaption>
+</figure>
+
+<p>Why? The sink at the top surface scales with the film temperature, $q = h\,A\,(T - T_\text{amb})$. In the CFD, the cooled surface water sinks in thin cold streaks, the bulk overturns, and warm water keeps arriving at the surface to be cooled in turn — the flux stays alive. The replay's flow is the frozen adiabatic loop, and a frozen flow does not react to the new cold fluid: nothing sinks. The plain replay still cools noticeably, because its numerical smearing keeps exchanging fluid across the top layer — cold down, warm up. That smearing, the very thing §9.4 is built to remove, had been quietly standing in for the missing vertical transport. The sharpened replays remove it: a thin, clean cold film settles on the top layer, its temperature falls towards $T_\text{amb}$, and the wall flux quenches itself. The hot bulk below stays hot.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_ld_hl_qwall.png" alt="Wall heat-loss rate over the replay: the plain replay keeps the flux alive, the sharpened replays let it collapse" style="max-width:820px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 11c.</span> The self-quenching, measured. The wall-flux monitor tracks all three runs together while the tank fills; once the warm phase ends, the sharpened replays lose their wall flux much faster, ending at 1.3&ndash;1.4 W against 2.0 W for the plain replay.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_montage_ld_hl.png" alt="Contour montage of the heat-loss trial: CFD with a uniformly cooled upper bulk; replays with the cooling stuck at the top, cleanly in the directional case, as ragged patches in the isotropic one" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 11d.</span> What happens instead of cooling, at mid-run (top) and the end of the run (bottom). In the CFD the whole upper bulk has cooled to a nearly uniform level by the end. The sharpened replays pin a thin cold film to the top layer — cleanly in the directional case, as ragged patches in the isotropic one — while the bulk below stays hot.</figcaption>
+</figure>
+
+<figure class="wide">
+  <div class="syncp" id="syncp-hl-negdiff">
+    <div class="syncp-bar">
+      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
+      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
+      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
+      <span class="syncp-pct">0%</span>
+    </div>
+    <div class="syncp-grid">
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_hl_ndoff.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">heat loss, sharpening off</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_hl_iso_s040.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">+ isotropic, $s = 0.4$</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="auto"><source src="assets/videos/rCFD_hl_dir_s040.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">+ directional, $s = 0.4$</div>
+      </div>
+    </div>
+  </div>
+  <figcaption><span class="label">Figure 11e.</span> The three heat-loss replays over the whole run, in sync (compare the CFD reference under heat loss in Figure 8c). Watch the top edge after the warm phase: the plain replay lets the cooling seep downward; the sharpened ones lock it into a thin surface film and keep the bulk hot.</figcaption>
+</figure>
+
+<script>
+(function(){
+  var root=document.getElementById('syncp-hl-negdiff');
+  if(!root) return;
+  var vids=[].slice.call(root.querySelectorAll('.syncp-vid'));
+  if(!vids.length) return;
+  var play=root.querySelector('.syncp-play'), reset=root.querySelector('.syncp-reset'),
+      slider=root.querySelector('.syncp-slider'), pct=root.querySelector('.syncp-pct'),
+      lead=vids[0], on=false, raf=null;
+  function show(f){ slider.value=Math.round(f*1000); pct.textContent=Math.round(f*100)+'%'; }
+  function seek(f){ f=Math.max(0,Math.min(1,f)); vids.forEach(function(v){ if(v.duration) v.currentTime=f*v.duration; }); show(f); }
+  function loop(){
+    if(!on) return;
+    if(lead.ended || (lead.duration && lead.currentTime>=lead.duration-0.04)){ vids.forEach(function(v){ v.currentTime=0; v.play(); }); }
+    show(lead.duration ? lead.currentTime/lead.duration : 0);
+    raf=requestAnimationFrame(loop);
+  }
+  play.addEventListener('click', function(){
+    on=!on;
+    if(on){ vids.forEach(function(v){v.play();}); play.innerHTML='&#10074;&#10074; Pause'; raf=requestAnimationFrame(loop); }
+    else { vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); }
+  });
+  reset.addEventListener('click', function(){ on=false; vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); seek(0); });
+  slider.addEventListener('input', function(){ on=false; vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); seek((+slider.value)/1000); });
+  vids.forEach(function(v){ if(v.readyState>=1){try{v.currentTime=0.001;}catch(e){}} else { v.addEventListener('loadedmetadata',function(){try{v.currentTime=0.001;}catch(e){}},{once:true}); } });
+})();
+</script>
+
+<p>Put next to §14, this sorts the two errors of the heat-loss replay cleanly. The smeared front is a <em>numerical</em> error, and the scalar side now fixes it (§9.4). The missing cooling is a <em>transport</em> error, and no scalar-side operator can fix it — not the diffusion model (§14), and not its inverse (this section). Both experiments point at the same place: the flow states in the database. That is exactly the motivation for §15 and §16 — bring the cooling-driven motion into the recorded patterns; the sharpening step then has the job it is good at, keeping the resulting fronts and low-temperature streaks sharp instead of smeared.</p>
+
 <h2 id="rebuild">15 — Rebuilding the Database with Heat Loss</h2>
 
 <p>Section 12 pinned the gap on a missing flow pattern: the adiabatic database never saw the cooling-driven down-flow, so the replay cannot make it. The obvious fix is to build the database from a run that already has the heat loss in it, so those down-flows are recorded from the start. We did that. We re-ran the CFD with the $h = 100$ wall loss switched on, recorded a fresh 600-frame C2C database from it (the <em>non-adiabatic</em> database), and replayed the same heat-loss case on it. Everything else was held fixed: $f_{sd} = 0.5$, $h = 100$, read at $t = 600$ s.</p>
