@@ -232,7 +232,7 @@
 
 <div class="tldr">
   <h3>TL;DR</h3>
-  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$). Step 2 then lets the tank lose heat at the top and tests how far the reused adiabatic database stretches: at the physical $h = 8$, and more visibly at a stronger $h = 100$, the replay captures only about a third of the cooling the full CFD shows, because it cannot reproduce the cooling-driven flow it never recorded. A field-based local diffusivity, read straight from the database, reproduces the hand-tuned $f_{sd} = 0.5$ with no tuning at all. A bounded negative diffusivity — an overshoot guard borrowed from flux-corrected transport, plus a directional weight — now sharpens the thermal front the replay used to smear: at strength $0.4$ it reproduces the CFD front width with no overshoot (§9.4). Under heat loss the same step makes the replay <em>worse</em>, its natural counterpart — a convective adjustment that mixes the unstable cold film downward — buys only a bounded share back (31% to 39% of the CFD cooling), and a prescribed circulation roll breaks that bound (73% at 20 mm/s, saturating near 82% at the top of the CFD speed range). Together they pin the remaining gap on the missing overturning flow, whose clean home is the database (§14.1).</p>
+  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$). Step 2 then lets the tank lose heat at the top and tests how far the reused adiabatic database stretches: at the physical $h = 8$, and more visibly at a stronger $h = 100$, the replay captures only about a third of the cooling the full CFD shows, because it cannot reproduce the cooling-driven flow it never recorded. A field-based local diffusivity, read straight from the database, reproduces the hand-tuned $f_{sd} = 0.5$ with no tuning at all. A bounded negative diffusivity — an overshoot guard borrowed from flux-corrected transport, plus a directional weight — now sharpens the thermal front the replay used to smear: at strength $0.4$ it reproduces the CFD front width with no overshoot (§9.4). Under heat loss the same step makes the replay <em>worse</em>, its natural counterpart — a convective adjustment that mixes the unstable cold film downward — buys only a bounded share back (31% to 39% of the CFD cooling), and a prescribed circulation roll breaks that bound (73% at 20 mm/s, saturating near 82% at the top of the CFD speed range). Together they pin the remaining gap on the missing overturning flow, whose clean home is the database (§14.1). Rebuilding that database from the cooling flow itself — this time with the local-diffusivity field stored — lifts the plain replay to 35% and raises the circulation ceiling to 81%, an end state within half a Kelvin of the CFD; gating the circulation to the cooling phase keeps 76% while matching the reference frame for frame through the filling phase (§15.3–15.5). What none of it reproduces is the plume-by-plume feedback of the real cooling, the texture that still tells replay and reference apart.</p>
   <button class="quick-tour-trigger" id="quickTourBtn" type="button"
           title="Auto-scroll through the five key figures (~60 s)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -2715,6 +2715,82 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 </figure>
 
 <p>Two things give the gap away. The temperature keeps cooling in the CFD but stalls in the replay: by $t = 600$ s the CFD cap has faded from orange to green while the replay's is still yellow, several Kelvin warmer, and that warmer cap is the $\sim 4$&ndash;$5$ K bias the metric reports. The flow tells the rest, the CFD overturns the whole run as the cooled surface water turns heavy and sinks, while the replay never moves off the frozen adiabatic loop. That missing overturning is the advection gap of §12, here as a picture. So the animation does not say "same as CFD"; it says the replay gets the easy part right, the warm jet and the broad layering the recorded advection carries, and misses the cooling-driven flow that the number, and the flow panel, both catch.</p>
+
+<h3 id="rebuild-local">15.3 — Rebuilding it once more, with the local-diffusivity field on board</h3>
+
+<p>The rebuilt database of §15.1 had one gap of its own: it never stored the local-diffusivity field, so every replay on it had to fall back to the global face-swap. We rebuilt it once more with the recorder writing that field frame by frame, the same 600-frame recipe as always, and checked the recording before using it: the preparation run reproduces the reference heat-loss CFD digit for digit in the mean-temperature trace (303.2175 K at $t = 494$ s in both files). So this database holds the correct cooling flow <em>and</em> supports the local-diffusion base that §9.3 anchored.</p>
+
+<p>A cooling-flow database needs one extra piece of bookkeeping. Even with the replay's heat-loss term switched off, a replay on this database ends $1.10$ K colder than the adiabatic-base replay: the recorded motion exports heat differently all by itself. So every run below carries two shares. The <em>total</em> share measures all its cooling against the fixed adiabatic-replay end state, the way the trial of §14.1 counted; the <em>fair</em> share subtracts the database's own no-loss drift first, the way §15 counted, and so isolates what the wall-loss path adds.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>replay on the heat-loss database</th><th class="num">end $T_\text{mean}$ (K)</th><th class="num">total share</th><th class="num">fair share</th><th class="num">mean $|\Delta T|$ vs CFD (K)</th></tr>
+</thead>
+<tbody>
+<tr><td>no wall loss (database flow only)</td><td class="num">306.53</td><td class="num">11%</td><td class="num">&mdash;</td><td class="num">4.85</td></tr>
+<tr><td>plain replay</td><td class="num">304.04</td><td class="num">35%</td><td class="num">25%</td><td class="num">3.64</td></tr>
+<tr><td>+ directional sharpening, vertical $s=0.4$</td><td class="num">305.39</td><td class="num">22%</td><td class="num">11%</td><td class="num">3.61</td></tr>
+<tr><td>+ directional sharpening, gradient $s=0.4$</td><td class="num">306.02</td><td class="num">16%</td><td class="num">5%</td><td class="num">4.13</td></tr>
+<tr><td>+ prescribed roll, 20 mm/s</td><td class="num">300.08</td><td class="num">74%</td><td class="num">63%</td><td class="num">2.39</td></tr>
+<tr><td>+ roll 20 and sorting adjustment</td><td class="num">299.44</td><td class="num">80%</td><td class="num">70%</td><td class="num">2.26</td></tr>
+<tr><td>+ roll 30 and vertical sharpening</td><td class="num">299.41</td><td class="num">81%</td><td class="num">70%</td><td class="num">1.77</td></tr>
+<tr><td>+ gated roll 20, sharpening and adjustment</td><td class="num">299.85</td><td class="num">76%</td><td class="num">66%</td><td class="num">2.11</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Read the plain row first, because it settles the question §15 left open. With the local-diffusion base the rebuilt database now captures $35\%$ in total, against $29\%$ on the adiabatic database, so the recorded cooling flow does help. But the split shows <em>how</em> it helps: eleven points come from the flow's own export, and the fair share, $25\%$, still sits below the adiabatic $29\%$. The flow that was born under cooling moves part of the heat out before the wall term can take it. The rebuild changes where the cooling comes from more than how much of it arrives, which is §15's lesson restated with better numbers.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_nadbrep_trace.png" alt="Mean temperature traces of the replays on the heat-loss database against the CFD references" style="max-width:1040px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 15.</span> Domain-averaged temperature on the heat-loss database. The kink near $t = 315$ s is the end of the filling phase. The circulation runs (dash-dotted) leave the pack after the kink and land within half a Kelvin of the CFD end state; the sharpening runs land above the plain replay.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_nadbrep_ladder.png" alt="Captured cooling of each replay as a share of the CFD depth" style="max-width:900px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 16.</span> The captured cooling as a share of the CFD depth (total share). Hatched bars are the adaptive and adjustment variants of their plain-coloured neighbours.</figcaption>
+</figure>
+
+<h3 id="ops-on-nadb">15.4 — Sharpening and circulation on the recorded cooling flow</h3>
+
+<p>The negative-diffusivity operators come over unchanged, and they behave exactly as they did on the adiabatic database: every sharpening form <em>reduces</em> the captured cooling, the vertical normal stays ahead of the gradient-based one, and the sensor-adaptive strength lands on its fixed counterpart. The mechanism survives the rebuild intact. The wall term feeds on a warm top layer; smearing keeps refilling that layer, so the flux stays alive; sharpening locks a thin cold film on top and the flux starves. A recorded cooling flow does not unseal the film, because its plumes sit at the recorded times and places, not where the replay's own film forms.</p>
+
+<p>The prescribed roll stays the strongest lever, and the recorded cooling flow raises its ceiling: $74\%$ at 20 mm/s, $80\%$ with the sorting adjustment on top, $81\%$ at 30 mm/s under the vertical sharpening &mdash; an end temperature of $299.41$ K against the CFD's $298.98$ K. One combination fails, and the failure is instructive: the roll under the <em>gradient-based</em> normal blows up within a few steps of the jet's arrival. The vertical weight is fixed geometry; the gradient weight is computed from the very field the roll is rewriting in the same pass, and that feedback between two user-level operators is what breaks.</p>
+
+<p>The wall-side energy account says where all these differences live. Integrating the wall-loss power over the run gives $1.9$&ndash;$2.0$ kJ for every stable run in the table, plain and circulated alike; the circulated runs even end with the <em>lower</em> wall flux, their top layer sitting closer to the ambient. The extra cooling of the roll runs is not pulled through the wall; it is heat the circulation exports along the flow path instead of parking it in the upper bulk. The capture is decided by transport, not by the wall model.</p>
+
+<p>One more experiment sharpens the picture. The CFD's own circulation only exists after the filling phase; a roll that turns from the first step stirs a layer the reference leaves quiet. So we gated it: roll off until $t = 315$ s, on for the cooling phase. Alone, the gate costs points ($81\% \to 73\%$ at 30 mm/s), because the always-on roll's early stirring had been imitating, by accident, the cooling the CFD accumulates during filling. But together with the sorting adjustment the gate costs almost nothing: $76\%$ gated against $76\%$ ungated, the same end temperature to two decimals. The adjustment, which acts only where the film makes the column unstable, quietly takes over the work the early roll was doing &mdash; and it does so only in the phase where the physics asks for it.</p>
+
+<h3 id="pictures-again">15.5 — The pictures against the numbers, again</h3>
+
+<p>§15.2 ended by warning that the animation and the metric can disagree. The new runs sharpen that warning into something usable, because now there are replays that match the <em>number</em> and replays that match the <em>look</em>, and one that tries to do both.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_montage_nadb.png" alt="Temperature fields of the operator families on the heat-loss database at mid-run and end of run" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 17.</span> Mid-run (top) and end of run (bottom) on the heat-loss database. The sharpening frames keep the sharp base and the jet arc at mid-run but end too warm; the roll matches the end-state shade but has already erased the arc by mid-run.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_montage_nadb_gate.png" alt="CFD against the plain replay, the always-on roll and the gated combination" style="max-width:1040px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 18.</span> The compromise, frame by frame. At mid-run the gated run (right) still looks like the reference &mdash; stratified layer, sharp base, the arc in place &mdash; where the always-on roll has stirred all of it away. At the end both circulation runs match the CFD's cooled upper bulk; the plain replay stays too warm.</figcaption>
+</figure>
+
+<figure class="wide">
+  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:948px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_nadb_cfd_vs_plain.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 19.</span> CFD reference (left) against the plain replay on the heat-loss database (right), temperature 293&ndash;333 K. The replay follows the filling phase closely and then under-cools: the upper bulk stays warm while the CFD's fades.</figcaption>
+</figure>
+
+<figure class="wide">
+  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:948px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_nadb_cfd_vs_gate.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 20.</span> CFD reference (left) against the gated combination (right): sharpening throughout, roll and adjustment only in the cooling phase. The filling phase now matches the reference frame for frame, and the end state lands within a Kelvin. What still tells the two apart, watched closely, is the texture of the cooling: the CFD drains its film through narrow, short-lived plumes; the replay mixes on a schedule.</figcaption>
+</figure>
+
+<p>The physics behind that last sentence is the honest limit of the whole exercise. The CFD cools through a feedback loop: the film chills, turns heavy <em>locally</em>, breaks into a plume, the plume renews the surface behind it, and the loop repeats, intermittent and plume-sized. Every replay in the table reaches its end state by some other route &mdash; smearing, sharpening, a steady prescribed roll &mdash; because the one thing a recorded or prescribed motion cannot do is respond to the temperature field the replay is creating. The gated combination narrows the visible difference to exactly that residue: same filling phase, same end state, different texture of the cooling in between. That residue is the feedback itself, and it is the cleanest statement so far of what the frozen flow leaves out.</p>
 
 <div class="keybox">
   <h4>Where this points &rarr; Step 3</h4>
