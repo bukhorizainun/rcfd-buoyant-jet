@@ -2622,6 +2622,15 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <figcaption><span class="label">Figure 11h.</span> The same roll in three homes. At the hook (third panel) the roll is sub-stepped and the field stays layered. Baked into the database at 20 mm/s (fourth panel) each frame moves parcels twenty cells in one jump and the field is torn apart. At 5 mm/s (fifth panel) the per-frame shift is a few cells: the database roll keeps the layering, cools the upper bulk, and matches its hook twin's capture.</figcaption>
 </figure>
 
+<p>The two numbers agree, 49% against 50%, but the video is where the two homes stop agreeing. Run the roll-at-hook and the roll-in-database panels side by side and the database roll's own geometry becomes hard to miss: two counter-rotating cells, prescribed as a single streamfunction spanning the tank, print themselves onto the field as two warm islands that never fully clear. At the hook the same roll is superimposed step by step on a replay field the recorded flow is already stirring, and the two mix well enough that no cell pattern survives to the end; baked into the database, the roll is the recorded motion, so its two-cell fingerprint replays identically every frame and never gets rubbed out. The CFD, by contrast, drains through many small plumes, triggered where and when the film happens to break, not through two large fixed cells. Same total amount, same speed, and still a different picture, because the geometry that produces the number is not hidden in a single end-state frame the way it is in motion.</p>
+
+<figure class="wide">
+  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_hl_rolldb5_hook_cfd.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 11i.</span> CFD reference (left), the roll at the hook (centre, 69%), and the same roll baked into the database at 5 mm/s (right, 49%). Watch the last few seconds: the hook panel ends on a fairly even shade, while the database panel settles into two warm patches, the footprint of the roll's own two-cell geometry.</figcaption>
+</figure>
+
 <figure class="wide">
   <img src="assets/figures/fig_negdiff_ld_hl_ladder.png" alt="Bar chart: share of the CFD cooling captured by each stand-in, from sharpening at 13 percent through local rules near a third to the prescribed roll rungs that flatten near 77 percent and the CFD at 100" style="max-width:860px;width:100%;display:block;margin:0 auto;border-radius:6px;">
   <figcaption><span class="label">Figure 11f.</span> The ladder as one picture, computed from the raw temperature traces. Local rules cluster in the shaded band; only the prescribed circulation climbs out of it, and it climbs with its speed until it flattens at the top of the CFD speed range.</figcaption>
