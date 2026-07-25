@@ -2858,6 +2858,42 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>The physics behind that last sentence is the honest limit of the whole exercise. The CFD cools through a feedback loop: the film chills, turns heavy <em>locally</em>, breaks into a plume, and the plume renews the surface behind it. The loop repeats, intermittent and plume-sized. Every replay in the table reaches its end state by some other route, whether smearing, sharpening, or a steady prescribed roll. The one thing a recorded or prescribed motion cannot do is respond to the temperature field the replay is creating. The transport runs close the amount, and even the end-state look. What stays different is the texture of the cooling in between. That residue is the feedback itself, and it is the cleanest statement so far of what the frozen flow leaves out.</p>
 
+<h3 id="texture-metric">15.6 &mdash; Measuring the texture, not just the shade</h3>
+
+<p>Everything in §15.5 comes from watching frames, so it is fair to ask whether a measurement says the same thing. It does, and no new run is needed. Every frame on this page, CFD and replay alike, is rendered with the same fixed colour scale, 293&ndash;333 K, and the same view. That makes the frames comparable field by field. For each frame we cut out the chamber, map the colour back to a temperature value through its hue, and resample the chamber onto a common grid. Then we read three numbers over the cooling window, from $t = 320$ s to the end.</p>
+
+<p>The first is how much structure sits <em>off</em> the layering: the spread of the field once each row's own mean is removed. A quiet, well-layered tank sits near zero, while plumes, rolls and blotches all raise it. The second is the one that matters most here. Compare a field's pattern with itself some seconds later, and see how fast the resemblance fades. Short-lived plumes appear and die, so the pattern renews and the resemblance drops quickly. A prescribed circulation prints the same cells frame after frame, so the resemblance holds. We report the lag at which half of it is left, and call it the renewal time. The third is the roughness of the front: how much the thermocline height varies from side to side, which a single centreline profile cannot show.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>field on the cooling window</th><th class="num">structure off layering</th><th class="num">renewal time (s)</th><th class="num">front roughness</th></tr>
+</thead>
+<tbody>
+<tr class="best"><td>CFD, $h = 100$</td><td class="num">0.018</td><td class="num">14.7</td><td class="num">0.005</td></tr>
+<tr><td>plain replay, adiabatic database</td><td class="num">0.028</td><td class="num">115.9</td><td class="num">0.008</td></tr>
+<tr><td>plain replay, heat-loss database</td><td class="num">0.032</td><td class="num">19.5</td><td class="num">0.007</td></tr>
+<tr><td>+ directional sharpening, vertical $s=0.4$</td><td class="num">0.027</td><td class="num">44.5</td><td class="num">0.005</td></tr>
+<tr><td>+ prescribed roll, 20 mm/s</td><td class="num">0.050</td><td class="num">91.8</td><td class="num">0.029</td></tr>
+<tr><td>+ roll 30 and vertical sharpening</td><td class="num">0.054</td><td class="num">84.4</td><td class="num">0.038</td></tr>
+<tr><td>roll baked into the database, 5 mm/s</td><td class="num">0.087</td><td class="num">&gt;120</td><td class="num">0.068</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="wide">
+  <img src="assets/figures/fig_structure_metrics.png" alt="Three panels: layering anomaly over time, pattern correlation against lag, and renewal time per run" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 21.</span> Left: how much structure sits off the layering through the cooling window. Centre: how a field's pattern loses resemblance to itself as the lag grows; the dotted line is the half mark. Right: the renewal time read off at that mark. The hatched bar never reaches it inside the 120 s window.</figcaption>
+</figure>
+
+<p>The CFD row looks strange at first. It has the <em>least</em> structure off the layering and the <em>smoothest</em> front of everything in the table, and still it renews its pattern fastest, in about 15 s. Both facts belong to the same picture. Its plumes are narrow, they live briefly, and between them the layer lies flat. Cooling through many small short-lived events leaves a field that looks calm on average and is never quite the same twice.</p>
+
+<p>The rebuilt database now shows a gain the cooling curve had kept hidden. On the adiabatic database the plain replay hardly renews at all, about 116 s, which is what a frozen adiabatic recording should give. On the heat-loss database the same plain replay renews in 19.5 s, close to the CFD's 14.7 s. The recorded cooling flow carries the intermittency of the original, and the replay inherits it. Counted in captured cooling, that rebuild was worth six points, §15.3. Counted this way, it covers most of the distance to the reference.</p>
+
+<p>The transport runs move the other way. The prescribed roll doubles to quintuples the off-layering structure, leaves the renewal time between 84 s and beyond the window, and roughens the front by six to thirteen times. The roll baked into the database is the extreme: its pattern does not fade at all inside 120 s, which is the two-cell fingerprint of Figure 11i written as a number. The sharpening runs sit in between, and the vertical form matches the CFD's front roughness most closely, which is what the mid-run frames already suggested.</p>
+
+<p>So the two readings deserve to stand side by side. Ranked by captured cooling the runs go plain, mixing profile, roll. Ranked by process they go the other way, with the plain replay on the rebuilt database closest to the CFD and the roll runs furthest from it. One recovery number cannot rank the methods on its own. Two limits are worth stating: the values come from rendered frames, so they carry some compression noise, and the CFD frames are sampled from a smaller pixel box than the replay frames. Any bias from that would flatter the CFD's fine structure, and the CFD still shows the least of it, so the comparison runs against the bias rather than with it. The renewal time is built from correlations and does not depend on the amplitude scale at all.</p>
+
 <div class="keybox">
   <h4>Where this points &rarr; Step 3</h4>
   <p>One database, adiabatic or rebuilt, freezes a single flow regime, and the heat-loss transient runs through many. The next move is a database that holds several regimes and switches between them as the tank cools. That multi-state idea is what Step 3 takes up.</p>
