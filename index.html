@@ -196,13 +196,6 @@
   </details>
 
   <details class="toc-group">
-    <summary>Step 3 — Multi-Database<span class="step-status plan">planned</span></summary>
-    <ol>
-      <li><a href="#step3">Multi-Database Experiments</a></li>
-    </ol>
-  </details>
-
-  <details class="toc-group">
     <summary>Step 4 — Finalization<span class="step-status plan">planned</span></summary>
     <ol>
       <li><a href="#step4">Writing &amp; Finalization</a></li>
@@ -1618,7 +1611,6 @@ for each cell i:
   <p class="stage-strip" aria-label="Where Step 2 sits in the project">
     <span>Step 1 · calibration</span>
     <span class="now">Step 2 · robustness test</span>
-    <span>Step 3 · multi-database</span>
   </p>
   <span class="chip">in progress</span>
 </div>
@@ -2291,7 +2283,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <div class="insightbox">
   <h4>What the gap really measures</h4>
-  <p>It helps to read the shortfall as a test of database reuse, not just a heat-loss result. The recurrence database was recorded once, from the adiabatic flow, and Step 2 reuses it under a boundary condition it never saw. The roughly two-thirds shortfall at $h = 100$ (wider at the gentle $h = 8$) is then a direct measure of how far that one database stretches: the physics it did record (the advection in the shift maps) still carries over, while the physics it never recorded (the cooling-driven down-flow) cannot appear no matter how the source term is tuned. So the number to keep from Step 2 is not the cooling itself but how much of it a reused adiabatic database can recover, which §15 takes up by rebuilding the database from a heat-loss run, and Step 3 by going multi-state.</p>
+  <p>It helps to read the shortfall as a test of database reuse, not just a heat-loss result. The recurrence database was recorded once, from the adiabatic flow, and Step 2 reuses it under a boundary condition it never saw. The roughly two-thirds shortfall at $h = 100$ (wider at the gentle $h = 8$) is then a direct measure of how far that one database stretches: the physics it did record (the advection in the shift maps) still carries over, while the physics it never recorded (the cooling-driven down-flow) cannot appear no matter how the source term is tuned. So the number to keep from Step 2 is not the cooling itself but how much of it a reused adiabatic database can recover, which §15 takes up by rebuilding the database from a heat-loss run.</p>
 </div>
 
 <p>The shortfall is not a fixed offset; it grows as the run goes on. The figure below tracks the cooling itself over time at $h = 100$: how much each method has cooled relative to its own adiabatic baseline.</p>
@@ -2974,44 +2966,22 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 </figure>
 
 <div class="keybox">
-  <h4>Where this points &rarr; Step 3</h4>
-  <p>One database, adiabatic or rebuilt, freezes a single flow regime, and the heat-loss transient runs through many. The next move is a database that holds several regimes and switches between them as the tank cools. That multi-state idea is what Step 3 takes up.</p>
-</div>
-
-<!-- =========================================================== -->
-<div class="part-divider wip" id="part-step3">
-  <div class="kicker">Step 3 · planned</div>
-  <div class="part-title">Multi-state database experiments</div>
-  <p>Step 2 showed that one database, adiabatic or rebuilt for heat loss, recovers only a quarter to a third of the cooling, because it freezes a single flow regime. Step 3 would build a multi-state database that holds several regimes and switches between them as the tank cools. The directions below are our own first thoughts; nothing here is run yet.</p>
-  <span class="chip plan">planned</span>
-</div>
-
-<h2 id="step3">16 — Step 3: Multi-State Database Experiments</h2>
-
-<p>Step 2 settled one thing: a single database freezes a single flow regime, and that is the ceiling, whether the regime is the adiabatic one (§12) or one rebuilt under heat loss (§15). The heat-loss transient, though, runs through many regimes, from the hot vigorous start to the cold slow end. A <em>multi-state</em> database stores several of those regimes from the recorded flow and lets the replay move between them as the tank cools, which loosens the frozen-flow limit a single database cannot escape. Step 3 is where we would build one and test it.</p>
-
-<div class="wip-card">
-  <p style="margin-top:0"><strong>Directions we are considering:</strong></p>
-  <ul>
-    <li><strong>Build a multi-state database.</strong> Split the recorded flow into several states keyed to the changing circulation, so the replay has more than one regime to draw on instead of a single frozen loop.</li>
-    <li><strong>Replay heat loss across the states.</strong> Run the same $h = 100$ case on the multi-state database and read the three metrics ($T_\text{mean}$, $CoG_y$, $\delta T_\text{mean}$) against the CFD reference (9.79 K of cooling at $h = 100$), to see how much of the gap the extra states recover.</li>
-    <li><strong>Weigh the cost.</strong> More states mean a larger database and more bookkeeping at replay; the question is how much missing cooling they buy back for that price.</li>
-  </ul>
-  <p style="margin-bottom:0; color:var(--ink-soft); font-style:italic;">Not started yet; these are proposed directions only, and any results will be added here as the work is done.</p>
+  <h4>Where this leaves the heat-loss case</h4>
+  <p>The wall term was matched from the start: the replays extract 1.7&ndash;2.0 kJ against about 1.5&ndash;1.8 kJ in the reference. What is missing is the advective export, and that is produced in the CFD by a flow which rearranges the whole tank in response to its own temperature field. A recorded flow cannot be asked to do that, so the hook can only imitate it. Rebuilding the database from the cooling run is what helps without a single new constant, lifting every operator by six to eight points, and a circulation whose speed comes from the convective scale reaches 53% with nothing left to tune. Beyond that, the capture column keeps rising only when the operator stirs more of the tank than the buoyancy forcing pays for, and the field metrics show the cost.</p>
 </div>
 
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step4">
   <div class="kicker">Step 4 · planned</div>
   <div class="part-title">Thesis writing &amp; finalization</div>
-  <p>Pulling Steps 1–3 into the written thesis.</p>
+  <p>Pulling Steps 1 and 2 into the written thesis.</p>
   <span class="chip plan">planned</span>
 </div>
 
-<h2 id="step4">17 — Step 4: Writing &amp; Finalization</h2>
+<h2 id="step4">16 — Step 4: Writing &amp; Finalization</h2>
 
 <div class="wip-card">
-  <p style="margin-top:0">The final stage: consolidate the workflow, the face-swap study, the heat-loss analysis, and the multi-state database experiments into the written thesis (methods, results, and discussion) and tidy up the figures and references for submission.</p>
+  <p style="margin-top:0">The final stage: consolidate the workflow, the face-swap study, the heat-loss analysis, and the database rebuild into the written thesis (methods, results, and discussion) and tidy up the figures and references for submission.</p>
   <p style="margin-bottom:0; color:var(--ink-soft); font-style:italic;">Not started yet; this section is a placeholder so the roadmap is complete.</p>
 </div>
 
