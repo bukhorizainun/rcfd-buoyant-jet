@@ -3154,6 +3154,34 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>The diffusion number is linear in $\Delta t$, which names the obvious remedy; and shortening the interval between shifts is in any case an established correction when a replay reproduces the character of a case but not its magnitude, because the recorded circulation is then too slow (<a href="#ref-zhang2025">Zhang et al. 2025</a>). Both readings point the same way, so it was tested on the same database with no operator at all, with the episode count raised to keep the physical window at 600 s. The capture rises from 35.2% at $\Delta t = 1$ s to 67.9% at 0.5 s and 76.0% at 0.75 s &mdash; more than any local operator here reaches within its budget.</p>
 
+<h4>One number doing two jobs</h4>
+
+<p>The diffusivity argument can be tested rather than believed, and the test is one run. For a steady flux through a layer one cell thick the drop across it is $\Delta T_\text{film} = q\,c_s / (\rho c_p D)$, so the reference's measured film of 1.54 K implies an effective diffusivity near the lid of about $2\times10^{-7}$ m²/s &mdash; essentially the molecular value for water. The database records $2.3\times10^{-6}$ there, an order of magnitude more. If that relation is the whole story, removing the face-swap diffusion should hand the film back.</p>
+
+<p>It does. With the local field switched off and the swap coefficient taken down in steps, the film grows from 0.57 K to 1.17, then 1.45, then 1.49 K against the reference's 1.54. The near-wall structure the replay was missing is not missing for want of an operator; it is dissolved by the diffusivity the database carries.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>face-swap diffusion</th><th class="num">film drop (K)</th><th class="num">capture</th><th class="num">$\delta T_\text{end}$ (K)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, $h=100$</td><td class="num">1.54</td><td class="num">100%</td><td class="num">6.76</td></tr>
+<tr><td>local diffusivity field (as used)</td><td class="num">0.57</td><td class="num">35.2%</td><td class="num">&mdash;</td></tr>
+<tr><td>$f_{sd} = 0.1$</td><td class="num">1.17</td><td class="num">14.6%</td><td class="num">10.02</td></tr>
+<tr><td>$f_{sd} = 0.01$</td><td class="num">1.45</td><td class="num">8.7%</td><td class="num">11.28</td></tr>
+<tr class="best"><td>$f_{sd} = 0$</td><td class="num">1.49</td><td class="num">8.1%</td><td class="num">11.57</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The same run says why that cannot simply be fixed. The captured cooling collapses from 35.2% to 8.1%, and the tank ends over-graded, 11.6 K of heterogeneity against 6.76. The face-swap diffusion is the replay's only means of moving heat across a stable interface: with the recorded shifts alone, nothing carries heat to the surface. So the same coefficient is at once the transport and the destroyer of the near-wall structure, and no single value can serve both. Every operator in this section has been an attempt to buy back one while keeping the other, which is why they all traded in the same direction.</p>
+
+<div class="keybox">
+  <h4>What a rebuilt database would have to achieve</h4>
+  <p>A finer frame interval lowers the recurrence diffusivity, because more of the motion is captured by the shift and less is left to be represented as diffusion. But it lowers it <em>everywhere</em>, and the table above is what happens when $D$ falls uniformly. A rebuild can only win if it moves the <em>near-lid</em> transport out of the diffusion term and into the shift term, so the plume motion is recorded as displacement rather than left as diffusivity. Whether a finer prep does that is an open question, not a safe assumption &mdash; but it is cheap to check before committing ten hours to it. The diffusivity probe costs one replay: if the new database shows $D$ at the lid an order of magnitude smaller while $D$ in the bulk holds, the film will survive without giving up the transport. If both fall together, the rebuild reproduces the trade above and there is no reason to continue.</p>
+</div>
+
 <p>The field goes the wrong way, by two independent measures. The heterogeneity at the end falls to 2.0&ndash;2.2 K against the reference's 6.76, so the tank is close to well mixed; and the topmost cell ends at 296 K against the reference's 306 K, colder than its own bulk mean, so the layering is not merely weakened but inverted. Accelerating a recorded circulation accelerates it everywhere, including through the stably stratified lower half that the real flow leaves alone. Adding the layer operator on top recovers part of the heterogeneity, 2.2 to 4.7 K, and still leaves the centroid four times further from the reference than the operator alone manages. So the time-step lever buys what every other lever here buys and pays in the same coin; it is recorded for that reason rather than as a candidate.</p>
 
 <!-- =========================================================== -->
