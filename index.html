@@ -3184,6 +3184,41 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>The field goes the wrong way, by two independent measures. The heterogeneity at the end falls to 2.0&ndash;2.2 K against the reference's 6.76, so the tank is close to well mixed; and the topmost cell ends at 296 K against the reference's 306 K, colder than its own bulk mean, so the layering is not merely weakened but inverted. Accelerating a recorded circulation accelerates it everywhere, including through the stably stratified lower half that the real flow leaves alone. Adding the layer operator on top recovers part of the heterogeneity, 2.2 to 4.7 K, and still leaves the centroid four times further from the reference than the operator alone manages. So the time-step lever buys what every other lever here buys and pays in the same coin; it is recorded for that reason rather than as a candidate.</p>
 
+<h3 id="floor">15.11 &mdash; The smallest feature the replay can hold</h3>
+
+<p>Running the same probe on the adiabatic database gives the reference point, and it also gives the study its one unifying number. In the cooling window the two databases are almost identical near the lid: $2.16\times10^{-6}$ m²/s against $2.52\times10^{-6}$, both about half their own bulk value. They differ only while the tank fills, where the cooling run carries an order of magnitude more mixing at the ceiling because the sink is already driving convection there. So the order-of-magnitude gap to the reference's near-molecular film belongs to this kind of database, not to the heat-loss case in particular.</p>
+
+<p>Turning the diffusion number around gives a length instead of a criterion. A feature of size $L$ survives a step while $D\,\Delta t / L^2$ stays below about a half, so the replay has a floor</p>
+
+<p style="text-align:center">$L_\text{min} = \sqrt{2 D \Delta t}$</p>
+
+<p>which for the bulk diffusivity of either database and the one-second step used in every run of this study is <strong>2.93 mm</strong>. Nothing smaller can be maintained, whatever operator asks for it.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>feature</th><th class="num">size (mm)</th><th class="num">&divide; floor</th><th class="num">holdable</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD thermocline, adiabatic case</td><td class="num">5.59</td><td class="num">1.91</td><td class="num">yes</td></tr>
+<tr><td>CFD thermocline, heat loss</td><td class="num">4.48</td><td class="num">1.53</td><td class="num">yes</td></tr>
+<tr><td>plain replay thermocline</td><td class="num">8.81</td><td class="num">3.01</td><td class="num">yes</td></tr>
+<tr><td>sharpened front, adiabatic</td><td class="num">5.52</td><td class="num">1.88</td><td class="num">yes</td></tr>
+<tr><td>sharpened front, heat loss</td><td class="num">4.97</td><td class="num">1.70</td><td class="num">yes</td></tr>
+<tr><td>step at the layer base</td><td class="num">2.08</td><td class="num">0.71</td><td class="num">no</td></tr>
+<tr><td>profile-depth front</td><td class="num">2.90</td><td class="num">0.99</td><td class="num">no</td></tr>
+<tr class="best"><td>CFD cold film at the lid</td><td class="num">1.00</td><td class="num">0.34</td><td class="num">no</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The study reads differently afterwards. The defect the sharpening was designed for in the adiabatic case, a 5.59 mm thermocline, sits at 1.9 times the floor &mdash; and the operator reached 5.52 mm and held it. The heat-loss thermocline at 4.48 mm sits at 1.5 times, and the operator held that too. The lid film at one cell sits at 0.34 times the floor, and no arrangement of operators produced it: not the plume rule, not the anti-diffusion gated to the ceiling, not the two together. The profile-depth front settled at 2.90 mm, the floor to two decimal places, because that is where a maintained front has to end up. And the 2.08 mm base of the step operator is below it, which is the precise sense in which that value was imposed rather than held.</p>
+
+<div class="keybox">
+  <h4>Why the adiabatic case worked and this one cannot</h4>
+  <p>It is not that heat loss is harder in some general way. The adiabatic defect lived above the floor and the heat-loss picture needs detail below it. $L_\text{min} = \sqrt{2 D \Delta t}$ can be evaluated before any operator is written, from the database and the step alone, which makes it the first thing worth checking when a replay is asked to reproduce a feature: measure the feature, measure the floor, and only then decide whether an operator is the right tool. Molecular water would put the floor at 0.53 mm, which is why the reference can carry a film the replay cannot.</p>
+</div>
+
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step3">
   <div class="kicker">Step 3 · planned</div>
