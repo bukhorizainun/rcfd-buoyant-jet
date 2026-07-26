@@ -3109,6 +3109,20 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <figcaption><span class="label">Figure 27.</span> The same runs on the three monitor curves. The first panel is where the operators look best and the third is where they part company with the reference: the step at $c=1$ tracks the mean temperature closely while its heterogeneity falls well below, which is the slab showing up as a number.</figcaption>
 </figure>
 
+<figure>
+  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1240px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_layerbase_cfd_vs_best.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 28.</span> The whole cooling window, reference first. Watch the interface rather than the endpoint: in the reference it stays a thin line at the channel level while the layer above cools; the plain replay lets it spread over a third of the tank; the step at $c=0.7$ holds the line and keeps the warm stream climbing to the lid; the step at $c=1$ holds the line and loses the stream entirely, which is the slab that scores best on every integral metric and worst on the picture.</figcaption>
+</figure>
+
+<figure>
+  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1000px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_layerbase_cfd_vs_80.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 29.</span> The two ends of the trade-off against the reference. Left of centre, the threshold raised to recover 81&thinsp;% of the cooling: the interface is right and the layer runs a shade cold. Right, the anomaly-preserving step on the budget depth: the warm stream is the strongest of any replay and the front thickness is the closest to the reference, but the layer ends too warm and a warm patch collects at the outlet.</figcaption>
+</figure>
+
 <p>An attempt was made to have both the capture and the structure. Convection homogenises the vertical, so the field was split into the horizontally averaged profile and the departure from it, $T = \langle T\rangle(y) + T'$, the step applied to $\langle T\rangle$ and $T'$ left alone. The heat is still conserved exactly and the vertical profile still ends up a step. It failed, and the reason is instructive: flattening the band means removes the very gradient the depth criterion tests for, so the diagnosed layer keeps growing and the run ends with a deeper, flatter tank &mdash; a field distance of 6.75 K, worse than doing nothing. Two rules that each read the field the other one writes do not compose, which is the same failure the roll under the gradient-based normal showed earlier.</p>
 
 <p>That diagnosis can be tested rather than asserted. Put the same anomaly-preserving step on the budget depth, where the depth comes from the wall energy and cannot respond to what the operator does to the profile, and it behaves: 44.3% capture against 46.3% for the same depth with the structure erased, so the capture is untouched, while the heat centroid improves from 0.172 to 0.087 mm and the front comes out at 5.50 mm against the reference's 4.48 &mdash; the closest front of any run here. So preserving the anomaly is sound in itself; combining it with a depth read off the same profile is not.</p>
