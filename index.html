@@ -3303,6 +3303,37 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>Two limits should be said out loud with those numbers. The maps already advect the field with the recorded displacement, and the stored flux belongs to the same flow, so part of what the term adds could be transport that is counted twice. Switching the maps off answers that: without them and without the flux the run is meaningless, ending at 329.1 K because nothing carries the inflow away, and with the flux alone it ends at 325.5 K. The channel does transport something in its own right, but roughly an order of magnitude less than the maps carry &mdash; it corrects them rather than copying them. The second limit is more basic. This is still a frozen recording: the flux belongs to the frame it was measured in, and the replay applies it to a field that has drifted away from the CFD field of that frame. It gives back the transport the averaging lost. It does not give back the feedback between the temperature it produces and the flow that would answer to it.</p>
 
+<h3 id="fluxvsmixing">15.14 &mdash; The number, the picture, and whether the picture is alive</h3>
+
+<p>§15.11 left the layer-base mixing at $c = 0.7$ as the closest field of the study, and it still is: 72&thinsp;% of the cooling and 1.23 K from the reference frames, with an end heterogeneity of 6.61 K against the reference's 6.76 K. Set the difference maps side by side and it is not close &mdash; the recorded flux with its operators sits at 3.84 K from the reference at the end of the run, the mixing rule at 1.28 K.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_flux_diff.png" alt="Temperature fields and their difference from the CFD for the plain replay, the recorded flux with operators, and the layer-base mixing" style="max-width:1100px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 31.</span> The fields, and what is left when the reference is subtracted. Both rows are decoded from the rendered frames through the same colour bar, with each tank located in its own frame, so the difference is a temperature and not an impression. Mid-run the plain replay smears the interface across a third of the tank; the recorded flux holds it and gives it the waviness the reference has; the mixing rule holds it and sits closest. At the end of the run the error left in the first two is almost uniform over the upper layer &mdash; the cooling they have not reached, rather than a shape they have got wrong &mdash; while the mixing rule ends a shade too cold instead.</figcaption>
+</figure>
+
+<p>Then measure whether the picture lives. The renewal time of the pattern, the lag at which the field's anomaly loses half the correlation with itself, is 14.7 s in the reference and 19.5 s in the plain replay. The recorded flux keeps it there, 20.6 s. The mixing rule at $c = 0.7$ takes it to <strong>100 s</strong>: over the whole cooling phase the same picture is redrawn with a slowly changing shade. Its statistics are the closest of the study and almost nothing in it is made or lost.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>run</th><th class="num">capture</th><th class="num">field dist. (K)</th><th class="num">$\delta T_\text{end}$ (K)</th><th class="num">front (mm)</th><th class="num">renewal $\tau_{50}$ (s)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, $h = 100$</td><td class="num">&mdash;</td><td class="num">0</td><td class="num">6.76</td><td class="num">4.48</td><td class="num">14.7</td></tr>
+<tr><td>plain replay</td><td class="num">35.2%</td><td class="num">3.51</td><td class="num">9.30</td><td class="num">8.81</td><td class="num">19.5</td></tr>
+<tr><td>recorded flux + operators</td><td class="num">53.1%</td><td class="num">1.98</td><td class="num">9.69</td><td class="num">7.78</td><td class="num">20.6</td></tr>
+<tr class="best"><td>layer-base mixing $c=0.7$</td><td class="num">71.9%</td><td class="num">1.23</td><td class="num">6.61</td><td class="num">2.90</td><td class="num">100.0</td></tr>
+<tr><td>$c=0.7$ + recorded flux</td><td class="num">64.9%</td><td class="num">1.39</td><td class="num">7.92</td><td class="num">2.51</td><td class="num">29.3</td></tr>
+<tr><td>prescribed roll 30 + sharpening</td><td class="num">80.7%</td><td class="num">1.71</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">84.4</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The two look like halves of one answer, so we ran them together. Both halves of that guess hold and they still do not add up. With the recorded flux underneath it the mixing drops from 71.9&thinsp;% to 64.9&thinsp;% and its heterogeneity moves away from the reference, because the mixing has already flattened the anomalies the flux would act on and a nearly uniform layer leaves the flux almost no head-room to work in. What the flux does deliver is the other half: the renewal time falls from 100 s to 29.3 s, three times faster, and the front roughness moves towards the reference. The static field starts to live again, and it costs seven points of cooling.</p>
+
+<p>That is the honest state of it. One route reaches the numbers with a field that barely moves; the other keeps the field moving and reaches half the numbers; putting them in the same run trades one for the other rather than adding them. What separates the reference from all of them is still the same thing the difference maps show at the lid: a row of cold fingers that form, fall and disappear, which needs the cooled fluid to change the flow that carries it &mdash; and that feedback is exactly what a frozen recording does not contain.</p>
+
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step3">
   <div class="kicker">Step 3 · planned</div>
