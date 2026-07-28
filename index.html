@@ -3367,6 +3367,11 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 </table>
 </div>
 
+<figure class="wide">
+  <img src="assets/figures/fig_burst.png" alt="The replay field handed back to the solver: chamber and the band under the lid at 0, 5, 20 and 40 seconds" style="max-width:1100px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 32.</span> The replay field handed back to the solver. Top: the chamber; bottom: the band under the lid, stretched. With the flow frozen the field is smooth and nothing hangs from the lid. Five seconds after the solver may act, the plunging inflow has rolled up and the first cold streaks appear at the lid; by twenty and forty seconds they are a row of fingers reaching down into the warm layer. Nothing was added to the case &mdash; the replay state was already unstable, and what appears is the response a frozen recording cannot carry.</figcaption>
+</figure>
+
 <p>The answer is immediate. Within five seconds the fastest descent grows by a factor of 4.6 and the number of falling cells nine-fold; by twenty seconds it is nearly thirteen times the starting count and the tank has lost 2.8 K, about ten times the rate any operator here reaches. Nothing was tuned for it. The state was already unstable; the only thing added was the fluid's ability to act on it.</p>
 
 <p><strong>That is the limit, measured rather than asserted.</strong> The operators, and the recorded flux beside them, act on a field whose transport cannot answer them, and the descent the reference builds <em>is</em> that answer. The renewal-time column says the same thing: everything driven by the recording stays near 20 s, and the rule that matches the integral numbers best sits at 100 s, while the reference renews in 14.7 s. The burst is a diagnosis, not a method &mdash; for those seconds the solver does the work, which is the cost the replay exists to avoid.</p>
