@@ -3259,6 +3259,50 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <p>It is not that heat loss is harder in some general way. The adiabatic defect lived above the floor and the heat-loss picture needs detail below it. $L_\text{min} = \sqrt{2 D \Delta t}$ can be evaluated before any operator is written, from the database and the step alone, which makes it the first thing worth checking when a replay is asked to reproduce a feature: measure the feature, measure the floor, and only then decide whether an operator is the right tool. Molecular water would put the floor at 0.53 mm, which is why the reference can carry a film the replay cannot.</p>
 </div>
 
+<h3 id="fluxchannel">15.13 &mdash; Recording the transport, not only the flow</h3>
+
+<p>Everything in §15.4 to §15.12 is an operator: a rule that rearranges the field the replay already has. Each one improves a column and pays for it in another, and together they settle near half of the CFD cooling. The reason is the same one §12 gave: what is missing is transport, and no rule that only shuffles the existing field can invent it. But transport is exactly the thing a recording can hand over.</p>
+
+<p>So the database was given one more channel. During preparation the CFD writes, for every frame and every cell, the vertical convective heat flux it is carrying at that moment:</p>
+
+<p style="text-align:center">$F = \rho\,c_p\,v\,\bigl(T - \langle T\rangle_\text{band}\bigr)$</p>
+
+<p>with $v$ the vertical velocity and $\langle T\rangle_\text{band}$ the volume-weighted mean temperature of the horizontal band of cells at the same height. The departure is taken from the band on purpose. Warm fluid rising and cold fluid sinking at the same height cancel in any average over that height &mdash; and that cancellation is what the cell-to-cell map performs when it is built. The band anomaly is the part that survives in the CFD and disappears from the map.</p>
+
+<p>At replay the file for the frame being played is read back and its divergence enters the temperature equation as a source: the vertical part of each face area carries the face value of the flux, $\Delta q = F_\text{face}\,|A_y|\,\Delta t$, from the lower cell to the upper one. Every transfer is capped by the same head-room limiter the sharpening uses, so no cell can be pushed past the range of its own neighbours. The flux comes from the reference; the boundedness does not have to be given up for it.</p>
+
+<div class="keybox">
+  <h4>Checked before it was believed</h4>
+  <p>A new database channel can be wrong in ways that still look plausible, so the path was tested first. <strong>The preparation is inert:</strong> the writer only reads solver fields, and its mean-temperature trace matches a preparation run made before the writer existed, digit for digit; the database it produced has the same local-diffusivity and recurrence files as the earlier one, by checksum. <strong>The frame is the right frame:</strong> against a synthetic database where every cell of frame $f$ holds the value $f$, the sum read back is $f\times$ the cell count at all 600 steps, and the frame number in the reader's log matches the library's own report of what it is replaying. <strong>Reading is free:</strong> with the flux read but multiplied by zero, the replay is bit-identical to the run without the channel. <strong>The sign is right:</strong> on a uniform upward test flux the term moves energy up and takes it out of the fluid below the lid; the energy leaving the bulk per step, divided by the imposed flux, gives 1.11&thinsp;&times;&thinsp;10<sup>&minus;3</sup> m² against a cooled surface of 1.125&thinsp;&times;&thinsp;10<sup>&minus;3</sup> m².</p>
+</div>
+
+<p>One detail turned out to matter as much as the data: <em>where</em> the limiter acts. Capping every face transfer on its own recovers little, 38.5&thinsp;% against 35.2&thinsp;% for the plain replay, and the diagnostic says why. During cooling the recorded field asks for about 201 J per step and the run passes 35.8 J of it, under a fifth. A cell in the bulk takes the flux in through its lower face and lets almost as much out through the upper one; the balance it keeps is small but the two halves are large, and capping each half separately throws away the part that would have cancelled. Summing the faces first and capping what is left is closer to what $-\nabla\!\cdot\!\mathbf{F}$ means, costs nothing in boundedness, and recovers 45.1&thinsp;% from the identical data.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>run</th><th class="num">$T_\text{mean}$ end (K)</th><th class="num">recovered</th><th class="num">trace dist. (K)</th><th class="num">front (mm)</th><th class="num">field dist. (K)</th><th class="num">renewal $\tau_{50}$ (s)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, heat loss $h=100$</td><td class="num">298.98</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">4.48</td><td class="num">&mdash;</td><td class="num">14.7</td></tr>
+<tr><td>plain replay</td><td class="num">304.03</td><td class="num">35.2%</td><td class="num">3.64</td><td class="num">8.81</td><td class="num">3.51</td><td class="num">19.5</td></tr>
+<tr><td>operators only (sharpen, then adjust)</td><td class="num">302.75</td><td class="num">47.8%</td><td class="num">2.80</td><td class="num">9.37</td><td class="num">2.82</td><td class="num">&mdash;</td></tr>
+<tr><td>recorded flux alone</td><td class="num">303.03</td><td class="num">45.1%</td><td class="num">2.90</td><td class="num">7.67</td><td class="num">2.50</td><td class="num">20.7</td></tr>
+<tr><td><strong>recorded flux + operators</strong></td><td class="num"><strong>302.21</strong></td><td class="num"><strong>53.1%</strong></td><td class="num"><strong>2.29</strong></td><td class="num"><strong>7.78</strong></td><td class="num"><strong>1.98</strong></td><td class="num"><strong>20.6</strong></td></tr>
+<tr><td>prescribed roll (§15.11)</td><td class="num">299.41</td><td class="num">80.7%</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">1.71</td><td class="num">84.4</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The last column is the one that separates this from the roll. The prescribed circulation reaches a bigger number, but it renews its pattern only every 84 s against the reference's 14.7 s: it buys the cooling by drawing a picture that stays put. The recorded flux renews at about 20 s, where the plain replay already was, and it lowers the layering anomaly at the same time. It is the first lever in this study that raises the captured cooling without slowing the pattern down, and it does it with no constant to tune &mdash; the numbers come from the CFD.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_flux_montage.png" alt="Temperature fields at mid-run and end of run: CFD, plain replay, recorded flux, flux with operators, prescribed roll" style="max-width:1100px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 30.</span> Temperature on the chamber front view at $t = 300$ s (top) and $t = 599$ s (bottom), blue 293 K to red 333 K. The plain replay carries a flat, broad interface. With the recorded flux the interface is thinner and it undulates, which is what the reference does. Adding the operators sharpens it further. The prescribed roll reaches a larger capture but draws a smooth, repeating pattern instead.</figcaption>
+</figure>
+
+<p>Two limits should be said out loud with those numbers. The maps already advect the field with the recorded displacement, and the stored flux belongs to the same flow, so part of what the term adds could be transport that is counted twice. Switching the maps off answers that: without them and without the flux the run is meaningless, ending at 329.1 K because nothing carries the inflow away, and with the flux alone it ends at 325.5 K. The channel does transport something in its own right, but roughly an order of magnitude less than the maps carry &mdash; it corrects them rather than copying them. The second limit is more basic. This is still a frozen recording: the flux belongs to the frame it was measured in, and the replay applies it to a field that has drifted away from the CFD field of that frame. It gives back the transport the averaging lost. It does not give back the feedback between the temperature it produces and the flow that would answer to it.</p>
+
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step3">
   <div class="kicker">Step 3 · planned</div>
