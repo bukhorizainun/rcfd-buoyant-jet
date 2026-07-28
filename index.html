@@ -3376,6 +3376,18 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p><strong>That is the limit, measured rather than asserted.</strong> The operators, and the recorded flux beside them, act on a field whose transport cannot answer them, and the descent the reference builds <em>is</em> that answer. The renewal-time column says the same thing: everything driven by the recording stays near 20 s, and the rule that matches the integral numbers best sits at 100 s, while the reference renews in 14.7 s. The burst is a diagnosis, not a method &mdash; for those seconds the solver does the work, which is the cost the replay exists to avoid.</p>
 
+<h4 style="margin:1.4em 0 0.4em; color:var(--ink); font-size:1.02em;">Handing it over, and taking it back</h4>
+
+<p>The test above ends where the solver ends. What it leaves open is what the replay does with the field afterwards, and answering that needs the pause to happen <em>inside</em> a running replay: the episode loop stops at 315 s, the solver takes the field for twenty seconds, and the replay carries on from what it produced.</p>
+
+<p>Two things make that possible. The replay now writes the enthalpy that matches its temperature at every step, so the state the solver inherits is consistent instead of a uniform 293 K, and the energy equation is switched on in the case before the loop starts. At the first step after the pause the whole field, 85 625 cells, is read back out of the solver into the replay data.</p>
+
+<p><strong>The hand-over works.</strong> The field the solver returns is 3.6 K colder than the one it received, 313.769 against 317.383 K, with the cells descending faster than 2 mm/s grown from 1 001 to 4 643 &mdash; and the replay picks that up: one step after the pause it carries 314.584 K where the same run without the pause carries 317.344 K.</p>
+
+<p><strong>Then the replay gives it back.</strong> By $t = 400$ s the two runs are level, 309.34 against 308.79 K, with the burst run now marginally the warmer of the two; at the end it reaches 302.951 K against 302.754 K, a capture of 45.9&thinsp;% against 47.8&thinsp;%. Twenty seconds of real physics leave no lasting trace.</p>
+
+<p>That is the cleanest statement of the limit this study can make. The cooling and the falling structure are not missing because the replay was never given them &mdash; they were given, in full, and the frozen transport returned the field to its own trajectory within about a minute of replay time. A mechanism cannot be handed over once. It has to be present while the field evolves, and that is the one thing a recording, of any channel, does not carry.</p>
+
 <div class="keybox">
   <h4>A property worth recording</h4>
   <p>Reading the enthalpy field against the temperature field gives the case's own specific heat: $H = c_p\,(T - 298.15)$ with $c_p = 1006.43$ J/kg&thinsp;K, and the same value in the CFD case and in the preparation. The material named <em>water</em> carries the specific heat, the thermal conductivity (0.0242 W/m&thinsp;K) and the molecular weight (28.966 kg/kmol) of <em>air</em>; only the density, through the temperature-dependent function, and the viscosity belong to water. It disturbs no comparison here, since both sides of every comparison share it, and it cancels in the recorded flux, where the same $c_p$ appears in the stored flux and in the cell heat capacity that turns it back into a temperature. It does matter for any statement about the fluid itself, and for the diffusion floor, which on these properties is 0.22 mm rather than the 0.53 mm quoted for molecular water in §15.12.</p>
