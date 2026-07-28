@@ -3338,6 +3338,44 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>That is the honest state of it. One route reaches the numbers with a field that barely moves; the other keeps the field moving and reaches half the numbers; putting them in the same run trades one for the other rather than adding them. What separates the reference from all of them is still the same thing the difference maps show at the lid: a row of cold fingers that form, fall and disappear, which needs the cooled fluid to change the flow that carries it &mdash; and that feedback is exactly what a frozen recording does not contain.</p>
 
+<h3 id="feedback">15.15 &mdash; What happens when the feedback is switched back on</h3>
+
+<p>Every operator in §15.4 to §15.14 works on the scalar while the transport stays frozen. The reference does something none of them can imitate: fluid that the lid has cooled becomes heavy, sinks, and <em>changes the flow that carries it</em>. So the fair question is not "which operator draws plumes" but "what would the replay field do if it were handed back to a solver".</p>
+
+<p>That test needs care, because the replay case cannot be solved as it stands. Two things had gone unnoticed, for a good reason &mdash; the replay never solves energy, the temperature lives in the rCFD scalar:</p>
+
+<ul>
+  <li>the <strong>energy model is switched off</strong>: the equation list holds only <code>flow</code>;</li>
+  <li>the <strong>enthalpy field sits at a uniform 293 K</strong> while the temperature field carries the replay values.</li>
+</ul>
+
+<p>Enthalpy is what the energy equation marches on, so the first solver step recomputes the temperature from it and the field is gone. Measured on the replay state: the maximum falls from 332.998 K to 293.000 K within one second of solver time. An earlier attempt at this test therefore returned a run identical, to the last digit, to the run without it &mdash; the solver had wiped the field and the replay carried on from its own array.</p>
+
+<p>The transfer is done on the data files instead. The CFD case keeps its own setup &mdash; energy equation, wall sink, buoyancy through the density function &mdash; and receives the replay's temperature, the enthalpy computed to match it, and the recorded velocity, so the test does not start from rest. Then the solver runs.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>solver time</th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$\delta T$ (K)</th><th class="num">fastest descent (mm/s)</th><th class="num">cells falling &gt; 2 mm/s</th></tr>
+</thead>
+<tbody>
+<tr><td>0 s (replay state)</td><td class="num">317.383</td><td class="num">14.56</td><td class="num">&minus;7.9</td><td class="num">1 001</td></tr>
+<tr><td>5 s</td><td class="num">316.127</td><td class="num">14.41</td><td class="num">&minus;36.0</td><td class="num">9 107</td></tr>
+<tr><td>20 s</td><td class="num">314.618</td><td class="num">13.91</td><td class="num">&minus;12.9</td><td class="num">12 694</td></tr>
+<tr><td>40 s</td><td class="num">314.881</td><td class="num">13.92</td><td class="num">&minus;15.9</td><td class="num">10 199</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The answer is immediate. Within five seconds the fastest descent grows by a factor of 4.6 and the number of falling cells nine-fold; by twenty seconds it is nearly thirteen times the starting count and the tank has lost 2.8 K, about ten times the rate any operator here reaches. Nothing was tuned for it. The state was already unstable; the only thing added was the fluid's ability to act on it.</p>
+
+<p><strong>That is the limit, measured rather than asserted.</strong> The operators, and the recorded flux beside them, act on a field whose transport cannot answer them, and the descent the reference builds <em>is</em> that answer. The renewal-time column says the same thing: everything driven by the recording stays near 20 s, and the rule that matches the integral numbers best sits at 100 s, while the reference renews in 14.7 s. The burst is a diagnosis, not a method &mdash; for those seconds the solver does the work, which is the cost the replay exists to avoid.</p>
+
+<div class="keybox">
+  <h4>A property worth recording</h4>
+  <p>Reading the enthalpy field against the temperature field gives the case's own specific heat: $H = c_p\,(T - 298.15)$ with $c_p = 1006.43$ J/kg&thinsp;K, and the same value in the CFD case and in the preparation. The material named <em>water</em> carries the specific heat, the thermal conductivity (0.0242 W/m&thinsp;K) and the molecular weight (28.966 kg/kmol) of <em>air</em>; only the density, through the temperature-dependent function, and the viscosity belong to water. It disturbs no comparison here, since both sides of every comparison share it, and it cancels in the recorded flux, where the same $c_p$ appears in the stored flux and in the cell heat capacity that turns it back into a temperature. It does matter for any statement about the fluid itself, and for the diffusion floor, which on these properties is 0.22 mm rather than the 0.53 mm quoted for molecular water in §15.12.</p>
+</div>
+
 <!-- =========================================================== -->
 <div class="part-divider wip" id="part-step3">
   <div class="kicker">Step 3 · planned</div>
