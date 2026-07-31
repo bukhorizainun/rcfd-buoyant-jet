@@ -1132,6 +1132,23 @@ footer .author { font-weight: 600; color: var(--ink-soft); }
 .katex-display { margin: 1.4em 0; }
 
 /* ============ Print ============ */
+
+/* Long background passages, folded away by default so the results come first.
+   Print rules above already force every <details> open, so nothing is lost
+   when the page is printed or saved as PDF. */
+details.theory {
+  margin: 1.1rem 0;
+  border-left: 3px solid var(--rule, #d8dee6);
+  padding: 0 0 0 1rem;
+}
+details.theory > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink-soft, #55606e);
+  padding: 0.35rem 0;
+}
+details.theory[open] > summary { margin-bottom: 0.6rem; }
+
 @media print {
   /* Force light tokens regardless of current theme */
   :root, [data-theme="dark"] {

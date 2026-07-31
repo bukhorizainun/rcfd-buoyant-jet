@@ -198,6 +198,9 @@
   <details class="toc-group">
     <summary>Step 3 — Finalization<span class="step-status plan">planned</span></summary>
     <ol>
+      <li><a href="#sinkaudit">What the Reference Removes</a></li>
+      <li><a href="#matched">The Family on a Matched Sink</a></li>
+      <li><a href="#otherwork">Other Work</a></li>
       <li><a href="#step3">Writing &amp; Finalization</a></li>
     </ol>
   </details>
@@ -283,6 +286,10 @@
 <h2 id="rcfd">3 — rCFD in a Nutshell</h2>
 
 <p>rCFD has two phases: <em>preparation</em> (run a short CFD, save the flow patterns) and <em>replay</em> (use those saved patterns to push the temperature around). The diagram below shows the whole pipeline at a glance &mdash; the animated dots illustrate how data flows between the steps.</p>
+
+<details class="theory">
+  <summary>How rCFD works, in full</summary>
+
 
 <figure class="workflow wide">
   <svg viewBox="0 0 1100 360" xmlns="http://www.w3.org/2000/svg" role="img"
@@ -441,9 +448,14 @@
 <p>The shift only moves things; it does not mix them. So a pure C2C replay would give an unrealistically sharp boundary between warm and cold zones. The next section shows how rCFD adds the missing mixing.</p>
 
 <!-- =========================================================== -->
+</details>
 <h2 id="fsd">4 — Face-Swap Diffusion</h2>
 
 <p>After each C2C shift, rCFD goes over every internal face and moves a small amount of heat from the warmer cell to the cooler one. This is the <strong>face-swap diffusion operator</strong>. It is <em>mass-neutral</em>: whatever one cell loses, the other cell gains, so the total heat in the tank does not change. It only adds the mixing that the shift alone cannot give. This face-swap step comes from Pirker and Lichtenegger in 2018 <a href="#ref-pirker2018">[2]</a>, and Lumetzberger et al. in 2025 <a href="#ref-lumetzberger2025">[3]</a> later wrote it in a cleaner mathematical form.</p>
+
+<details class="theory">
+  <summary>How face-swap diffusion works, in full</summary>
+
 
 <figure class="workflow wide">
   <svg viewBox="0 0 1100 340" xmlns="http://www.w3.org/2000/svg" role="img"
@@ -646,6 +658,7 @@
 </figure>
 
 <!-- =========================================================== -->
+</details>
 <h2 id="step1a">5 — Step 1a: Workflow on Windows 11</h2>
 
 <p>The rCFD tutorial was originally written for Linux. Step 1a takes the same tutorial and makes it run end-to-end on Windows 11 with ANSYS Fluent 2022 R2. The main changes were:</p>
@@ -2614,11 +2627,6 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p><strong>The roll can move into the database.</strong> That last sentence has now been tested directly. A preparation run records the adiabatic flow while the prescribed roll is added to the displacement markers as an extra conservative flux, so the recorded displacement fields — the ones the preparation machinery turns into cell-to-cell shifts — carry the flow plus the roll, and the replay needs no roll code at all. The first attempt failed in an instructive way. At 20 mm/s a one-second frame is a twenty-cell displacement, and the shift applies it in one jump: the layering is torn apart (Figure 11h, fourth panel) and the capture collapses, while the same roll at the hook, split into ten sub-steps, stays fine. The failure is granularity, not principle. Rebuilt at 5 mm/s, where a frame is a five-cell shift, the database roll lands within two points of its hook twin at the same speed — 49% against 50% in the account of §15.3's recovery figure (mean of the last 20 s; the hook rungs above read 50% and 69% in that account) — and the frames keep the stratified structure instead of scrambling it. One bookkeeping note travels with this database: even with the wall loss off, its replay ends 3.9 K colder than the adiabatic base, because the steady roll keeps carrying warm fluid down to the outlet and the export term removes it; of the 49%, about ten points go through the wall path and the rest through that stirring-driven export. The practical reading: a prescribed circulation can live in the database as a synthetic displacement field, provided its per-frame displacement stays at a few cells.</p>
 
-<figure class="wide">
-  <img src="assets/figures/fig_negdiff_montage_ld_hl_rolldb.png" alt="Contour montage: CFD, baseline replay, roll at the hook, roll in the database at 20 mm/s with a scrambled field, and roll in the database at 5 mm/s with a stratified, cooled field" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-  <figcaption><span class="label">Figure 11h.</span> The same roll in three homes. At the hook (third panel) the roll is sub-stepped and the field stays layered. Baked into the database at 20 mm/s (fourth panel) each frame moves parcels twenty cells in one jump and the field is torn apart. At 5 mm/s (fifth panel) the per-frame shift is a few cells: the database roll keeps the layering, cools the upper bulk, and matches its hook twin's capture.</figcaption>
-</figure>
-
 <p>The two numbers agree, 49% against 50%, but the video is where the two homes stop agreeing. Run the roll-at-hook and the roll-in-database panels side by side and the database roll's own geometry becomes hard to miss: two counter-rotating cells, prescribed as a single streamfunction spanning the tank, print themselves onto the field as two warm islands that never fully clear. At the hook the same roll is superimposed step by step on a replay field the recorded flow is already stirring, and the two mix well enough that no cell pattern survives to the end; baked into the database, the roll is the recorded motion, so its two-cell fingerprint replays identically every frame and never gets rubbed out. The CFD, by contrast, drains through many small plumes, triggered where and when the film happens to break, not through two large fixed cells. Same total amount, same speed, and still a different picture, because the geometry that produces the number is not hidden in a single end-state frame the way it is in motion.</p>
 
 <figure class="wide">
@@ -2631,11 +2639,6 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <figure class="wide">
   <img src="assets/figures/fig_negdiff_ld_hl_ladder.png" alt="Bar chart: share of the CFD cooling captured by each stand-in, from sharpening at 13 percent through local rules near a third to the prescribed roll rungs that flatten near 77 percent and the CFD at 100" style="max-width:860px;width:100%;display:block;margin:0 auto;border-radius:6px;">
   <figcaption><span class="label">Figure 11f.</span> The ladder as one picture, computed from the raw temperature traces. Local rules cluster in the shaded band; only the prescribed circulation climbs out of it, and it climbs with its speed until it flattens at the top of the CFD speed range.</figcaption>
-</figure>
-
-<figure class="wide">
-  <img src="assets/figures/fig_negdiff_montage_ld_hl_ca.png" alt="Contour montage: CFD with a uniformly cooled green upper bulk; plain replay with a cold band over a hot core; adjusted replays with a well-mixed upper bulk at a lighter shade; prescribed roll closest to the CFD shade" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-  <figcaption><span class="label">Figure 11g.</span> What each family fixes. By the end of the run the plain replay has the wrong <em>structure</em>: a cooled band floating over a hot core. The adjusted replays have the right structure — an upper bulk that cools as one well-mixed layer — but at a lighter shade. The prescribed roll comes closest to the CFD shade as well; the faint columnar pattern in its panel is the imprint of the prescribed roll cells.</figcaption>
 </figure>
 
 <figure class="wide">
@@ -2818,59 +2821,9 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <figcaption><span class="label">Figure 16b.</span> End-state temperature along the vertical centreline: height against temperature, a metric independent of the mean. The CFD (dashed) cools its whole upper layer. The plain replay and the sharpening runs keep it warm, the isotropic one adding a spurious cold bulge low in the tank. The vertical and guarded runs hold the sharpest, most CFD-like thermocline. Only the transport runs bring the upper layer down toward the CFD.</figcaption>
 </figure>
 
-<h3 id="gated-pairs">15.5 &mdash; Turning the same test around, and giving each operator its own window</h3>
-
-<p>The guard of &sect;15.4 has to recognise a statically unstable pair before it can skip it, so the operator already knows where the field is unstable. Under heat loss those pairs are not incidental: the sink manufactures them, cooling the top cell layer so that cold sits above warm beneath the whole lid. In the reference that state does not survive, because the film breaks into plumes that sink while warm fluid rises to replace them. The replay cannot do this on its own. But the same local test can be given the opposite instruction: where a near-vertical pair is unstable, exchange heat <em>down</em> the gradient until the pair is neutral. Nothing new is measured, and no length scale is introduced. The direction still comes from the local gradient, and static stability decides the sign. One form mixes the pair towards its mass-weighted mean, the classical convective adjustment; the other swaps the two cells outright, so a cold parcel falls one cell per sweep undiluted, closer to what a plume does.</p>
-
-<p>It works, and it is the first local step in this study to raise the captured cooling rather than trade it: $43.0\%$ for the mixing form and $45.0\%$ for the swapping one, against $35.2\%$ for the plain replay, with a better mean-temperature trace in both cases ($3.0$ K against $3.64$ K).</p>
-
-<p><strong>When the rule is allowed to act matters more than how hard it acts.</strong> The frames exposed a defect the numbers hid. While the hot inflow is still filling the tank, the rule tears the rising plume into vertical filaments, so a single inlet appears to produce three jets. The cause is in the test: a plume climbing through colder water carries warm fluid under cold fluid at its leading edge, which is a statically unstable column by the criterion the rule uses. The cold film the rule was written for does not exist yet at that stage, so the rule is held until the inflow stops. The gate can be checked instead of trusted: before the switch a gated run reproduces the plain replay to $0.003$ K, against $2.06$ K for the ungated one, which is the tearing measured. Holding it back also pays, and the capture rises to $47.1\%$ with ten sweeps and $47.3\%$ with thirty.</p>
-
-<p><strong>Each operator in its own window.</strong> The sharpening builds the front while the jet runs, and it is also what blocks the transport once the cooling starts; the pair rule is the reverse. So the sharpening is switched off when the inflow stops and the pair rule switched on there. That combination is the best of the whole local family on two counts at once: $47.8\%$ of the CFD cooling, the highest here, and a mean-temperature deviation of $2.80$ K, the smallest here. The control run says how much belongs to the sharpening: the same schedule with no sharpening reproduces the gated pair rule exactly, $47.1\%$, so the sharpening window is worth $0.7$ points of capture and $0.38$ K of trace. It earns its place for the shape it leaves behind. The end state pays for it in one column, the front spreading back to $9.4$ mm against $5.0$ mm for a run sharpened throughout, with $4.5$ mm in the reference.</p>
-
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr><th>run</th><th>end (K)</th><th>captured</th><th>vs no-sink</th><th>mean |&Delta;T| (K)</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>plain replay (local diffusivity)</td><td class="num">304.04</td><td class="num">35%</td><td class="num">25%</td><td class="num">3.64</td></tr>
-    <tr><td>+ unstable pairs, mixed</td><td class="num">303.24</td><td class="num">43%</td><td class="num">32%</td><td class="num">3.05</td></tr>
-    <tr><td>+ unstable pairs, swapped</td><td class="num">303.04</td><td class="num">45%</td><td class="num">34%</td><td class="num">3.01</td></tr>
-    <tr><td>+ unstable pairs, swapped, gated</td><td class="num">302.82</td><td class="num">47%</td><td class="num">36%</td><td class="num">3.18</td></tr>
-    <tr><td>+ the same, 30 sweeps</td><td class="num">302.81</td><td class="num">47%</td><td class="num">37%</td><td class="num">3.17</td></tr>
-    <tr class="best"><td>sharpen while filling, pairs while cooling</td><td class="num">302.75</td><td class="num">48%</td><td class="num">37%</td><td class="num">2.80</td></tr>
-    <tr><td>the same with the gradient normal</td><td class="num">302.75</td><td class="num">48%</td><td class="num">37%</td><td class="num">3.11</td></tr>
-    <tr><td>control: no sharpening, gated pairs only</td><td class="num">302.82</td><td class="num">47%</td><td class="num">36%</td><td class="num">3.18</td></tr>
-  </tbody>
-</table>
-</div>
-
-<figure class="wide">
-  <img src="assets/figures/fig_note15_ladder.png" alt="Captured cooling of the local operators on the heat-loss database" style="max-width:820px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-  <figcaption><span class="label">Figure 16c.</span> Captured cooling of the local family on the heat-loss database, as a share of the CFD depth of $10.19$ K. Every form of the sharpening sits below the plain replay; the pair rule is the only local step above it, and the split schedule is the highest.</figcaption>
-</figure>
-
-<figure class="wide">
-  <img src="assets/figures/fig_note15_montage.png" alt="CFD and the local operators, mid-run, end of run, and the inlet corner" style="max-width:1100px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-  <figcaption><span class="label">Figure 16d.</span> Temperature on the chamber, mid-run (top) and end of run (middle), on the same 293&ndash;333 K scale, with the inlet corner enlarged below. The panels get greener from left to right and their interfaces get wider, which is the trade-off of the table in one picture. The enlargement settles a reading question: the tank has one inlet, in the channel on the left, and the band rising beside it is the same jet after buoyancy has lifted it.</figcaption>
-</figure>
-
-<figure class="wide">
-  <video controls preload="metadata" playsinline style="max-width:1100px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-    <source src="assets/videos/vid_nadb_cfd_vs_split.mp4" type="video/mp4">
-  </video>
-  <figcaption><span class="label">Figure 16e.</span> CFD reference (left) against the split schedule (right), temperature 293&ndash;333 K. The replay now drains its upper layer downward instead of only sideways: cold streaks descend from the lid, which is the pair rule standing in for the collapsing film. The amount and the direction are reproduced; the narrow, intermittent texture of the reference is not.</figcaption>
-</figure>
-
 <h3 id="pictures-again">15.6 — The pictures against the numbers, again</h3>
 
 <p>§15.2 ended by warning that the animation and the metric can disagree. The new runs sharpen that warning into something usable. Now there are replays that match the <em>number</em>, replays that match the <em>look</em>, and one that tries to do both.</p>
-
-<figure class="wide">
-  <img src="assets/figures/fig_negdiff_montage_nadb.png" alt="Temperature fields of the operator families on the heat-loss database at mid-run and end of run" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-  <figcaption><span class="label">Figure 17.</span> Mid-run (top) and end of run (bottom) on the heat-loss database. The sharpening frames keep the sharp base and the jet arc at mid-run but end too warm; the roll matches the end-state shade but has already erased the arc by mid-run.</figcaption>
-</figure>
 
 <figure class="wide">
   <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
@@ -3061,11 +3014,6 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <p>So the earlier reading of this section needs correcting: it is not that the gradient normal is preferable for the appearance of the field. Neither normal improves the appearance. What the sharpening line delivers is the front, and the front alone.</p>
 
 <figure class="wide">
-  <img src="assets/figures/fig_diff_vs_cfd.png" alt="Difference fields: replay minus CFD for four operators at mid-run and end of run" style="max-width:900px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-  <figcaption><span class="label">Figure 25.</span> Replay minus reference, in Kelvin, decoded from the frames. Red is warmer than the reference, blue colder, white agreement. The sharpened field is uniformly too warm over the whole upper layer, which is why it scores worst on the table above even though its interface is the thinnest. The mixing profile has roughly the right level and the wrong structure.</figcaption>
-</figure>
-
-<figure class="wide">
   <img src="assets/figures/fig_nadb_sharpening_zoom.png" alt="Montage: CFD, plain replay, vertical and gradient sharpening at mid-run and end of run" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;">
   <figcaption><span class="label">Figure 24.</span> Mid-run and end of run on the heat-loss database. At mid-run both sharpened runs cut the broad interface of the plain replay back towards the reference. At the end the split is plain to see: the sharpened fields hold the thin interface but their upper layer stays orange, several Kelvin warmer than the reference's green, while the plain replay has the closer shade and the broader interface. None of them has the reference's cold fingers. The bottom row is there because the colour scale misleads: on a fixed 293&ndash;333 K rainbow a thin front is compressed into a few narrow bands and reads as a line drawn across the picture, so the eye judges the front well and the layers badly, which is the wrong way round. Enlarged, the line is what it is, a transition a few millimetres thick, and the reference's sits higher than any of the replays'. The dashed marks on the middle row show which band the bottom row stretches, so that row is a wide strip and not a square by design.</figcaption>
 </figure>
@@ -3076,6 +3024,284 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <h4>Where this leaves the heat-loss case</h4>
   <p>The wall term was matched from the start: the replays extract 1.7&ndash;2.0 kJ against about 1.5&ndash;1.8 kJ in the reference. What is missing is the advective export, and that is produced in the CFD by a flow which rearranges the whole tank in response to its own temperature field. A recorded flow cannot be asked to do that, so the hook can only imitate it. Rebuilding the database from the cooling run is what helps without a single new constant, lifting every operator by six to eight points, and a circulation whose speed comes from the convective scale reaches 53% with nothing left to tune. Beyond that, the capture column keeps rising only when the operator stirs more of the tank than the buoyancy forcing pays for, and the field metrics show the cost.</p>
 </div>
+
+<h3 id="floor">15.12 &mdash; The smallest feature the replay can hold</h3>
+
+<p>Running the same probe on the adiabatic database gives the reference point, and it also gives the study its one unifying number. In the cooling window the two databases are almost identical near the lid: $2.16\times10^{-6}$ m²/s against $2.52\times10^{-6}$, both about half their own bulk value. They differ only while the tank fills, where the cooling run carries an order of magnitude more mixing at the ceiling because the sink is already driving convection there. So the order-of-magnitude gap to the reference's near-molecular film belongs to this kind of database, not to the heat-loss case in particular.</p>
+
+<p>Turning the diffusion number around gives a length instead of a criterion. A feature of size $L$ survives a step while $D\,\Delta t / L^2$ stays below about a half, so the replay has a floor</p>
+
+<p style="text-align:center">$L_\text{min} = \sqrt{2 D \Delta t}$</p>
+
+<p>which for the bulk diffusivity of either database and the one-second step used in every run of this study is <strong>2.93 mm</strong>. Nothing smaller can be maintained, whatever operator asks for it.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>feature</th><th class="num">size (mm)</th><th class="num">&divide; floor</th><th class="num">holdable</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD thermocline, adiabatic case</td><td class="num">5.59</td><td class="num">1.91</td><td class="num">yes</td></tr>
+<tr><td>CFD thermocline, heat loss</td><td class="num">4.48</td><td class="num">1.53</td><td class="num">yes</td></tr>
+<tr><td>plain replay thermocline</td><td class="num">8.81</td><td class="num">3.01</td><td class="num">yes</td></tr>
+<tr><td>sharpened front, adiabatic</td><td class="num">5.52</td><td class="num">1.88</td><td class="num">yes</td></tr>
+<tr><td>sharpened front, heat loss</td><td class="num">4.97</td><td class="num">1.70</td><td class="num">yes</td></tr>
+<tr><td>step at the layer base</td><td class="num">2.08</td><td class="num">0.71</td><td class="num">no</td></tr>
+<tr><td>profile-depth front</td><td class="num">2.90</td><td class="num">0.99</td><td class="num">no</td></tr>
+<tr class="best"><td>CFD cold film at the lid</td><td class="num">1.00</td><td class="num">0.34</td><td class="num">no</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The study reads differently afterwards. The defect the sharpening was designed for in the adiabatic case, a 5.59 mm thermocline, sits at 1.9 times the floor &mdash; and the operator reached 5.52 mm and held it. The heat-loss thermocline at 4.48 mm sits at 1.5 times, and the operator held that too. The lid film at one cell sits at 0.34 times the floor, and no arrangement of operators produced it: not the plume rule, not the anti-diffusion gated to the ceiling, not the two together. The profile-depth front settled at 2.90 mm, the floor to two decimal places, because that is where a maintained front has to end up. And the 2.08 mm base of the step operator is below it, which is the precise sense in which that value was imposed rather than held.</p>
+
+<div class="keybox">
+  <h4>Why the adiabatic case worked and this one cannot</h4>
+  <p>It is not that heat loss is harder in some general way. The adiabatic defect lived above the floor and the heat-loss picture needs detail below it. $L_\text{min} = \sqrt{2 D \Delta t}$ can be evaluated before any operator is written, from the database and the step alone, which makes it the first thing worth checking when a replay is asked to reproduce a feature: measure the feature, measure the floor, and only then decide whether an operator is the right tool. Molecular water would put the floor at 0.53 mm, which is why the reference can carry a film the replay cannot.</p>
+</div>
+
+<h3 id="fluxvsmixing">15.14 &mdash; The number, the picture, and whether the picture is alive</h3>
+
+<p>§15.11 left the layer-base mixing at $c = 0.7$ as the closest field of the study, and it still is: 72&thinsp;% of the cooling and 1.23 K from the reference frames, with an end heterogeneity of 6.61 K against the reference's 6.76 K. Set the difference maps side by side and it is not close &mdash; the recorded flux with its operators sits at 3.84 K from the reference at the end of the run, the mixing rule at 1.28 K.</p>
+
+<p>Then measure whether the picture lives. The renewal time of the pattern, the lag at which the field's anomaly loses half the correlation with itself, is 14.7 s in the reference and 19.5 s in the plain replay. The recorded flux keeps it there, 20.6 s. The mixing rule at $c = 0.7$ takes it to <strong>100 s</strong>: over the whole cooling phase the same picture is redrawn with a slowly changing shade. Its statistics are the closest of the study and almost nothing in it is made or lost.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>run</th><th class="num">capture</th><th class="num">field dist. (K)</th><th class="num">$\delta T_\text{end}$ (K)</th><th class="num">front (mm)</th><th class="num">renewal $\tau_{50}$ (s)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, $h = 100$</td><td class="num">&mdash;</td><td class="num">0</td><td class="num">6.76</td><td class="num">4.48</td><td class="num">14.7</td></tr>
+<tr><td>plain replay</td><td class="num">35.2%</td><td class="num">3.51</td><td class="num">9.30</td><td class="num">8.81</td><td class="num">19.5</td></tr>
+<tr><td>recorded flux + operators</td><td class="num">53.1%</td><td class="num">1.98</td><td class="num">9.69</td><td class="num">7.78</td><td class="num">20.6</td></tr>
+<tr><td>layer-base mixing $c=0.7$</td><td class="num">71.9%</td><td class="num">1.23</td><td class="num">6.61</td><td class="num">2.90</td><td class="num">100.0</td></tr>
+<tr><td>layer-base mixing $c=0.85$</td><td class="num">77.2%</td><td class="num">1.47</td><td class="num">5.98</td><td class="num">&mdash;</td><td class="num">93.3</td></tr>
+<tr class="best"><td>$c=0.7$ + recorded flux &times;0.25</td><td class="num">67.6%</td><td class="num">1.23</td><td class="num">7.50</td><td class="num">&mdash;</td><td class="num">77.7</td></tr>
+<tr><td>$c=0.7$ + recorded flux</td><td class="num">64.9%</td><td class="num">1.39</td><td class="num">7.92</td><td class="num">2.51</td><td class="num">29.3</td></tr>
+<tr><td>prescribed roll 30 + sharpening</td><td class="num">80.7%</td><td class="num">1.71</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">84.4</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The two look like halves of one answer, so we ran them together. Both halves of that guess hold and they still do not add up. With the full recorded flux underneath it the mixing drops from 71.9&thinsp;% to 64.9&thinsp;% and its heterogeneity moves away from the reference, because the mixing has already flattened the anomalies the flux would act on and a nearly uniform layer leaves the flux almost no head-room to work in. What the flux does deliver is the other half: the renewal time falls from 100 s to 29.3 s, three times faster, and the front roughness moves towards the reference.</p>
+
+<p>The trade between those two ends is not linear, and its middle is the best field of the study. At a <em>quarter</em> of the recorded flux the capture is 67.6&thinsp;%, four points below the mixing alone instead of seven, while the renewal time is already down to 77.7 s and both texture measures &mdash; the layering anomaly 0.019 and the front roughness 0.0057 &mdash; are the closest to the reference of any run here. On the last frame its field sits <strong>0.85 K</strong> from the reference, against 1.28 K for the mixing alone, which ends a shade too cold. Turning the mixing up instead buys the cooling the other way: $c = 0.85$ reaches 77.2&thinsp;%, but its end heterogeneity drops to 5.98 K, below the reference's 6.76 K, so the layer becomes more uniform than the flow it copies while the picture stays as static as before.</p>
+
+<p>That is the honest state of it. One route reaches the numbers with a field that barely moves; the other keeps the field moving and reaches half the numbers; putting them in the same run trades one for the other rather than adding them. What separates the reference from all of them is still the same thing the difference maps show at the lid: a row of cold fingers that form, fall and disappear, which needs the cooled fluid to change the flow that carries it &mdash; and that feedback is exactly what a frozen recording does not contain.</p>
+
+<h2 id="sinkaudit">16 — What the Reference Actually Removes</h2>
+
+<p>Every number on this page that says how much of the CFD cooling the replay captures is a ratio, and the bottom of that ratio is the cooling of the reference. That bottom had been taken on trust. It is worth measuring, because the replay copies the reference's own sink formula, so the two ought to be removing the same heat from the same cells.</p>
+
+<p>They are not, and the difference is large enough to change how everything above should be read.</p>
+
+<h3>16.1 — Measuring the lid term</h3>
+
+<p>The heat-loss case and the adiabatic case share a mesh, an inlet schedule and a mass flow. They differ in one thing, the sink at the lid. Their fields are stored every 15 s, so each term of the heat balance can be read straight out of them: what is stored in the tank, what enters at the inlet, what leaves at the outlet, and what the lid takes.</p>
+
+<p>Reading both cases and subtracting one balance from the other is better than reading either alone, because whatever bias the flux estimates carry is the same on both sides and cancels. The two inlet integrals agree to 1.3 J out of 25.3 kJ, which is the check that the pair really is a controlled one. What is left after the subtraction is the heat the lid took: <strong>6581 J</strong>.</p>
+
+<p>The formula the case declares gives a different answer. Evaluated on the reference's own fields, $h A (T_\text{cell} - T_\infty)$ with $h = 100$ W/m²K over the 1125 lid cells integrates to <strong>1575 J</strong> over the same window. The reference removes <strong>4.18 times</strong> the heat its stated boundary condition accounts for.</p>
+
+<p>Three further routes agree. The global balance of the heat-loss case on its own asks for 6763 J. A control volume drawn around the lid cell row, fed by advection and conduction from below, asks for 8586 J. And the replay, applying the declared formula to its own lid row, removes 1930 J. The replay is faithful to the boundary condition it was given. It is the reference that is not.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_wall_sink_finding.png" alt="Heat leaving through the lid: the reference measured against its own formula, and the replay">
+  <figcaption><span class="label">Figure 33.</span> Left: the heat leaving through the lid. The reference's own formula (dashed) and the replay under the declared coefficient sit together near 3.5 W, while the heat the reference actually loses (solid) runs about four times higher. Raising the replay's coefficient puts it on the measured curve. Right: the mean temperature that follows. Under the declared coefficient the replay tracks the <em>adiabatic</em> reference far more closely than the heat-loss one.</figcaption>
+</figure>
+
+<h3>16.2 — Why the gap looked like a limit</h3>
+
+<p>This changes how the earlier sections read. A replay removing 1930 J was being scored against a reference removing 6581 J, so most of the distance between them was never a transport problem. It was a boundary condition the two sides did not share.</p>
+
+<p>The shape of the error says the same. In the plain replay the upper layer ended 7.8 K too warm, and it was too warm almost <em>uniformly</em>: the difference map at the end of the run showed the whole region above the thermocline in one flat colour, at a mean absolute difference of 5.20 K. That is a level error, not a shape error. A sharpening step moves heat between neighbouring cells and changes the shape of a front. It cannot lower the temperature of a whole well-mixed layer, because inside that layer there is nowhere for the heat to go. So every form of the step was tried against an error it had no way of reaching, and the family looked as though it had met a ceiling.</p>
+
+<p>The montages carried the same signature and were read the same way. Frame after frame showed a warm upper layer that no operator would shift, and the natural reading was that the recorded motion did not carry enough heat downward. Part of that reading survives, and it is the front. The larger part does not.</p>
+
+<p>One earlier remark needs correcting in the light of this. Section 13 turned $h$ up and called the result <em>papering over the missing flow with an unphysical coefficient</em>. On the evidence above, raising the replay's coefficient is not papering over anything: it is setting the replay to remove the heat the reference actually removes. The physical objection was reasonable when the reference's own lid term had not been measured. It no longer holds.</p>
+
+<h3>16.3 — What the extra removal is not</h3>
+
+<p>The number invites an obvious question: where does the extra heat go? The source term was instrumented so it could answer for itself. It records the value it hands the solver into a user memory, and a hook sums that over the field at the end of every time step. Over a window inside the hot plateau it reports 3.44 W over exactly 1125 cells. That is the declared formula, over the intended cells. The source term is not saying one thing and doing another.</p>
+
+<p>Six further candidates were then run rather than argued about, each as a short window restarted from the same stored field.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Control</th><th class="num">Unaccounted removal (W)</th></tr>
+</thead>
+<tbody>
+<tr><td>As built</td><td class="num">+9.76</td></tr>
+<tr><td>Source linearisation removed</td><td class="num">+9.66</td></tr>
+<tr><td>Inner iterations raised from 30 to 100</td><td class="num">+9.63</td></tr>
+<tr><td>Time step cut from 0.2 to 0.05 s</td><td class="num">+9.67</td></tr>
+<tr><td>Outlet backflow</td><td class="num">none, 0 faces</td></tr>
+<tr><td>Domain mass</td><td class="num">differs by 0.03%</td></tr>
+<tr><td><strong>Coefficient set to zero (null control)</strong></td><td class="num"><strong>−1.16</strong></td></tr>
+<tr><td>Density held constant (buoyancy off)</td><td class="num">≈ 0.2 to 2</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The null control is the one that matters most, because it tests the measurement rather than the case: with the coefficient set to zero the budget closes to −1.16 W. The method is sound, and the imbalance appears only when the sink is switched on. With the density held constant, so that the cooled lid can no longer drive any overturning, the imbalance largely goes with it.</p>
+
+<p>The extra removal is therefore tied to the buoyancy-driven convection the sink sets off, and not to the sink's own value, its linearisation, the time step or the iteration count. That is as far as the present evidence reaches. The cause is left open, the number is reported as measured, and every comparison below is made against the heat the reference actually removes.</p>
+
+<h3>16.4 — The sign of the wall term</h3>
+
+<p>One reading of the wall term deserves its own test, because if it held it would overturn all of the above. The term is written here with the heat that <em>leaves</em> as the positive quantity: the cell is cooled by $-q$, and the balance target is lowered by the same amount. It can also be written as a signed source, in which $q$ is what the cell <em>receives</em> and is therefore negative above ambient. The second convention is the more common one, so the question is whether the result depends on the choice.</p>
+
+<p>It does not. Rewriting the block in the signed convention, with every downstream sign following, reproduces the original run byte for byte across all 601 samples. The convention is a way of writing it down, not a physical choice.</p>
+
+<p>The mistake that the convention invites is a different matter, and it was run as well. If the field is cooled while the balance target is <em>raised</em> by the same amount, the global-balance correction has to put the heat back. That run ends at 307.93 K against 303.81 K for the code as it stands: <strong>+4.12 K</strong>, and warmer than a run with no sink at all. The cooling disappears completely. The replay does the opposite, ending 2.5 K below its own adiabatic run, which is the direct evidence that it is not making that slip.</p>
+<h2 id="matched">17 — The Operator Family on a Matched Sink</h2>
+
+<p>With both sides removing the same heat, the operators can be compared on their own merits. The runs below all use a lid coefficient set so that the replay removes 6623 J against the reference's 6581 J. Nothing else about the database, the schedule or the limiter changes.</p>
+
+<p>Setting the sink alone, with no operator at all, already moves most of the distance. The end profile falls from an RMS departure of 5.15 K to 2.26 K, the mean temperature from 4.11 to 1.10 K over the run, and the top of the tank from 7.8 K too warm to 3.0 K too cold. Whatever is left after that is what the local rules have to work on, and it is a different problem from the one the earlier sections were solving.</p>
+
+<h3>17.1 — One change that was hiding the rest</h3>
+
+<p>The first result had nothing to do with which operator is used. It is <em>when</em> the operator is allowed to run.</p>
+
+<p>The earlier work split the replay into two windows and stopped the sharpening when the inflow stopped, at 315 s. That choice was made for good reasons at the time: run from the start and left running, the step was seen to interfere with the rising jet. On a matched sink the split costs most of what the operator can give. The directional operator with the vertical normal, at the same strength, reaches an end-profile RMS of <strong>2.18 K</strong> when it stops at 315 s and <strong>0.42 K</strong> when it is left running for the whole replay.</p>
+
+<p>The reason is visible in the cooling phase. After the inflow stops, the lid keeps working and the thermocline keeps being eroded by the film it produces. That is exactly when a sharpening step has something to hold, and the split schedule switched it off at that moment. On the earlier, weaker sink there was little film to speak of, so the loss was small and the split looked harmless.</p>
+
+<h3>17.2 — A fair ladder for each operator</h3>
+
+<p>The second result concerns how the operators were ranked. Each was given its own strength ladder, on the same schedule and the same sink, because a single shared strength flatters whichever operator happens to peak there.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Operator</th><th class="num">$s=0.3$</th><th class="num">0.45</th><th class="num">0.5</th><th class="num">0.6</th><th class="num">0.7</th><th class="num">0.85</th></tr>
+</thead>
+<tbody>
+<tr><td>no operator, matched sink only</td><td class="num" colspan="6">2.26</td></tr>
+<tr><td>isotropic</td><td class="num"><strong>1.92</strong></td><td class="num">—</td><td class="num">2.09</td><td class="num">—</td><td class="num">2.19</td><td class="num">—</td></tr>
+<tr><td>directional, gradient normal</td><td class="num">1.16</td><td class="num">—</td><td class="num"><strong>1.05</strong></td><td class="num">—</td><td class="num">1.22</td><td class="num">—</td></tr>
+<tr><td>directional, vertical normal</td><td class="num">0.77</td><td class="num">—</td><td class="num"><strong>0.59</strong></td><td class="num">—</td><td class="num">1.13</td><td class="num">—</td></tr>
+<tr><td>&nbsp;&nbsp;+ stability test</td><td class="num">0.80</td><td class="num"><strong>0.34</strong></td><td class="num">0.37</td><td class="num">0.61</td><td class="num">—</td><td class="num">—</td></tr>
+<tr><td>&nbsp;&nbsp;+ adaptive strength</td><td class="num">1.31</td><td class="num">—</td><td class="num">0.68</td><td class="num">—</td><td class="num"><strong>0.36</strong></td><td class="num">0.53</td></tr>
+<tr><td>&nbsp;&nbsp;+ local-diffusivity strength</td><td class="num">—</td><td class="num">0.41</td><td class="num"><strong>0.36</strong></td><td class="num">0.52</td><td class="num">0.75</td><td class="num">1.06</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><span class="label">Table.</span> Each operator on its own strength ladder, same schedule and same sink. The entry is the RMS departure of the end profile from the reference, in kelvin.</p>
+
+<p>The adaptive strength shows why a single-strength comparison is not safe. At $s = 0.5$ it reads 0.68 K and looks clearly beaten. Its own optimum is at $s = 0.7$, where it reads 0.36 K and is level with the best. Had the ladder not been run, the study would have reported it as a failure.</p>
+
+<p>Three further switches inside the family were tried on the matched sink and none of them helps: restricting the operator to a band under the lid gives 2.27 K, gating it on the strength of the local gradient 1.74 K, smoothing the gradient normal over neighbours 1.03 K, and blending the gradient normal with the vertical one 0.45 K.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_family_metrics.png" alt="The four monitored metrics for each operator of the family against the CFD">
+  <figcaption><span class="label">Figure 34.</span> The family on the four monitored quantities, each operator at its own best strength, all on the matched sink and the same schedule. The ordering is the same in every panel: the isotropic operator furthest from the reference, the gradient normal next, the vertical normal closest, with the stability test and the database-set strength lying on top of one another. The grey curve is the sink alone, with no operator.</figcaption>
+</figure>
+
+<h3>17.3 — Letting the database set the strength</h3>
+
+<p>There is one more variant, and it fits the rest of the study better than a tuned constant does. The strength need not be a number chosen by hand. The database already stores, frame by frame and cell by cell, the sub-grid mixing the CFD actually had. Where that recorded diffusivity is large, the broad front the replay carries is largely physical and should be left alone. Where it is small, the width is numerical, and that is where an up-gradient step belongs. Writing the weight as</p>
+
+<p style="text-align:center">$w \;=\; 1 - D_\text{face} / D_\text{ref}$</p>
+
+<p>with $D_\text{ref}$ the largest recorded value in the field at that step, taken by reduction, the strength follows the recording instead of a constant. Nothing is tuned by hand except the overall level.</p>
+
+<p>Its ladder peaks at $s = 0.5$ with an end-profile RMS of 0.36 K, level with the two best fixed-strength operators. It is taken as the working point, not because it wins on the numbers, which it does not do by any margin worth claiming, but because it carries one assumption fewer and because it is the same idea the rest of the study rests on: the recording, not a global constant, decides what the replay does.</p>
+
+<h3>17.4 — Where the working point stands</h3>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th></th><th class="num">CFD</th><th class="num">declared sink</th><th class="num">working point</th></tr>
+</thead>
+<tbody>
+<tr><td>End profile, RMS (K)</td><td class="num">—</td><td class="num">5.15</td><td class="num"><strong>0.36</strong></td></tr>
+<tr><td>&nbsp;&nbsp;bulk / front / top (K)</td><td class="num">—</td><td class="num">+2.28 / +1.91 / +7.83</td><td class="num">+0.20 / −0.18 / +0.17</td></tr>
+<tr><td>Mean temperature, RMS (K)</td><td class="num">—</td><td class="num">4.11</td><td class="num"><strong>0.54</strong></td></tr>
+<tr><td>Heterogeneity, RMS (K)</td><td class="num">—</td><td class="num">2.42</td><td class="num"><strong>1.65</strong></td></tr>
+<tr><td>Centre of gravity, RMS (mm)</td><td class="num">—</td><td class="num">0.09</td><td class="num"><strong>0.04</strong></td></tr>
+<tr><td>Field distance (K)</td><td class="num">—</td><td class="num">3.51</td><td class="num"><strong>1.46</strong></td></tr>
+<tr><td>&nbsp;&nbsp;after 400 s</td><td class="num">—</td><td class="num">3.88</td><td class="num"><strong>0.60</strong></td></tr>
+<tr><td>Layering anomaly $A$</td><td class="num">0.0184</td><td class="num">0.0315</td><td class="num"><strong>0.0183</strong></td></tr>
+<tr><td>Front roughness $R$</td><td class="num">0.0051</td><td class="num">0.0067</td><td class="num"><strong>0.0051</strong></td></tr>
+<tr><td>Pattern renewal $\tau_{50}$ (s)</td><td class="num">14.7</td><td class="num">19.5</td><td class="num">9.6</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The amplitude of the field structure now matches the reference almost exactly, and so does the roughness of the front. The one number that does not fall into place is the renewal time: the replay's pattern turns over in 9.6 s against 14.7 s in the CFD, so its structures are born and die faster than the reference's. That is not a strength setting — across the ladder it stays between 8.6 and 9.6 s — and it appears to belong with the sink rather than with the sharpening.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_family_vs_cfd_montage.png" alt="Temperature fields: CFD against the plain replay and each operator of the family">
+  <figcaption><span class="label">Figure 35.</span> The fields themselves, on one colour scale from 293 to 333 K and one view. Top row the reference, then the plain replay under the declared coefficient, then the family, each at its own best strength; the columns are the middle of the hot inflow and the end of the run. At $t = 300$ s the reference holds a sharp interface. The plain replay smears it and keeps the layer above too warm, and the isotropic operator tears the layer below into fingers that have no counterpart in the reference. The two directional forms and the working point reproduce both the interface and the layer.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_family_montage.png" alt="Replay minus CFD for each operator of the family">
+  <figcaption><span class="label">Figure 36.</span> Replay minus reference for the family, on the same colour scale, in the middle of the hot inflow (top) and at the end (bottom). The isotropic operator builds a warm bulge with a scalloped edge that has no counterpart in the reference; the two directional forms remove it. In the top row the working point carries a tighter but more intense line at the thermocline than the gradient normal, which is why its mean there reads slightly higher; every other measure, including the end state below, puts it in front.</figcaption>
+</figure>
+
+<h3>17.5 — What is left</h3>
+
+<p>One defect survives the matched sink, and it shows up in two places at once. The heterogeneity lags through the whole heating phase: the reference rises to 15.6 K by 100 s and holds, while the replay climbs more slowly and reaches 14.1 K by 310 s, running 1.5 to 4 K low throughout. The same thing appears in the difference maps as a thin line at the thermocline while the inflow is hot. After the inflow stops, both close and stay closed.</p>
+
+<p>So the front builds too slowly and too softly while the tank is filling, and everything else follows. That is a smaller and much better posed question than the one this study began with, and it is where the next round belongs.</p>
+<h2 id="otherwork">18 — Other Work: Routes That Add Transport</h2>
+
+<p>Everything above is one family: a local rule that rearranges the heat the replay already has, without inventing any motion. The sections that follow belong to a different line of work. Each of them adds transport the recording does not contain — a circulation drawn at the lid, a mixed-layer depth over which heat is spread, a stored flux applied as a divergence, or a pair exchange that moves content between cells.</p>
+
+<p>They are kept because they were run and measured, and several of them reach larger capture numbers than the family does. But they answer a different question, and mixing them into the comparison above would make the family look worse or better for reasons that have nothing to do with the family. They are collected here so the two lines stay apart.</p>
+
+<p>Two things are worth carrying over. All of these were scored before the reference's own lid term was measured (§16), so their capture numbers sit on the same compressed scale as the earlier sections, and none of them has been repeated on a matched sink. And the field measurements still stand on their own, because those compare pictures rather than ratios.</p>
+<h3 id="gated-pairs">15.5 &mdash; Turning the same test around, and giving each operator its own window</h3>
+
+<p>The guard of &sect;15.4 has to recognise a statically unstable pair before it can skip it, so the operator already knows where the field is unstable. Under heat loss those pairs are not incidental: the sink manufactures them, cooling the top cell layer so that cold sits above warm beneath the whole lid. In the reference that state does not survive, because the film breaks into plumes that sink while warm fluid rises to replace them. The replay cannot do this on its own. But the same local test can be given the opposite instruction: where a near-vertical pair is unstable, exchange heat <em>down</em> the gradient until the pair is neutral. Nothing new is measured, and no length scale is introduced. The direction still comes from the local gradient, and static stability decides the sign. One form mixes the pair towards its mass-weighted mean, the classical convective adjustment; the other swaps the two cells outright, so a cold parcel falls one cell per sweep undiluted, closer to what a plume does.</p>
+
+<p>It works, and it is the first local step in this study to raise the captured cooling rather than trade it: $43.0\%$ for the mixing form and $45.0\%$ for the swapping one, against $35.2\%$ for the plain replay, with a better mean-temperature trace in both cases ($3.0$ K against $3.64$ K).</p>
+
+<p><strong>When the rule is allowed to act matters more than how hard it acts.</strong> The frames exposed a defect the numbers hid. While the hot inflow is still filling the tank, the rule tears the rising plume into vertical filaments, so a single inlet appears to produce three jets. The cause is in the test: a plume climbing through colder water carries warm fluid under cold fluid at its leading edge, which is a statically unstable column by the criterion the rule uses. The cold film the rule was written for does not exist yet at that stage, so the rule is held until the inflow stops. The gate can be checked instead of trusted: before the switch a gated run reproduces the plain replay to $0.003$ K, against $2.06$ K for the ungated one, which is the tearing measured. Holding it back also pays, and the capture rises to $47.1\%$ with ten sweeps and $47.3\%$ with thirty.</p>
+
+<p><strong>Each operator in its own window.</strong> The sharpening builds the front while the jet runs, and it is also what blocks the transport once the cooling starts; the pair rule is the reverse. So the sharpening is switched off when the inflow stops and the pair rule switched on there. That combination is the best of the whole local family on two counts at once: $47.8\%$ of the CFD cooling, the highest here, and a mean-temperature deviation of $2.80$ K, the smallest here. The control run says how much belongs to the sharpening: the same schedule with no sharpening reproduces the gated pair rule exactly, $47.1\%$, so the sharpening window is worth $0.7$ points of capture and $0.38$ K of trace. It earns its place for the shape it leaves behind. The end state pays for it in one column, the front spreading back to $9.4$ mm against $5.0$ mm for a run sharpened throughout, with $4.5$ mm in the reference.</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>run</th><th>end (K)</th><th>captured</th><th>vs no-sink</th><th>mean |&Delta;T| (K)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>plain replay (local diffusivity)</td><td class="num">304.04</td><td class="num">35%</td><td class="num">25%</td><td class="num">3.64</td></tr>
+    <tr><td>+ unstable pairs, mixed</td><td class="num">303.24</td><td class="num">43%</td><td class="num">32%</td><td class="num">3.05</td></tr>
+    <tr><td>+ unstable pairs, swapped</td><td class="num">303.04</td><td class="num">45%</td><td class="num">34%</td><td class="num">3.01</td></tr>
+    <tr><td>+ unstable pairs, swapped, gated</td><td class="num">302.82</td><td class="num">47%</td><td class="num">36%</td><td class="num">3.18</td></tr>
+    <tr><td>+ the same, 30 sweeps</td><td class="num">302.81</td><td class="num">47%</td><td class="num">37%</td><td class="num">3.17</td></tr>
+    <tr class="best"><td>sharpen while filling, pairs while cooling</td><td class="num">302.75</td><td class="num">48%</td><td class="num">37%</td><td class="num">2.80</td></tr>
+    <tr><td>the same with the gradient normal</td><td class="num">302.75</td><td class="num">48%</td><td class="num">37%</td><td class="num">3.11</td></tr>
+    <tr><td>control: no sharpening, gated pairs only</td><td class="num">302.82</td><td class="num">47%</td><td class="num">36%</td><td class="num">3.18</td></tr>
+  </tbody>
+</table>
+</div>
+
+<figure class="wide">
+  <img src="assets/figures/fig_note15_ladder.png" alt="Captured cooling of the local operators on the heat-loss database" style="max-width:820px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 16c.</span> Captured cooling of the local family on the heat-loss database, as a share of the CFD depth of $10.19$ K. Every form of the sharpening sits below the plain replay; the pair rule is the only local step above it, and the split schedule is the highest.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_note15_montage.png" alt="CFD and the local operators, mid-run, end of run, and the inlet corner" style="max-width:1100px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+  <figcaption><span class="label">Figure 16d.</span> Temperature on the chamber, mid-run (top) and end of run (middle), on the same 293&ndash;333 K scale, with the inlet corner enlarged below. The panels get greener from left to right and their interfaces get wider, which is the trade-off of the table in one picture. The enlargement settles a reading question: the tank has one inlet, in the channel on the left, and the band rising beside it is the same jet after buoyancy has lifted it.</figcaption>
+</figure>
+
+<figure class="wide">
+  <video controls preload="metadata" playsinline style="max-width:1100px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_nadb_cfd_vs_split.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 16e.</span> CFD reference (left) against the split schedule (right), temperature 293&ndash;333 K. The replay now drains its upper layer downward instead of only sideways: cold streaks descend from the lid, which is the pair rule standing in for the collapsing film. The amount and the direction are reproduced; the narrow, intermittent texture of the reference is not.</figcaption>
+</figure>
 
 <h3 id="layerbase">15.11 &mdash; The base of the layer: a thickness and a position</h3>
 
@@ -3224,41 +3450,6 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>The field goes the wrong way, by two independent measures. The heterogeneity at the end falls to 2.0&ndash;2.2 K against the reference's 6.76, so the tank is close to well mixed; and the topmost cell ends at 296 K against the reference's 306 K, colder than its own bulk mean, so the layering is not merely weakened but inverted. Accelerating a recorded circulation accelerates it everywhere, including through the stably stratified lower half that the real flow leaves alone. Adding the layer operator on top recovers part of the heterogeneity, 2.2 to 4.7 K, and still leaves the centroid four times further from the reference than the operator alone manages. So the time-step lever buys what every other lever here buys and pays in the same coin; it is recorded for that reason rather than as a candidate.</p>
 
-<h3 id="floor">15.12 &mdash; The smallest feature the replay can hold</h3>
-
-<p>Running the same probe on the adiabatic database gives the reference point, and it also gives the study its one unifying number. In the cooling window the two databases are almost identical near the lid: $2.16\times10^{-6}$ m²/s against $2.52\times10^{-6}$, both about half their own bulk value. They differ only while the tank fills, where the cooling run carries an order of magnitude more mixing at the ceiling because the sink is already driving convection there. So the order-of-magnitude gap to the reference's near-molecular film belongs to this kind of database, not to the heat-loss case in particular.</p>
-
-<p>Turning the diffusion number around gives a length instead of a criterion. A feature of size $L$ survives a step while $D\,\Delta t / L^2$ stays below about a half, so the replay has a floor</p>
-
-<p style="text-align:center">$L_\text{min} = \sqrt{2 D \Delta t}$</p>
-
-<p>which for the bulk diffusivity of either database and the one-second step used in every run of this study is <strong>2.93 mm</strong>. Nothing smaller can be maintained, whatever operator asks for it.</p>
-
-<div class="table-wrap">
-<table>
-<thead>
-<tr><th>feature</th><th class="num">size (mm)</th><th class="num">&divide; floor</th><th class="num">holdable</th></tr>
-</thead>
-<tbody>
-<tr><td>CFD thermocline, adiabatic case</td><td class="num">5.59</td><td class="num">1.91</td><td class="num">yes</td></tr>
-<tr><td>CFD thermocline, heat loss</td><td class="num">4.48</td><td class="num">1.53</td><td class="num">yes</td></tr>
-<tr><td>plain replay thermocline</td><td class="num">8.81</td><td class="num">3.01</td><td class="num">yes</td></tr>
-<tr><td>sharpened front, adiabatic</td><td class="num">5.52</td><td class="num">1.88</td><td class="num">yes</td></tr>
-<tr><td>sharpened front, heat loss</td><td class="num">4.97</td><td class="num">1.70</td><td class="num">yes</td></tr>
-<tr><td>step at the layer base</td><td class="num">2.08</td><td class="num">0.71</td><td class="num">no</td></tr>
-<tr><td>profile-depth front</td><td class="num">2.90</td><td class="num">0.99</td><td class="num">no</td></tr>
-<tr class="best"><td>CFD cold film at the lid</td><td class="num">1.00</td><td class="num">0.34</td><td class="num">no</td></tr>
-</tbody>
-</table>
-</div>
-
-<p>The study reads differently afterwards. The defect the sharpening was designed for in the adiabatic case, a 5.59 mm thermocline, sits at 1.9 times the floor &mdash; and the operator reached 5.52 mm and held it. The heat-loss thermocline at 4.48 mm sits at 1.5 times, and the operator held that too. The lid film at one cell sits at 0.34 times the floor, and no arrangement of operators produced it: not the plume rule, not the anti-diffusion gated to the ceiling, not the two together. The profile-depth front settled at 2.90 mm, the floor to two decimal places, because that is where a maintained front has to end up. And the 2.08 mm base of the step operator is below it, which is the precise sense in which that value was imposed rather than held.</p>
-
-<div class="keybox">
-  <h4>Why the adiabatic case worked and this one cannot</h4>
-  <p>It is not that heat loss is harder in some general way. The adiabatic defect lived above the floor and the heat-loss picture needs detail below it. $L_\text{min} = \sqrt{2 D \Delta t}$ can be evaluated before any operator is written, from the database and the step alone, which makes it the first thing worth checking when a replay is asked to reproduce a feature: measure the feature, measure the floor, and only then decide whether an operator is the right tool. Molecular water would put the floor at 0.53 mm, which is why the reference can carry a film the replay cannot.</p>
-</div>
-
 <h3 id="fluxchannel">15.13 &mdash; Recording the transport, not only the flow</h3>
 
 <p>Everything in §15.4 to §15.12 is an operator: a rule that rearranges the field the replay already has. Each one improves a column and pays for it in another, and together they settle near half of the CFD cooling. The reason is the same one §12 gave: what is missing is transport, and no rule that only shuffles the existing field can invent it. But transport is exactly the thing a recording can hand over.</p>
@@ -3302,41 +3493,6 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 </figure>
 
 <p>Two limits should be said out loud with those numbers. The maps already advect the field with the recorded displacement, and the stored flux belongs to the same flow, so part of what the term adds could be transport that is counted twice. Switching the maps off answers that: without them and without the flux the run is meaningless, ending at 329.1 K because nothing carries the inflow away, and with the flux alone it ends at 325.5 K. The channel does transport something in its own right, but roughly an order of magnitude less than the maps carry &mdash; it corrects them rather than copying them. The second limit is more basic. This is still a frozen recording: the flux belongs to the frame it was measured in, and the replay applies it to a field that has drifted away from the CFD field of that frame. It gives back the transport the averaging lost. It does not give back the feedback between the temperature it produces and the flow that would answer to it.</p>
-
-<h3 id="fluxvsmixing">15.14 &mdash; The number, the picture, and whether the picture is alive</h3>
-
-<p>§15.11 left the layer-base mixing at $c = 0.7$ as the closest field of the study, and it still is: 72&thinsp;% of the cooling and 1.23 K from the reference frames, with an end heterogeneity of 6.61 K against the reference's 6.76 K. Set the difference maps side by side and it is not close &mdash; the recorded flux with its operators sits at 3.84 K from the reference at the end of the run, the mixing rule at 1.28 K.</p>
-
-<figure class="wide">
-  <img src="assets/figures/fig_flux_diff.png" alt="Temperature fields and their difference from the CFD for the plain replay, the recorded flux with operators, and the layer-base mixing" style="max-width:1100px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-  <figcaption><span class="label">Figure 31.</span> The fields, and what is left when the reference is subtracted. Both rows are decoded from the rendered frames through the same colour bar, with each tank located in its own frame, so the difference is a temperature and not an impression. Mid-run the plain replay smears the interface across a third of the tank; the recorded flux holds it and gives it the waviness the reference has; the mixing rule holds it and sits closest. At the end of the run the error left in the first two is almost uniform over the upper layer &mdash; the cooling they have not reached, rather than a shape they have got wrong &mdash; while the mixing rule ends a shade too cold instead.</figcaption>
-</figure>
-
-<p>Then measure whether the picture lives. The renewal time of the pattern, the lag at which the field's anomaly loses half the correlation with itself, is 14.7 s in the reference and 19.5 s in the plain replay. The recorded flux keeps it there, 20.6 s. The mixing rule at $c = 0.7$ takes it to <strong>100 s</strong>: over the whole cooling phase the same picture is redrawn with a slowly changing shade. Its statistics are the closest of the study and almost nothing in it is made or lost.</p>
-
-<div class="table-wrap">
-<table>
-<thead>
-<tr><th>run</th><th class="num">capture</th><th class="num">field dist. (K)</th><th class="num">$\delta T_\text{end}$ (K)</th><th class="num">front (mm)</th><th class="num">renewal $\tau_{50}$ (s)</th></tr>
-</thead>
-<tbody>
-<tr><td>CFD, $h = 100$</td><td class="num">&mdash;</td><td class="num">0</td><td class="num">6.76</td><td class="num">4.48</td><td class="num">14.7</td></tr>
-<tr><td>plain replay</td><td class="num">35.2%</td><td class="num">3.51</td><td class="num">9.30</td><td class="num">8.81</td><td class="num">19.5</td></tr>
-<tr><td>recorded flux + operators</td><td class="num">53.1%</td><td class="num">1.98</td><td class="num">9.69</td><td class="num">7.78</td><td class="num">20.6</td></tr>
-<tr><td>layer-base mixing $c=0.7$</td><td class="num">71.9%</td><td class="num">1.23</td><td class="num">6.61</td><td class="num">2.90</td><td class="num">100.0</td></tr>
-<tr><td>layer-base mixing $c=0.85$</td><td class="num">77.2%</td><td class="num">1.47</td><td class="num">5.98</td><td class="num">&mdash;</td><td class="num">93.3</td></tr>
-<tr class="best"><td>$c=0.7$ + recorded flux &times;0.25</td><td class="num">67.6%</td><td class="num">1.23</td><td class="num">7.50</td><td class="num">&mdash;</td><td class="num">77.7</td></tr>
-<tr><td>$c=0.7$ + recorded flux</td><td class="num">64.9%</td><td class="num">1.39</td><td class="num">7.92</td><td class="num">2.51</td><td class="num">29.3</td></tr>
-<tr><td>prescribed roll 30 + sharpening</td><td class="num">80.7%</td><td class="num">1.71</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">84.4</td></tr>
-</tbody>
-</table>
-</div>
-
-<p>The two look like halves of one answer, so we ran them together. Both halves of that guess hold and they still do not add up. With the full recorded flux underneath it the mixing drops from 71.9&thinsp;% to 64.9&thinsp;% and its heterogeneity moves away from the reference, because the mixing has already flattened the anomalies the flux would act on and a nearly uniform layer leaves the flux almost no head-room to work in. What the flux does deliver is the other half: the renewal time falls from 100 s to 29.3 s, three times faster, and the front roughness moves towards the reference.</p>
-
-<p>The trade between those two ends is not linear, and its middle is the best field of the study. At a <em>quarter</em> of the recorded flux the capture is 67.6&thinsp;%, four points below the mixing alone instead of seven, while the renewal time is already down to 77.7 s and both texture measures &mdash; the layering anomaly 0.019 and the front roughness 0.0057 &mdash; are the closest to the reference of any run here. On the last frame its field sits <strong>0.85 K</strong> from the reference, against 1.28 K for the mixing alone, which ends a shade too cold. Turning the mixing up instead buys the cooling the other way: $c = 0.85$ reaches 77.2&thinsp;%, but its end heterogeneity drops to 5.98 K, below the reference's 6.76 K, so the layer becomes more uniform than the flow it copies while the picture stays as static as before.</p>
-
-<p>That is the honest state of it. One route reaches the numbers with a field that barely moves; the other keeps the field moving and reaches half the numbers; putting them in the same run trades one for the other rather than adding them. What separates the reference from all of them is still the same thing the difference maps show at the lid: a row of cold fingers that form, fall and disappear, which needs the cooled fluid to change the flow that carries it &mdash; and that feedback is exactly what a frozen recording does not contain.</p>
 
 <h3 id="feedback">15.15 &mdash; What happens when the feedback is switched back on</h3>
 
@@ -3401,7 +3557,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <span class="chip plan">planned</span>
 </div>
 
-<h2 id="step3">16 — Step 3: Writing &amp; Finalization</h2>
+<h2 id="step3">19 — Step 3: Writing &amp; Finalization</h2>
 
 <div class="wip-card">
   <p style="margin-top:0">The final stage: consolidate the workflow, the face-swap study, the heat-loss analysis, and the database rebuild into the written thesis (methods, results, and discussion) and tidy up the figures and references for submission.</p>
