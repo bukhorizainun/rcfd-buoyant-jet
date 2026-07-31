@@ -1,0 +1,241 @@
+<h2 id="quantitative">7 — Quantitative Results</h2>
+
+<p>For every case we put the rCFD trace on the CFD time grid and compute five standard error metrics, following Hyndman and Koehler <a href="#ref-hyndman2006">[4]</a>: signed bias, MAE, RMSE, error standard deviation, and the maximum absolute error.</p>
+
+<figure class="wide" id="quantPlotFigure">
+  <div id="plotOverlay" style="width: 100%; min-height: 460px;">
+    <!-- Static fallback for non-JS / print -->
+    <noscript>
+      <img src="assets/figures/fig_step1b_diffusivity_overlay.png"
+           alt="Overlay of T_mean and CoG_y for CFD reference and seven rCFD cases"
+           style="width: 100%;" loading="lazy" decoding="async">
+    </noscript>
+  </div>
+  <figcaption><span class="label">Figure 5 (interactive).</span> Mean temperature $T_\text{mean}(t)$ on the left, its rise $\Delta T_\text{mean}(t) = T_\text{mean}(t) - 293$ K in the middle, and the thermal centre of gravity $CoG_y(t)$ on the right, for the CFD reference (thick black) and the seven rCFD cases. Hover over a curve to see the exact value at that time. Click a legend entry to hide or show that trace. Drag inside the plot to zoom, double-click to reset.</figcaption>
+</figure>
+
+<script>
+(function() {
+  // ------------ Interactive overlay plot (Plotly) ------------------
+  const palette = {
+    cfd:   '#000000',
+    rcfd: [
+      '#0b66b0',  // 0.000
+      '#1a8a3a',  // 0.125
+      '#d97f0b',  // 0.375
+      '#9c2cb8',  // 0.500
+      '#c83737',  // 0.750
+      '#7a6a2a',  // 1.500
+      '#5e5e5e'   // 3.000
+    ]
+  };
+
+  function buildTraces(data) {
+    const tracesA = [];   // absolute T_mean   -> x  / y
+    const tracesD = [];   // delta T_mean      -> x2 / y2
+    const tracesC = [];   // delta CoG_y       -> x3 / y3
+
+    // CFD reference (thick black, no markers)
+    tracesA.push({
+      x: data.cfd.t, y: data.cfd.T,
+      mode: 'lines', name: 'CFD reference',
+      line: { color: palette.cfd, width: 2.8 },
+      hovertemplate: '<b>CFD reference</b><br>t = %{x:.1f} s<br>T = %{y:.2f} K<extra></extra>',
+      legendgroup: 'cfd', xaxis: 'x', yaxis: 'y'
+    });
+    tracesD.push({
+      x: data.cfd.t, y: data.cfd.T.map(v => v - 293),
+      mode: 'lines', name: 'CFD reference',
+      line: { color: palette.cfd, width: 2.8 },
+      hovertemplate: '<b>CFD reference</b><br>t = %{x:.1f} s<br>ΔT = %{y:.2f} K<extra></extra>',
+      legendgroup: 'cfd', xaxis: 'x2', yaxis: 'y2', showlegend: false
+    });
+    tracesC.push({
+      x: data.cfd.t, y: data.cfd.CoG_dy_mm,
+      mode: 'lines', name: 'CFD reference',
+      line: { color: palette.cfd, width: 2.8 },
+      hovertemplate: '<b>CFD reference</b><br>t = %{x:.1f} s<br>ΔCoG = %{y:.3f} mm<extra></extra>',
+      legendgroup: 'cfd', xaxis: 'x3', yaxis: 'y3', showlegend: false
+    });
+
+    data.cases.forEach((c, i) => {
+      const color = palette.rcfd[i] || '#888';
+      const lbl   = 'f_sd = ' + c.label;
+      tracesA.push({
+        x: c.t, y: c.T,
+        mode: 'lines', name: lbl,
+        line: { color: color, width: 1.6 },
+        hovertemplate: '<b>' + lbl + '</b><br>t = %{x:.1f} s<br>T = %{y:.2f} K<extra></extra>',
+        legendgroup: c.suffix, xaxis: 'x', yaxis: 'y'
+      });
+      tracesD.push({
+        x: c.t, y: c.T.map(v => v - 293),
+        mode: 'lines', name: lbl,
+        line: { color: color, width: 1.6 },
+        hovertemplate: '<b>' + lbl + '</b><br>t = %{x:.1f} s<br>ΔT = %{y:.2f} K<extra></extra>',
+        legendgroup: c.suffix, xaxis: 'x2', yaxis: 'y2', showlegend: false
+      });
+      tracesC.push({
+        x: c.t, y: c.CoG_dy_mm,
+        mode: 'lines', name: lbl,
+        line: { color: color, width: 1.6 },
+        hovertemplate: '<b>' + lbl + '</b><br>t = %{x:.1f} s<br>ΔCoG = %{y:.3f} mm<extra></extra>',
+        legendgroup: c.suffix, xaxis: 'x3', yaxis: 'y3', showlegend: false
+      });
+    });
+
+    return [...tracesA, ...tracesD, ...tracesC];
+  }
+
+  // CFD trace colour adapts to theme so the thick black line is visible
+  // on the dark background.
+  function themeColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return {
+      dark,
+      bg:       cs.getPropertyValue('--bg').trim()       || '#ffffff',
+      text:     cs.getPropertyValue('--ink').trim()      || '#1a1a1a',
+      grid:     dark ? '#2a3038' : '#e6e6e6',
+      accent:   cs.getPropertyValue('--accent').trim()   || '#00467f',
+      cfdLine:  dark ? '#f0f0f0' : '#000000'
+    };
+  }
+
+  let lastTraces = null;
+  let lastData   = null;
+
+  function plotOverlay(data) {
+    lastData = data;
+    const tc = themeColors();
+    // Override the CFD trace colour for the current theme
+    const traces = buildTraces(data);
+    traces.forEach(t => {
+      if (t.name === 'CFD reference') t.line.color = tc.cfdLine;
+    });
+    lastTraces = traces;
+
+    const layout = {
+      grid: { rows: 1, columns: 3, pattern: 'independent', xgap: 0.09 },
+      xaxis:  { domain: [0,     0.29], title: { text: 'Time (s)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 600],
+                color: tc.text },
+      yaxis:  { title: { text: 'T<sub>mean</sub> (K)' },
+                gridcolor: tc.grid, zeroline: false, range: [290, 324],
+                color: tc.text },
+      xaxis2: { domain: [0.355, 0.645], title: { text: 'Time (s)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 600],
+                color: tc.text },
+      yaxis2: { title: { text: 'ΔT<sub>mean</sub> (K)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 30],
+                color: tc.text },
+      xaxis3: { domain: [0.71,  1.0],  title: { text: 'Time (s)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 600],
+                color: tc.text },
+      yaxis3: { title: { text: 'ΔCoG<sub>y</sub> (mm)' },
+                gridcolor: tc.grid, zeroline: false, range: [0, 1.2],
+                color: tc.text },
+      annotations: [
+        { text: '<b>Mean temperature</b>',
+          x: 0.145, xref: 'paper', y: 1.06, yref: 'paper',
+          xanchor: 'center', showarrow: false,
+          font: { size: 13, color: tc.accent } },
+        { text: '<b>Mean temperature rise</b>',
+          x: 0.5, xref: 'paper', y: 1.06, yref: 'paper',
+          xanchor: 'center', showarrow: false,
+          font: { size: 13, color: tc.accent } },
+        { text: '<b>Thermal centre of gravity</b>',
+          x: 0.855, xref: 'paper', y: 1.06, yref: 'paper',
+          xanchor: 'center', showarrow: false,
+          font: { size: 13, color: tc.accent } }
+      ],
+      legend: {
+        orientation: 'h', x: 0.5, xanchor: 'center', y: -0.18,
+        font: { size: 11, color: tc.text }, bgcolor: 'rgba(0,0,0,0)'
+      },
+      margin: { t: 50, b: 90, l: 55, r: 20 },
+      hovermode: 'closest',
+      hoverlabel: { font: { family: 'Inter, sans-serif', size: 12 } },
+      font: { family: 'Inter, "Source Serif Pro", sans-serif', size: 12, color: tc.text },
+      paper_bgcolor: tc.bg,
+      plot_bgcolor:  tc.bg
+    };
+    const config = {
+      responsive: true,
+      displaylogo: false,
+      modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'],
+      toImageButtonOptions: { format: 'png', filename: 'step1b_diffusivity_overlay', scale: 2 }
+    };
+    Plotly.newPlot('plotOverlay', traces, layout, config);
+  }
+
+  document.addEventListener('themechange', () => {
+    if (lastData) plotOverlay(lastData);
+  });
+
+  // Data is preloaded via <script src="assets/data/step1b_traces.js">
+  // which assigns window.step1bTraces -- this works under file:// (no fetch).
+  function tryRender() {
+    if (typeof Plotly === 'undefined' || !window.step1bTraces) {
+      // Plotly or data not ready yet -- retry on next tick.
+      return setTimeout(tryRender, 80);
+    }
+    try {
+      plotOverlay(window.step1bTraces);
+    } catch (err) {
+      console.warn('Interactive plot failed, falling back to PNG:', err);
+      const el = document.getElementById('plotOverlay');
+      el.innerHTML = '<img src="assets/figures/fig_step1b_diffusivity_overlay.png" ' +
+                     'alt="Overlay of T_mean and CoG_y" style="width: 100%;" loading="lazy" decoding="async">';
+    }
+  }
+  tryRender();
+})();
+</script>
+
+<h3>7.1 — Mean temperature errors</h3>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>$f_{sd}$</th><th class="num">Bias (K)</th><th class="num">MAE (K)</th><th class="num">RMSE (K)</th><th class="num">Max abs (K)</th></tr>
+</thead>
+<tbody>
+<tr class="best"><td>0.000 <span class="tag-best">best</span></td><td class="num">−0.377</td><td class="num">0.761</td><td class="num">1.076</td><td class="num">2.569</td></tr>
+<tr><td>0.125</td><td class="num">+0.340</td><td class="num">0.852</td><td class="num">1.080</td><td class="num">2.278</td></tr>
+<tr><td>0.375</td><td class="num">+0.556</td><td class="num">1.062</td><td class="num">1.360</td><td class="num">2.834</td></tr>
+<tr><td>0.500</td><td class="num">+0.572</td><td class="num">1.147</td><td class="num">1.459</td><td class="num">2.955</td></tr>
+<tr><td>0.750</td><td class="num">+0.575</td><td class="num">1.297</td><td class="num">1.634</td><td class="num">3.162</td></tr>
+<tr><td>1.500</td><td class="num">+0.630</td><td class="num">1.726</td><td class="num">2.142</td><td class="num">3.879</td></tr>
+<tr><td>3.000</td><td class="num">+0.899</td><td class="num">2.512</td><td class="num">3.045</td><td class="num">5.394</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>7.2 — Centre-of-gravity errors</h3>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>$f_{sd}$</th><th class="num">Bias (mm)</th><th class="num">MAE (mm)</th><th class="num">RMSE (mm)</th><th class="num">Max abs (mm)</th></tr>
+</thead>
+<tbody>
+<tr><td>0.000</td><td class="num">−0.046</td><td class="num">0.087</td><td class="num">0.116</td><td class="num">0.268</td></tr>
+<tr><td>0.125</td><td class="num">−0.057</td><td class="num">0.071</td><td class="num">0.097</td><td class="num">0.218</td></tr>
+<tr><td>0.375</td><td class="num">−0.057</td><td class="num">0.059</td><td class="num">0.074</td><td class="num">0.154</td></tr>
+<tr class="best"><td>0.500 <span class="tag-best">best</span></td><td class="num">−0.059</td><td class="num">0.060</td><td class="num">0.069</td><td class="num">0.129</td></tr>
+<tr><td>0.750</td><td class="num">−0.066</td><td class="num">0.068</td><td class="num">0.072</td><td class="num">0.108</td></tr>
+<tr><td>1.500</td><td class="num">−0.112</td><td class="num">0.114</td><td class="num">0.137</td><td class="num">0.260</td></tr>
+<tr><td>3.000</td><td class="num">−0.223</td><td class="num">0.231</td><td class="num">0.281</td><td class="num">0.501</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Two things jump out. First, the $T_\text{mean}$ error always gets smaller as $f_{sd}$ goes down &mdash; the best mean-temperature case is the no-mixing case, $f_{sd}=0$. Second, the $CoG_y$ error has a real minimum in the middle of the sweep, at $f_{sd}=0.500$, which is slightly better than the next-best values $0.750$ and $0.375$.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_step1b_error_abs.png" alt="Absolute error in T_mean and CoG_y over time" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 6.</span> Absolute error against the CFD reference over time: $T_\text{mean}$ (left), $CoG_y$ (right). The $T_\text{mean}$ error envelope grows with $f_{sd}$; the $CoG_y$ envelope is smallest at $f_{sd}=0.500$.</figcaption>
+</figure>
+
+<!-- =========================================================== -->

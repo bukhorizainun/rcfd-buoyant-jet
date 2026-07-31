@@ -1,0 +1,166 @@
+<h2 id="rcfd">3 — rCFD in a Nutshell</h2>
+
+<p>rCFD has two phases: <em>preparation</em> (run a short CFD, save the flow patterns) and <em>replay</em> (use those saved patterns to push the temperature around). The diagram below shows the whole pipeline at a glance &mdash; the animated dots illustrate how data flows between the steps.</p>
+
+<details class="theory">
+  <summary>How rCFD works, in full</summary>
+
+
+<figure class="workflow wide">
+  <svg viewBox="0 0 1100 360" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="rCFD pipeline diagram">
+    <defs>
+      <marker id="wfArrowHead" viewBox="0 0 10 10" refX="8" refY="5"
+              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+
+    <!-- Phase labels -->
+    <text x="275" y="32" text-anchor="middle"
+          class="wf-phase-label prep">Preparation &mdash; runs once</text>
+    <text x="825" y="32" text-anchor="middle"
+          class="wf-phase-label replay">Replay &mdash; fast loop</text>
+
+    <!-- Phase separator -->
+    <line x1="550" y1="55" x2="550" y2="265"
+          stroke="var(--ink-faint)" stroke-width="1"
+          stroke-dasharray="3 5" opacity="0.4"/>
+
+    <!-- ============ Box 1: Short CFD run ============ -->
+    <g class="wf-box" transform="translate(40, 80)"
+       data-tip-title="Short CFD run"
+       data-tip="A conventional Navier-Stokes simulation, just long enough to reach the recurrent regime (about 30 s of simulated time). This is the only expensive step; it runs once.">
+      <title>Short CFD run</title>
+      <rect class="bg preparation" x="0" y="0" width="220" height="170"/>
+      <!-- Icon: chamber outline with velocity arrows -->
+      <g transform="translate(50, 30)">
+        <rect class="wf-icon-fill" x="0" y="0" width="120" height="65" rx="4"/>
+        <line class="wf-icon-stroke" x1="15" y1="18" x2="48" y2="18" marker-end="url(#wfArrowHead)"/>
+        <line class="wf-icon-stroke" x1="55" y1="34" x2="92" y2="34" marker-end="url(#wfArrowHead)"/>
+        <line class="wf-icon-stroke" x1="20" y1="48" x2="55" y2="48" marker-end="url(#wfArrowHead)"/>
+      </g>
+      <text class="wf-title" x="110" y="125" text-anchor="middle">Short CFD run</text>
+      <text class="wf-sub"   x="110" y="148" text-anchor="middle">~30 s of velocity field</text>
+    </g>
+
+    <!-- Arrow 1 (Box1 -> Box2) -->
+    <g style="color: var(--ink-faint)">
+      <path id="wfPath1" class="wf-arrow" d="M 265 165 L 305 165"/>
+      <circle r="4.5" fill="var(--accent)">
+        <animateMotion dur="2.4s" repeatCount="indefinite" rotate="auto">
+          <mpath href="#wfPath1"/>
+        </animateMotion>
+      </circle>
+    </g>
+
+    <!-- ============ Box 2: C2C database ============ -->
+    <g class="wf-box" transform="translate(310, 80)"
+       data-tip-title="C2C shift database"
+       data-tip="For every recorded frame, lists which neighbour cell each cell's fluid moves into during one time step. Saved to disk and reused for every rCFD replay.">
+      <title>C2C shift database</title>
+      <rect class="bg preparation" x="0" y="0" width="220" height="170"/>
+      <!-- Icon: grid of cells with one shift arrow -->
+      <g transform="translate(60, 26)">
+        <rect class="wf-icon-fill" x="0"   y="0"  width="22" height="22"/>
+        <rect class="wf-icon-fill" x="25"  y="0"  width="22" height="22"/>
+        <rect class="wf-icon-fill" x="50"  y="0"  width="22" height="22"/>
+        <rect class="wf-icon-fill" x="75"  y="0"  width="22" height="22"/>
+        <rect class="wf-icon-fill" x="0"   y="25" width="22" height="22"/>
+        <rect class="wf-icon-fill" x="25"  y="25" width="22" height="22" fill-opacity="0.55"/>
+        <rect class="wf-icon-fill" x="50"  y="25" width="22" height="22"/>
+        <rect class="wf-icon-fill" x="75"  y="25" width="22" height="22"/>
+        <line class="wf-icon-stroke" x1="36" y1="34" x2="58" y2="34" marker-end="url(#wfArrowHead)"/>
+      </g>
+      <text class="wf-title" x="110" y="125" text-anchor="middle">C2C database</text>
+      <text class="wf-sub"   x="110" y="148" text-anchor="middle">cell-to-cell shift patterns</text>
+    </g>
+
+    <!-- Arrow 2 (Box2 -> Box3, crosses the phase divider) -->
+    <g style="color: var(--ink-faint)">
+      <path id="wfPath2" class="wf-arrow" d="M 535 165 L 575 165"/>
+      <circle r="4.5" fill="var(--accent)">
+        <animateMotion dur="2.4s" begin="0.6s" repeatCount="indefinite">
+          <mpath href="#wfPath2"/>
+        </animateMotion>
+      </circle>
+    </g>
+
+    <!-- ============ Box 3: Shift & diffuse ============ -->
+    <g class="wf-box" transform="translate(580, 80)"
+       data-tip-title="Shift &amp; diffuse"
+       data-tip="The core rCFD step. Pick a frame from the C2C database, translate the temperature field along its shift map, then apply the face-swap diffusion operator with parameter f_sd to add the missing mixing.">
+      <title>Shift &amp; diffuse</title>
+      <rect class="bg replay" x="0" y="0" width="220" height="170"/>
+      <!-- Icon: three cells with shift arrows + a small "diffuse" wave -->
+      <g transform="translate(50, 28)">
+        <circle class="wf-icon-fill" cx="22" cy="20" r="16"/>
+        <circle class="wf-icon-fill" cx="62" cy="20" r="16"/>
+        <circle class="wf-icon-fill" cx="102" cy="20" r="16"/>
+        <line class="wf-icon-stroke" x1="38" y1="20" x2="48" y2="20" marker-end="url(#wfArrowHead)"/>
+        <line class="wf-icon-stroke" x1="78" y1="20" x2="88" y2="20" marker-end="url(#wfArrowHead)"/>
+        <path class="wf-icon-stroke" d="M 18 55 Q 30 48 42 55 T 66 55 T 90 55 T 110 55" fill="none"/>
+      </g>
+      <text class="wf-title" x="110" y="125" text-anchor="middle">Shift &amp; diffuse</text>
+      <text class="wf-sub"   x="110" y="148" text-anchor="middle">apply C2C, then face-swap mixing</text>
+    </g>
+
+    <!-- Arrow 3 (Box3 -> Box4) -->
+    <g style="color: var(--ink-faint)">
+      <path id="wfPath3" class="wf-arrow" d="M 805 165 L 845 165"/>
+      <circle r="4.5" fill="#c87b1f">
+        <animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite">
+          <mpath href="#wfPath3"/>
+        </animateMotion>
+      </circle>
+    </g>
+
+    <!-- ============ Box 4: Output T field ============ -->
+    <g class="wf-box" transform="translate(850, 80)"
+       data-tip-title="Output T field"
+       data-tip="One temperature-field snapshot per replay step. After 600 steps the full 600 s of thermal transport is reproduced, at a small fraction of the original CFD cost (well over a hundred times cheaper once snapshot rendering is switched off).">
+
+      <title>Output T field</title>
+      <rect class="bg replay" x="0" y="0" width="220" height="170"/>
+      <!-- Icon: stratified chamber -->
+      <g transform="translate(55, 26)">
+        <rect x="0" y="0"  width="110" height="15" fill="#c83737" opacity="0.80"/>
+        <rect x="0" y="15" width="110" height="11" fill="#d97f0b" opacity="0.80"/>
+        <rect x="0" y="26" width="110" height="11" fill="#e2c64b" opacity="0.80"/>
+        <rect x="0" y="37" width="110" height="11" fill="#5db478" opacity="0.80"/>
+        <rect x="0" y="48" width="110" height="15" fill="#3b6db5" opacity="0.80"/>
+      </g>
+      <text class="wf-title" x="110" y="125" text-anchor="middle">Output T field</text>
+      <text class="wf-sub"   x="110" y="148" text-anchor="middle">one snapshot per replay step</text>
+    </g>
+
+    <!-- Loop arrow: from output (bottom-right) under the boxes back to Shift &amp; diffuse (bottom-left of that box) -->
+    <g style="color: #c87b1f">
+      <path id="wfPathLoop" class="wf-arrow loop"
+            d="M 960 268 C 960 320, 690 320, 690 268"/>
+      <circle r="4" fill="#c87b1f">
+        <animateMotion dur="3.6s" begin="1.8s" repeatCount="indefinite">
+          <mpath href="#wfPathLoop"/>
+        </animateMotion>
+      </circle>
+    </g>
+    <text x="825" y="345" text-anchor="middle"
+          class="wf-sub" style="font-style: italic; fill: #c87b1f; font-size: 12px;">
+      repeat 600 times (one replay step per simulated second)
+    </text>
+  </svg>
+  <figcaption>The rCFD pipeline. Preparation (left half, blue) runs once: a short CFD simulation produces a database of cell-to-cell (C2C) shift patterns. Replay (right half, orange) runs many times: each step picks a pattern from the database, applies it to the temperature field, and adds a small amount of face-swap diffusion. Hover any box for a longer description.</figcaption>
+</figure>
+
+<h3>3.1 — Preparation: building the C2C database</h3>
+
+<p>During preparation, the CFD solver writes, at every saved frame, a small list that says: "the fluid in cell $i$ moved into cell $j$ during this time step". This list is called the cell-to-cell (C2C) shift map. The database is just many of these maps, taken from the repeating regime of the CFD run.</p>
+
+<h3>3.2 — Replay: moving the temperature</h3>
+
+<p>During replay, rCFD picks a frame from the database and uses its C2C map to move the temperature field one step. This shifts warm and cold pockets across the tank, but it never solves the Navier-Stokes equations again.</p>
+
+<p>The shift only moves things; it does not mix them. So a pure C2C replay would give an unrealistically sharp boundary between warm and cold zones. The next section shows how rCFD adds the missing mixing.</p>
+
+<!-- =========================================================== -->
+</details>

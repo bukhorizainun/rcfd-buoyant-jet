@@ -1,0 +1,147 @@
+<h3 id="layerbase">15.11 &mdash; The base of the layer: a thickness and a position</h3>
+
+<p>The field measurements above all point at one place in the chamber. The sharpening operators work at the thermocline and lose on the picture; the transport operators work through the column and win on it. What both readings have in common is the base of the warm layer. It is where the export is fed from below, and it is the feature the eye reads first in a montage. So the one operator that acted there deserved a closer look than it had been given.</p>
+
+<p>That operator is the step form of the encroachment closure. Inside a layer of depth $h$ below the top surface, every cell is moved toward the layer's own mass-weighted mean,</p>
+
+<p style="text-align:center">$T_i \leftarrow T_i + c\,w_i\,(\overline{T} - T_i), \qquad \overline{T} = \dfrac{\sum_j w_j V_j T_j}{\sum_j w_j V_j}$</p>
+
+<p>with $c$ the share taken per step. Using the same weight $w$ in the mean and in the move is what makes it safe: the weighted mean of the increments is exactly zero, so the heat of the region is conserved whatever the weights are. That property is worth naming, because it is what the operator has <em>instead of</em> a physical closure. It does not carry heat between neighbours; it imposes a shape and keeps the heat of the region it acts on. A calibrated model, not a closure.</p>
+
+<p>With $w_i = 1$ inside the layer and $0$ outside, that gives a base one cell thick &mdash; 2.08 mm on the end profile, against the reference's 4.48 mm. So the replay finally overshoots the reference, in the one direction the sharpening family could never reach. A real convective layer does not end in a step either. In the laboratory convection tank of <a href="#ref-deardorff">Deardorff, Willis and Stockton</a> the top of the mixed layer is not a surface but a zone, bracketed by the heights at which 5% and 90% of the fluid carries mixed-layer properties, and its thickness scales with the depth of the layer rather than being a fixed length. The form to carry over is therefore a thickness proportional to $h$, with the proportionality $\zeta$ the single number left to set:</p>
+
+<p style="text-align:center">$w_i = \operatorname{clip}\!\left(\dfrac{h + \tfrac{1}{2}\zeta h - d_i}{\zeta h},\,0,\,1\right)$</p>
+
+<p>The weight is one above the zone, falls linearly through it, and is zero below; the conservation argument holds unchanged, and $\zeta = 0$ recovers the step.</p>
+
+<h4>Reading the depth off the profile</h4>
+
+<p>That fixes how the layer ends but not where. The depth still came from the heat that had left through the wall, and that budget is one-way: heat only accumulates, so the layer it predicts can only deepen. The reference does something else. Its warm layer deepens to about 0.43 of the chamber height, stalls there, and rises again once the inflow changes, because cold fluid has collected underneath and a stable interface stops the convection reaching further. A depth read from the field carries that behaviour without being told about it.</p>
+
+<p>Ocean mixed layers are diagnosed exactly that way. <a href="#ref-deboyer">de Boyer Montégut and co-workers</a> take the base as the shallowest depth at which the temperature departs from a near-surface reference by more than a fixed threshold, $\Delta T = 0.2$ K below the value at 10 m, and show on moored records that the criterion follows the base of the layer through the seasonal cycle. Transferred to the chamber, the temperature is averaged over horizontal bands, the reference comes from the topmost bands that hold fluid, and</p>
+
+<p style="text-align:center">$h = \min\{\,d : T_\text{ref} - \langle T\rangle(d) > \Delta T_\text{crit}\,\}$</p>
+
+<p>The vertical range of this case falls by roughly a factor of three over the run, so a fixed 0.2 K would mean different things early and late; the threshold is a share of the instantaneous range of the profile instead. Nothing in it is fitted to the reference, since both the range and the reference level come from the replay. Two consequences follow. The depth no longer needs the sink, so unlike the budget form this variant is not silent in an adiabatic replay and has to be checked there separately. And the depth can now decrease, which the budget form could never do.</p>
+
+<p>The first attempt failed in a way worth recording, because any profile-diagnosed closure can fall into it. Early in the run the chamber is close to isothermal, no crossing exists, and the code read that as one layer filling the whole column. The operator then mixed the whole column, which removed the very interface the test looks for, so the decision held from the first step onward and the run spent the entire cooling window fully stirred. Its endpoint looked respectable while its trajectory was nowhere near the reference: a mean-temperature deviation of 7.86 K against 2.72 K for the budget form. Reading a missing crossing as <em>no layer</em> instead, so the depth falls back to its floor and the operator stays quiet until a front forms, drops that deviation to 1.31 K with nothing else changed.</p>
+
+
+<h4>What the step does to the picture</h4>
+
+<p>At this point the monitors are as close as they have been anywhere in the study. The best of these runs follows the reference mean temperature to 0.92 K over the whole window, holds the heat centroid to 0.08 mm, and captures 81% of the cooling, all at the same time. Judged on those columns it is the working point.</p>
+
+<p>The picture says something else. Two presentation faults had to be cleared before it could be trusted, and both mislead in the same direction.</p>
+
+<p>The first is the crop. The earlier montages start at the left wall of the tank, which hides the two channels: the warm stream enters through a channel at mid height and the outlet leaves through another at the same height. Without them in view the interface reads as a line drawn across the picture for no reason, when it is the height at which the tank is fed and drained. The montage below reaches a third of a tank width to the left so the channel is visible, and the dividing line is then plainly the channel level. The reference's own pathline panel confirms it: the tank runs as two separated circulation cells with the channel level between them.</p>
+
+<p>The second is the camera. The renderer does not always return the same view &mdash; three turned up across the runs of this study &mdash; and a crop fixed by hand then compares one tank against a differently sized tank elsewhere in the frame. That fault alone put a field distance of 10.5 K on a run whose true distance is 1.86 K. The tank is now located in every frame from the colour itself.</p>
+
+<p>With that cleared, the field measurement is unambiguous, and it disagrees with the monitors. Setting every cell of the layer to the layer mean, which is what $c = 1$ does, flattens the vertical profile and every horizontal difference along with it: the warm stream that should climb from the channel to the top wall is averaged away, and the replay shows a featureless slab above a hard line. Leaving part of the grading in place, $c = 0.7$, keeps the stream and gives the closest field of the whole study.</p>
+
+<p><em>Read with the correction below:</em> the capture figures in this section are what the operator does, not what the surface heat budget authorises. The last nine points of capture can be bought back. Raising the threshold to $\Delta T_\text{crit} = 0.15$ at the same $c = 0.7$ gives 80.9% of the cooling with the closest mean-temperature trace of the study, 0.92 K, and a field distance of 1.93 K &mdash; still ahead of the prescribed roll at 20 mm/s, still behind the same operator at the lower threshold. The layer it leaves is a shade too cold, cyan against the reference's green, and that is where the last of the field distance sits.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>layer-base operators, heat-loss database</th><th class="num">capture</th><th class="num">field $\overline{|\Delta T|}$ (K)</th><th class="num">$|\Delta T_\text{mean}|$ (K)</th><th class="num">$|\Delta z_\text{cog}|$ (mm)</th><th class="num">$\delta T_\text{end}$ (K)</th><th class="num">front (mm)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, $h=100$</td><td class="num">&mdash;</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">6.76</td><td class="num">4.48</td></tr>
+<tr><td>plain replay</td><td class="num">35%</td><td class="num">3.51</td><td class="num">3.64</td><td class="num">0.079</td><td class="num">&mdash;</td><td class="num">8.81</td></tr>
+<tr><td>step at the base, budget depth</td><td class="num">46%</td><td class="num">2.55</td><td class="num">2.76</td><td class="num">0.172</td><td class="num">9.36</td><td class="num">2.08</td></tr>
+<tr><td>profile depth, $c=1$</td><td class="num">82%</td><td class="num">1.86</td><td class="num">1.03</td><td class="num">0.080</td><td class="num">5.34</td><td class="num">2.25</td></tr>
+<tr class="best"><td>profile depth, $c=0.7$</td><td class="num">72%</td><td class="num">1.24</td><td class="num">1.38</td><td class="num">0.075</td><td class="num">6.61</td><td class="num">2.90</td></tr>
+<tr><td>profile depth, $c=0.7$, threshold 0.15</td><td class="num">81%</td><td class="num">1.93</td><td class="num">0.92</td><td class="num">0.076</td><td class="num">5.34</td><td class="num">2.30</td></tr>
+<tr><td>profile depth, anomaly kept</td><td class="num">76%</td><td class="num">6.75</td><td class="num">2.26</td><td class="num">0.250</td><td class="num">2.28</td><td class="num">45.5</td></tr>
+<tr><td>anomaly kept, budget depth</td><td class="num">44%</td><td class="num">2.76</td><td class="num">3.22</td><td class="num">0.087</td><td class="num">8.67</td><td class="num">5.50</td></tr>
+<tr><td>prescribed roll 30 + sharpening</td><td class="num">81%</td><td class="num">1.71</td><td class="num">1.77</td><td class="num">0.148</td><td class="num">&mdash;</td><td class="num">&mdash;</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure>
+  <img src="assets/figures/fig_layer_base_montage.png" alt="Montage of the layer-base operators against the CFD reference, with the feed channel in view" style="max-width:1240px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 26.</span> The layer-base operators against the reference, with the feed channel in view and every tank located in its own frame. Mid-run, end of run, and the end-of-run interface band enlarged. At mid-run the reference carries the warm stream from the channel to the top wall behind a thin interface; the plain replay keeps the stream but smears the interface across a third of the height; the step at $c=1$ has the interface and no stream at all; the step at $c=0.7$ has both. At the end of the run the reference layer is green, and $c=0.7$ is the only replay that reaches that shade, the higher-threshold variant next to it coming out a little too cold. The anomaly-preserving step on the budget depth carries the most visible stream of any replay here, which is what it was built to do, but its layer ends a shade too warm and a warm patch collects at the outlet, and that is where its field distance goes. What none of them has is the row of cold fingers hanging from the cooled lid: plume-scale structure, and not something a rule acting on the horizontal mean can supply.</figcaption>
+</figure>
+
+<figure>
+  <img src="assets/figures/fig_layer_base_metrics.png" alt="Three panels: mean temperature, heat centroid and heterogeneity of the layer-base operators against the CFD" style="max-width:820px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 27.</span> The same runs on the three monitor curves. The first panel is where the operators look best and the third is where they part company with the reference: the step at $c=1$ tracks the mean temperature closely while its heterogeneity falls well below, which is the slab showing up as a number.</figcaption>
+</figure>
+
+<figure>
+  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1240px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_layerbase_cfd_vs_best.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 28.</span> The whole cooling window, reference first. Watch the interface rather than the endpoint: in the reference it stays a thin line at the channel level while the layer above cools; the plain replay lets it spread over a third of the tank; the step at $c=0.7$ holds the line and keeps the warm stream climbing to the lid; the step at $c=1$ holds the line and loses the stream entirely, which is the slab that scores best on every integral metric and worst on the picture.</figcaption>
+</figure>
+
+<figure>
+  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1000px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_layerbase_cfd_vs_80.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 29.</span> The two ends of the trade-off against the reference. Left of centre, the threshold raised to recover 81&thinsp;% of the cooling: the interface is right and the layer runs a shade cold. Right, the anomaly-preserving step on the budget depth: the warm stream is the strongest of any replay and the front thickness is the closest to the reference, but the layer ends too warm and a warm patch collects at the outlet.</figcaption>
+</figure>
+
+<p>An attempt was made to have both the capture and the structure. Convection homogenises the vertical, so the field was split into the horizontally averaged profile and the departure from it, $T = \langle T\rangle(y) + T'$, the step applied to $\langle T\rangle$ and $T'$ left alone. The heat is still conserved exactly and the vertical profile still ends up a step. It failed, and the reason is instructive: flattening the band means removes the very gradient the depth criterion tests for, so the diagnosed layer keeps growing and the run ends with a deeper, flatter tank &mdash; a field distance of 6.75 K, worse than doing nothing. Two rules that each read the field the other one writes do not compose, which is the same failure the roll under the gradient-based normal showed earlier.</p>
+
+<p>That diagnosis can be tested rather than asserted. Put the same anomaly-preserving step on the budget depth, where the depth comes from the wall energy and cannot respond to what the operator does to the profile, and it behaves: 44.3% capture against 46.3% for the same depth with the structure erased, so the capture is untouched, while the heat centroid improves from 0.172 to 0.087 mm and the front comes out at 5.50 mm against the reference's 4.48 &mdash; the closest front of any run here. So preserving the anomaly is sound in itself; combining it with a depth read off the same profile is not.</p>
+
+<p>It is not a clear win even there, and the field measurement is what says so: 2.76 against 2.55 K for the same depth with the structure erased. Preserving the anomaly buys the front and the centroid and loses a little of the field, because the departures it keeps are the ones the recorded flow carries, and those are not the reference&rsquo;s departures. Keeping structure and keeping the <em>right</em> structure are different requirements, and only the second one closes the picture.</p>
+
+<h4>Where the extra cooling came from</h4>
+
+<p>Reading the depth off the profile takes a local rule from a third of the cooling to four fifths of it, and it would be comfortable to leave the story there. One more test says the four fifths is borrowed, and the montage had been saying so from the first minute of the run.</p>
+
+<p>The tell is at the start. In the early frames the whole upper half of the tank turns into one flat block with a hard lower edge, before the sink has removed enough heat to have mixed anything at all. The reason is that the depth criterion cannot tell two similar-looking interfaces apart. While the tank is filling, the warm inflow leaves a front behind it, and that front is a stable one: nothing has stirred the fluid above it. The criterion finds it, calls it the base of a convective layer, and the operator homogenises a region the surface cooling has never touched.</p>
+
+<p>The surface heat budget is the quantity that knows better, since mixing a layer of depth $h$ into a gradient costs a heat deficit the surface must actually have removed. Keeping the smaller of the two, $h = \min(h_\text{profile}, h_\text{budget})$, gives each quantity the job it is good for: the profile says where the interface is, the budget says how deep the cooling can have reached by now. Early on the budget is near zero, so the operator stays out of the way and the filling proceeds untouched.</p>
+
+<p>The capture then falls from 79% to 43%, back among the runs whose depth came from the budget in the first place. So the extra cooling was not produced by reading the field better. It was produced by stirring a region the forcing does not pay for, and the flat block in the early frames was that overreach made visible. It is the same conclusion the lever sweeps reach from the opposite direction: what sets the capture is how much of the tank is stirred, and a closure that stirs more than the surface loss can justify will always look better on the capture column than it deserves.</p>
+
+<div class="keybox">
+  <h4>The honest frontier</h4>
+  <p>Within what the heat budget authorises, a local rule on this database gives about 45% of the cooling, a front of 5.9 mm against the reference's 4.48, and a bulk still several Kelvin too warm. The field distance of 1.24 K stands as a measurement, but it belongs to a run whose capture is borrowed in the same way, so it is the closest field reached in this study rather than a validated closure. Everything past that &mdash; here and in the prescribed-roll chapter alike &mdash; is bought by moving more fluid than the measured surface loss can account for. And what none of it supplies is the row of cold fingers hanging from the cooled lid, which is plume-scale structure and beyond a rule acting on the horizontal mean.</p>
+</div>
+
+<h4>What the recorded diffusivity says</h4>
+
+<p>Two questions about the stored diffusivity had been left open, and both matter for the whole sharpening line: whether the field varies enough for the word <em>local</em> to mean anything, and what it says near the lid, since the cold film there drives both the wall flux and the descending plumes. The read-only accessor makes them answerable &mdash; the field is summed by depth every step and written out, with the operator left on at zero strength so the run reads the field and changes nothing.</p>
+
+<p>The field is strongly non-uniform: cell values span zero to $1.27\times10^{-4}$ m²/s, so it is not a relabelled constant. The lid behaves in two regimes. Averaged over the top millimetre against the rest of the tank, the ratio is 6.0 at $t=60$ s, 3.9 at 300 s, then 0.59 at 450 s and 0.53 at the end. While the tank fills, the ceiling is the most actively mixed part of it, which is what the arriving warm stream spreading along the lid should look like; once the inflow stops, the same region mixes only about half as much as the bulk. So the database does record damped mixing at the lid through the cooling window, and a film ought to survive there.</p>
+
+<p>It does not, and the reason is size rather than physics. The volume a face swaps in one step is $D\,c_s\,\Delta t$ on this cubic mesh, which against the cell volume is the diffusion number $\mathrm{Di} = D\,\Delta t / c_s^2$. With $c_s = 1$ mm and $\Delta t = 1$ s the lid value gives $\mathrm{Di} = 2.3$, the bulk value 4.4, and the largest recorded value of order $10^2$. An explicit diffusive step stops being a small perturbation above about 0.5; at 2 to 4 a cell is levelled with its neighbours within one step. The library must be limiting the exchange internally, which was not checked here, but the conclusion does not depend on the limiter: at this time step the recorded diffusivity is far outside the range in which a diffusive step preserves millimetre-scale structure. That is the quantitative root of the smearing the whole negative-diffusivity line was built to fight, and it is why no operator acting once per second could hold a one-millimetre film.</p>
+
+<p>The diffusion number is linear in $\Delta t$, which names the obvious remedy; and shortening the interval between shifts is in any case an established correction when a replay reproduces the character of a case but not its magnitude, because the recorded circulation is then too slow (<a href="#ref-zhang2025">Zhang et al. 2025</a>). Both readings point the same way, so it was tested on the same database with no operator at all, with the episode count raised to keep the physical window at 600 s. The capture rises from 35.2% at $\Delta t = 1$ s to 67.9% at 0.5 s and 76.0% at 0.75 s &mdash; more than any local operator here reaches within its budget.</p>
+
+<h4>One number doing two jobs</h4>
+
+<p>The diffusivity argument can be tested rather than believed, and the test is one run. For a steady flux through a layer one cell thick the drop across it is $\Delta T_\text{film} = q\,c_s / (\rho c_p D)$, so the reference's measured film of 1.54 K implies an effective diffusivity near the lid of about $2\times10^{-7}$ m²/s &mdash; essentially the molecular value for water. The database records $2.3\times10^{-6}$ there, an order of magnitude more. If that relation is the whole story, removing the face-swap diffusion should hand the film back.</p>
+
+<p>It does. With the local field switched off and the swap coefficient taken down in steps, the film grows from 0.57 K to 1.17, then 1.45, then 1.49 K against the reference's 1.54. The near-wall structure the replay was missing is not missing for want of an operator; it is dissolved by the diffusivity the database carries.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>face-swap diffusion</th><th class="num">film drop (K)</th><th class="num">capture</th><th class="num">$\delta T_\text{end}$ (K)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, $h=100$</td><td class="num">1.54</td><td class="num">100%</td><td class="num">6.76</td></tr>
+<tr><td>local diffusivity field (as used)</td><td class="num">0.57</td><td class="num">35.2%</td><td class="num">&mdash;</td></tr>
+<tr><td>$f_{sd} = 0.1$</td><td class="num">1.17</td><td class="num">14.6%</td><td class="num">10.02</td></tr>
+<tr><td>$f_{sd} = 0.01$</td><td class="num">1.45</td><td class="num">8.7%</td><td class="num">11.28</td></tr>
+<tr class="best"><td>$f_{sd} = 0$</td><td class="num">1.49</td><td class="num">8.1%</td><td class="num">11.57</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The same run says why that cannot simply be fixed. The captured cooling collapses from 35.2% to 8.1%, and the tank ends over-graded, 11.6 K of heterogeneity against 6.76. The face-swap diffusion is the replay's only means of moving heat across a stable interface: with the recorded shifts alone, nothing carries heat to the surface. So the same coefficient is at once the transport and the destroyer of the near-wall structure, and no single value can serve both. Every operator in this section has been an attempt to buy back one while keeping the other, which is why they all traded in the same direction.</p>
+
+<div class="keybox">
+  <h4>What a rebuilt database would have to achieve</h4>
+  <p>A finer frame interval lowers the recurrence diffusivity, because more of the motion is captured by the shift and less is left to be represented as diffusion. But it lowers it <em>everywhere</em>, and the table above is what happens when $D$ falls uniformly. A rebuild can only win if it moves the <em>near-lid</em> transport out of the diffusion term and into the shift term, so the plume motion is recorded as displacement rather than left as diffusivity. Whether a finer prep does that is an open question, not a safe assumption &mdash; but it is cheap to check before committing ten hours to it. The diffusivity probe costs one replay: if the new database shows $D$ at the lid an order of magnitude smaller while $D$ in the bulk holds, the film will survive without giving up the transport. If both fall together, the rebuild reproduces the trade above and there is no reason to continue.</p>
+</div>
+
+<p>The field goes the wrong way, by two independent measures. The heterogeneity at the end falls to 2.0&ndash;2.2 K against the reference's 6.76, so the tank is close to well mixed; and the topmost cell ends at 296 K against the reference's 306 K, colder than its own bulk mean, so the layering is not merely weakened but inverted. Accelerating a recorded circulation accelerates it everywhere, including through the stably stratified lower half that the real flow leaves alone. Adding the layer operator on top recovers part of the heterogeneity, 2.2 to 4.7 K, and still leaves the centroid four times further from the reference than the operator alone manages. So the time-step lever buys what every other lever here buys and pays in the same coin; it is recorded for that reason rather than as a candidate.</p>
+

@@ -1,0 +1,29 @@
+<h2 id="step1a">5 — Step 1a: Workflow on Windows 11</h2>
+
+<p>The rCFD tutorial was originally written for Linux. Step 1a takes the same tutorial and makes it run end-to-end on Windows 11 with ANSYS Fluent 2022 R2. The main changes were:</p>
+
+<ul>
+  <li>Replacing Linux shell commands inside the Scheme files with Windows equivalents (<code>xcopy</code> instead of a looped <code>cp</code>, absolute paths with backslashes).</li>
+  <li>Installing the Visual Studio C++ tools so that Fluent can compile the UDF library at runtime.</li>
+  <li>Adding clean-up logic so that the old <code>libudf_rcfd_run/</code> folder is deleted before every run. Without this, a stale build from a previous crash would be reused.</li>
+  <li>Fixing an MPI crash that always happened at episode 272 of the replay (it came from a corona-cell sync problem).</li>
+  <li>Fixing blank snapshots: the contour plot had to be drawn before saving the frame.</li>
+</ul>
+
+<p>After these fixes the full workflow runs end-to-end on a four-core laptop. The rCFD replay (600 episodes) takes about fifteen minutes; the CFD reference that the recurrence database is built from is far more expensive, at about 9&nbsp;h 43&nbsp;min (see Section 6).</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_02_cfd_tmean_cog.png" alt="CFD reference T_mean and CoG_y traces" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 2.</span> CFD reference traces of $T_\text{mean}(t)$ (left) and $CoG_y(t)$ (right). The average temperature rises while the warm inlet is on ($t<315$ s), peaks around $t\approx 345$ s, then falls. The centre of gravity climbs as warm fluid collects at the top.</figcaption>
+</figure>
+
+<h3>5.1 — First rCFD replay at $f_{sd} = 0.75$</h3>
+
+<p>For the first replay we used $f_{sd} = 0.75$ as a starting value. The rCFD curves follow the CFD curves in shape, but $T_\text{mean}$ sits clearly above the reference. That offset is what motivated Step 1b: instead of guessing the right value of $f_{sd}$, we decided to sweep it.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_comparison_TMean_CoG.png" alt="Step 1a CFD vs rCFD comparison at f_sd = 0.75" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 3.</span> Step 1a comparison: CFD reference (black) versus rCFD replay at $f_{sd} = 0.75$. The rCFD trace for $T_\text{mean}$ stays above the reference during the warm phase; $CoG_y$ follows the reference quite well, but its peak arrives later.</figcaption>
+</figure>
+
+<!-- =========================================================== -->

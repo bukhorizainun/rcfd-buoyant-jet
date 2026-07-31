@@ -1,0 +1,626 @@
+<h2 id="references">References</h2>
+
+<div class="bib">
+<ol>
+  <li id="ref-lichtenegger2016">T. Lichtenegger and S. Pirker, <span class="title">Recurrence CFD — a novel approach to simulate multiphase flows with strongly separated time scales</span>, Chemical Engineering Science <strong>153</strong>, 394–410 (2016).</li>
+  <li id="ref-pirker2018">S. Pirker and T. Lichtenegger, <span class="title">Efficient time-extrapolation of single- and multiphase simulations by transport-based recurrence CFD (rCFD)</span>, Chemical Engineering Science <strong>188</strong>, 65–83 (2018). §2.4 describes the one-step cell-to-cell exchange used for face-swap diffusion, and the separate "global balance safety belt" that uses the same exchange to keep the global mass conserved. §3.2 reports a fluidised-bed heat-transfer case where transport-based rCFD smears out the sharp, localised heat-transfer layer.</li>
+  <li id="ref-lumetzberger2025">H. Lumetzberger, S. Pirker and T. Lichtenegger, <span class="title">Propagator-moments approximation for recurrence CFD: application to species transport in turbulent flows</span>, Chemical Engineering Science <strong>311</strong>, 121624 (2025). Modern propagator-theoretic derivation of the face-swap operator.</li>
+  <li id="ref-hyndman2006">R. J. Hyndman and A. B. Koehler, <span class="title">Another look at measures of forecast accuracy</span>, International Journal of Forecasting <strong>22</strong>(4), 679–688 (2006). Standard reference for the bias, MAE, RMSE error metrics used here.</li>
+  <li id="ref-abbasi2020">S. Abbasi, S. Pirker and T. Lichtenegger, <span class="title">Application of recurrence CFD (rCFD) to species transport in turbulent vortex shedding</span>, Computers and Fluids <strong>196</strong>, 104348 (2020). Source of the $D_\text{rec} = D + D_\text{sgs}$ decomposition motivating the local-diffusion path.</li>
+  <li id="ref-fluent2022">ANSYS Inc., <span class="title">ANSYS Fluent Theory Guide, Release 2022 R2</span>, Canonsburg, PA (2022).</li>
+  <li id="ref-pfm">Particulate Flow Modelling, JKU Linz, <span class="title">rCFDreloaded source code</span>, internal repository (2026). Implementation reference for the face-swap operator (<code>src/rCFD_swap.h</code>).</li>
+  <li id="ref-borisbook1973">J. P. Boris and D. L. Book, <span class="title">Flux-Corrected Transport. I. SHASTA, a fluid transport algorithm that works</span>, Journal of Computational Physics <strong>11</strong>(1), 38–69 (1973). Origin of the no-new-extremum rule used by the sharpening concept in §9.4.</li>
+  <li id="ref-zalesak1979">S. T. Zalesak, <span class="title">Fully multidimensional Flux-Corrected Transport algorithms for fluids</span>, Journal of Computational Physics <strong>31</strong>(3), 335–362 (1979). Multidimensional form of the flux limiter.</li>
+  <li id="ref-zhang2025">X. Zhang, M. Thumfart, R. Rössler and S. Pirker, <span class="title">Aligning real-time recurrence computational fluid dynamics simulations with plant data for the Ruhrstahl–Heraeus degassing process of steel</span>, Steel Research International <strong>2025</strong>, 1–16, doi:10.1002/srin.202500395. Shortening the interval between shifts as an alignment correction when a replay reproduces the character of a case but not its magnitude.</li>
+  <li id="ref-deardorff">J. W. Deardorff, G. E. Willis and B. H. Stockton, <span class="title">Laboratory studies of the entrainment zone of a convectively mixed layer</span>, Journal of Fluid Mechanics <strong>100</strong>, 41–64 (1980). Tank experiments in which the top of a convective layer is a zone, not a surface, with a thickness that scales with the layer depth. Basis for the tapered layer weight in §15.11.</li>
+  <li id="ref-deboyer">C. de Boyer Montégut, G. Madec, A. S. Fischer, A. Lazar and D. Iudicone, <span class="title">Mixed layer depth over the global ocean: an examination of profile data and a profile-based climatology</span>, Journal of Geophysical Research <strong>109</strong>, C12003 (2004). The threshold criterion for a mixed-layer base, $\Delta T = 0.2$ K below a near-surface reference, transferred in §15.11 to a share of the instantaneous vertical range.</li>
+</ol>
+</div>
+
+<script>
+(function() {
+  // -------- Custom tooltip for SVG workflow boxes -------------------
+  const boxes = document.querySelectorAll('.workflow .wf-box[data-tip]');
+  if (!boxes.length) return;
+
+  const tip = document.createElement('div');
+  tip.className = 'wf-tooltip';
+  document.body.appendChild(tip);
+
+  function showTip(box, ev) {
+    tip.innerHTML = '<strong>' + box.dataset.tipTitle + '</strong>' + box.dataset.tip;
+    tip.classList.add('show');
+
+    const r  = box.getBoundingClientRect();
+    const sy = window.scrollY || window.pageYOffset;
+    const sx = window.scrollX || window.pageXOffset;
+    // place above the box if there is room; otherwise below
+    const popH = tip.offsetHeight;
+    const above = r.top - popH - 10 > 0;
+    if (above) {
+      tip.style.top  = (r.top + sy - popH - 10) + 'px';
+    } else {
+      tip.style.top  = (r.bottom + sy + 10) + 'px';
+    }
+    // center horizontally on the box
+    const popW = tip.offsetWidth;
+    let left = r.left + sx + r.width / 2 - popW / 2;
+    // clamp to viewport
+    left = Math.max(8 + sx, Math.min(left, sx + window.innerWidth - popW - 8));
+    tip.style.left = left + 'px';
+  }
+  function hideTip() {
+    tip.classList.remove('show');
+  }
+
+  boxes.forEach(box => {
+    box.addEventListener('mouseenter', (ev) => showTip(box, ev));
+    box.addEventListener('mouseleave', hideTip);
+  });
+  document.addEventListener('scroll', hideTip, { passive: true });
+})();
+</script>
+
+<script>
+(function() {
+  // -------- Theme toggle (light / dark mode) ------------------------
+  const root = document.documentElement;
+  const btn  = document.getElementById('themeToggle');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    // Notify listeners (Plotly re-render etc.)
+    document.dispatchEvent(new CustomEvent('themechange', { detail: { theme: next } }));
+  });
+})();
+</script>
+
+<script>
+(function() {
+  // -------- Sortable tables (click <th> to sort) --------------------
+  // Auto-detects numeric columns. Handles signed values, +/- prefixes,
+  // and ignores embedded badge text (e.g. "best").
+  function parseCell(cell) {
+    // Strip badges and decorations; keep the first numeric-looking token.
+    const raw = (cell.textContent || '').trim();
+    const m = raw.match(/-?\+?\s*\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0].replace(/\s+/g, '')) : NaN;
+  }
+
+  function sortTable(table, colIdx, asc) {
+    const tbody = table.tBodies[0];
+    const rows  = Array.from(tbody.querySelectorAll('tr'));
+    const numericPass = rows.every(r => {
+      const c = r.cells[colIdx];
+      return c && !isNaN(parseCell(c));
+    });
+    rows.sort((a, b) => {
+      const ca = a.cells[colIdx], cb = b.cells[colIdx];
+      if (numericPass) {
+        const va = parseCell(ca), vb = parseCell(cb);
+        return asc ? va - vb : vb - va;
+      } else {
+        const sa = (ca.textContent || '').trim();
+        const sb = (cb.textContent || '').trim();
+        return asc ? sa.localeCompare(sb) : sb.localeCompare(sa);
+      }
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
+
+  document.querySelectorAll('.table-wrap > table').forEach(table => {
+    if (!table.tHead || !table.tBodies[0]) return;
+    table.classList.add('sortable');
+    const headers = Array.from(table.tHead.querySelectorAll('th'));
+    headers.forEach((th, idx) => {
+      let asc = true;
+      th.addEventListener('click', () => {
+        sortTable(table, idx, asc);
+        headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+        th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+        asc = !asc;
+      });
+    });
+  });
+})();
+</script>
+
+<script>
+(function() {
+  // -------- Citation popovers (hover / click on [N]) ----------------
+  const links = document.querySelectorAll('a[href^="#ref-"]');
+  if (!links.length) return;
+
+  // Cache reference contents and assign cite-link styling + numeric label
+  const refMap = {};
+  document.querySelectorAll('.bib li[id^="ref-"]').forEach((li, i) => {
+    refMap[li.id] = {
+      num: i + 1,
+      html: li.innerHTML.trim()
+    };
+  });
+
+  // Reusable popover element
+  const pop = document.createElement('div');
+  pop.className = 'cite-popover';
+  pop.setAttribute('role', 'tooltip');
+  document.body.appendChild(pop);
+
+  let activeLink = null;
+  let hideTimer  = null;
+
+  function positionPopover(link) {
+    const r  = link.getBoundingClientRect();
+    const sy = window.scrollY || window.pageYOffset;
+    const sx = window.scrollX || window.pageXOffset;
+    // place below the citation by default
+    pop.style.left = (r.left + sx) + 'px';
+    pop.style.top  = (r.bottom + sy + 8) + 'px';
+
+    // adjust if overflow on the right
+    const popRect = pop.getBoundingClientRect();
+    const overflowR = popRect.right - window.innerWidth + 12;
+    if (overflowR > 0) {
+      pop.style.left = (r.left + sx - overflowR) + 'px';
+    }
+  }
+
+  function showPopover(link) {
+    const targetId = link.getAttribute('href').slice(1);
+    const ref      = refMap[targetId];
+    if (!ref) return;
+
+    if (activeLink && activeLink !== link) activeLink.classList.remove('active');
+    activeLink = link;
+    activeLink.classList.add('active');
+
+    pop.innerHTML =
+      '<span class="cite-pop-num">' + ref.num + '</span>' +
+      '<span class="cite-pop-body">' + ref.html + '</span>' +
+      '<a class="cite-pop-jump" href="#' + targetId + '">Jump to bibliography &rarr;</a>';
+    positionPopover(link);
+    pop.classList.add('show');
+  }
+
+  function hidePopover() {
+    pop.classList.remove('show');
+    if (activeLink) activeLink.classList.remove('active');
+    activeLink = null;
+  }
+
+  function scheduleHide() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hidePopover, 220);
+  }
+  function cancelHide() {
+    clearTimeout(hideTimer);
+  }
+
+  // Convert each citation link to the cite-link style + handlers
+  links.forEach(link => {
+    if (!refMap[link.getAttribute('href').slice(1)]) return;
+    link.classList.add('cite-link');
+
+    link.addEventListener('mouseenter', () => {
+      cancelHide();
+      showPopover(link);
+    });
+    link.addEventListener('mouseleave', scheduleHide);
+
+    link.addEventListener('click', (ev) => {
+      // Toggle on click; do not jump to the bibliography immediately so
+      // the reader can read the popover in place. The "Jump to ..." link
+      // inside the popover still navigates if they want to.
+      ev.preventDefault();
+      if (activeLink === link && pop.classList.contains('show')) {
+        hidePopover();
+      } else {
+        cancelHide();
+        showPopover(link);
+      }
+    });
+  });
+
+  pop.addEventListener('mouseenter', cancelHide);
+  pop.addEventListener('mouseleave', scheduleHide);
+
+  // Click outside to close
+  document.addEventListener('click', (ev) => {
+    if (!pop.contains(ev.target) && !ev.target.closest('a[href^="#ref-"]')) {
+      hidePopover();
+    }
+  });
+
+  // Esc to close
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') hidePopover();
+  });
+
+  // Reposition on resize/scroll while shown
+  window.addEventListener('resize', () => {
+    if (activeLink) positionPopover(activeLink);
+  });
+  window.addEventListener('scroll', () => {
+    if (activeLink) positionPopover(activeLink);
+  }, { passive: true });
+})();
+</script>
+
+<div class="quick-tour-overlay" id="quickTour" hidden>
+  <div class="qt-bar">
+    <div class="qt-progress" aria-hidden="true">
+      <div class="qt-progress-fill" id="qtProgressFill"></div>
+    </div>
+    <div class="qt-content">
+      <div class="qt-step-info">
+        <span class="qt-step-num" id="qtStepNum">1</span>
+        <span class="qt-step-total">of <span id="qtStepTotal">5</span></span>
+      </div>
+      <div class="qt-caption" id="qtCaption"></div>
+      <div class="qt-controls">
+        <button class="qt-btn" id="qtPrev" type="button" title="Previous stop" aria-label="Previous">‹</button>
+        <button class="qt-btn primary" id="qtPlayPause" type="button" title="Pause / Resume">⏸</button>
+        <button class="qt-btn" id="qtNext" type="button" title="Next stop" aria-label="Next">›</button>
+        <button class="qt-btn qt-close" id="qtClose" type="button" title="Exit tour" aria-label="Close">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // -------- 60-second quick tour ------------------------------------
+  // Auto-scrolls through five key views, ~12 s per stop. The user can
+  // pause, step manually, or exit. Pulse outline highlights the target.
+
+  const stops = [
+    {
+      selector: '.tldr',
+      caption: 'Headline first: best <strong>T<sub>mean</sub></strong> at f<sub>sd</sub>=0, best <strong>CoG<sub>y</sub></strong> at f<sub>sd</sub>=0.5. The rest of the page is how we got there.'
+    },
+    {
+      selector: '.workflow',
+      caption: 'rCFD in one diagram: record cell-to-cell shifts during a short CFD run, then <em>replay</em> them with a small mixing step. Hover the boxes for details.'
+    },
+    {
+      selector: '#wallClockFigure',
+      caption: 'CFD reference takes about <strong>9.7 h</strong>; with snapshots off, each rCFD replay runs in only a <strong>few minutes</strong> — roughly a <strong>263×</strong> speed-up. The whole point of rCFD.'
+    },
+    {
+      selector: '#quantPlotFigure',
+      caption: 'The interactive comparison. Hover any curve for exact values, click the legend to isolate a case. Tables below sort by Bias, MAE, RMSE.'
+    },
+    {
+      selector: '#scrubber',
+      caption: 'See it move: drag the scrubber to compare all seven rCFD cases against the CFD reference at any time. This is the part PDF can’t do.'
+    }
+  ];
+
+  const btn         = document.getElementById('quickTourBtn');
+  const overlay     = document.getElementById('quickTour');
+  const captionEl   = document.getElementById('qtCaption');
+  const stepNumEl   = document.getElementById('qtStepNum');
+  const stepTotEl   = document.getElementById('qtStepTotal');
+  const progressEl  = document.getElementById('qtProgressFill');
+  const playPause   = document.getElementById('qtPlayPause');
+  const prevBtn     = document.getElementById('qtPrev');
+  const nextBtn     = document.getElementById('qtNext');
+  const closeBtn    = document.getElementById('qtClose');
+
+  if (!btn || !overlay) return;
+
+  stepTotEl.textContent = stops.length;
+
+  const STOP_MS = 12000;
+  let idx       = 0;
+  let timer     = null;
+  let rafId     = null;
+  let startedAt = 0;
+  let elapsed   = 0;
+  let paused    = false;
+  let highlighted = null;
+
+  function setHighlight(el) {
+    if (highlighted) highlighted.classList.remove('qt-highlight');
+    highlighted = el;
+    if (el) el.classList.add('qt-highlight');
+  }
+
+  function goTo(i) {
+    idx = (i + stops.length) % stops.length;
+    const stop = stops[idx];
+    const el   = document.querySelector(stop.selector);
+    captionEl.innerHTML = stop.caption;
+    stepNumEl.textContent = idx + 1;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlight(el);
+    }
+    elapsed = 0;
+    startedAt = performance.now();
+    if (!paused) restartTimer();
+    updateProgress();
+  }
+
+  function restartTimer() {
+    clearTimeout(timer);
+    cancelAnimationFrame(rafId);
+    timer = setTimeout(() => {
+      if (idx < stops.length - 1) goTo(idx + 1);
+      else exit(true);
+    }, STOP_MS - elapsed);
+    startedAt = performance.now();
+    tickProgress();
+  }
+
+  function tickProgress() {
+    if (paused) return;
+    updateProgress();
+    rafId = requestAnimationFrame(tickProgress);
+  }
+
+  function updateProgress() {
+    const now = paused ? startedAt : performance.now();
+    const e   = Math.min(STOP_MS, elapsed + (paused ? 0 : now - startedAt));
+    progressEl.style.width = (100 * e / STOP_MS).toFixed(1) + '%';
+  }
+
+  function pause() {
+    if (paused) return;
+    paused = true;
+    elapsed += performance.now() - startedAt;
+    clearTimeout(timer);
+    cancelAnimationFrame(rafId);
+    playPause.textContent = '▶';
+    playPause.title = 'Resume tour';
+  }
+  function resume() {
+    if (!paused) return;
+    paused = false;
+    playPause.textContent = '⏸';
+    playPause.title = 'Pause tour';
+    restartTimer();
+  }
+
+  function enter() {
+    overlay.hidden = false;
+    document.body.classList.add('qt-active');
+    paused = false;
+    elapsed = 0;
+    goTo(0);
+  }
+  function exit(reachedEnd) {
+    overlay.hidden = true;
+    document.body.classList.remove('qt-active');
+    clearTimeout(timer);
+    cancelAnimationFrame(rafId);
+    setHighlight(null);
+    paused = false;
+    elapsed = 0;
+    if (reachedEnd) {
+      // Soft toast that the tour is done
+      const toast = document.getElementById('toast');
+      if (toast) {
+        toast.textContent = 'Tour complete — explore the page or rerun it from the TL;DR.';
+        toast.classList.add('show');
+        clearTimeout(exit._t);
+        exit._t = setTimeout(() => toast.classList.remove('show'), 2400);
+      }
+    }
+  }
+
+  btn.addEventListener('click', enter);
+  playPause.addEventListener('click', () => paused ? resume() : pause());
+  prevBtn.addEventListener('click',  () => goTo(idx - 1));
+  nextBtn.addEventListener('click',  () => goTo(idx + 1));
+  closeBtn.addEventListener('click', () => exit(false));
+
+  // Keyboard during tour: arrows + space + esc
+  document.addEventListener('keydown', (ev) => {
+    if (overlay.hidden) return;
+    if (ev.key === 'ArrowRight') { ev.preventDefault(); goTo(idx + 1); }
+    else if (ev.key === 'ArrowLeft')  { ev.preventDefault(); goTo(idx - 1); }
+    else if (ev.key === ' ')          { ev.preventDefault(); paused ? resume() : pause(); }
+    else if (ev.key === 'Escape')     { ev.preventDefault(); exit(false); }
+  });
+})();
+</script>
+
+<script>
+(function() {
+  // -------- Permalink: encode f_sd picker + scrubber time in URL hash --
+  // Format:  #<section-anchor>?fsd=<0..6>&t=<seconds>
+  // Either part is optional. Plain section anchors (#visual) still work.
+
+  const fsdSlider  = document.getElementById('fsdSlider');
+  const scrubSlider = document.getElementById('scrubSlider');
+  const shareBtn   = document.getElementById('shareLinkBtn');
+  const toast      = document.getElementById('toast');
+
+  function parseHash() {
+    const h = (location.hash || '').replace(/^#/, '');
+    if (!h) return { section: '', params: {} };
+    const qIdx = h.indexOf('?');
+    let section, paramStr;
+    if (qIdx >= 0) {
+      section  = h.slice(0, qIdx);
+      paramStr = h.slice(qIdx + 1);
+    } else if (/^(fsd|t)=/.test(h)) {
+      // Hash starts with a param key (e.g. "#fsd=4&t=300") — no anchor
+      section  = '';
+      paramStr = h;
+    } else {
+      section  = h;
+      paramStr = '';
+    }
+    const params = {};
+    new URLSearchParams(paramStr).forEach((v, k) => { params[k] = v; });
+    return { section, params };
+  }
+
+  function buildHash(section, params) {
+    const usp = new URLSearchParams();
+    Object.keys(params).forEach(k => {
+      if (params[k] !== undefined && params[k] !== '') usp.set(k, String(params[k]));
+    });
+    const qs = usp.toString();
+    if (!section && !qs) return '';
+    return section + (qs ? '?' + qs : '');
+  }
+
+  // Apply a state object to the picker/scrubber by setting values and
+  // dispatching 'input' so the existing render functions fire.
+  function applyState(params) {
+    if (params.fsd !== undefined && fsdSlider) {
+      const i = Math.max(0, Math.min(6, parseInt(params.fsd, 10)));
+      if (Number.isFinite(i) && String(i) !== fsdSlider.value) {
+        fsdSlider.value = String(i);
+        fsdSlider.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+    if (params.t !== undefined && scrubSlider) {
+      const t = parseFloat(params.t);
+      if (Number.isFinite(t) && t >= 0 && t <= 600) {
+        scrubSlider.value = t.toFixed(2);
+        scrubSlider.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  }
+
+  // Throttled writer: keeps the URL fresh while the user drags sliders
+  // without flooding history.replaceState.
+  let writeTimer = null;
+  function scheduleWrite() {
+    clearTimeout(writeTimer);
+    writeTimer = setTimeout(writeHash, 200);
+  }
+  function writeHash() {
+    const cur = parseHash();
+    const fsdVal = fsdSlider ? parseInt(fsdSlider.value, 10) : null;
+    const tVal   = scrubSlider ? parseFloat(scrubSlider.value) : null;
+    const params = {};
+    // Only include non-default values to keep URLs short.
+    if (fsdVal !== null && fsdVal !== 3) params.fsd = fsdVal;          // 3 = 0.500 (default)
+    if (tVal   !== null && Math.round(tVal) > 0) params.t = Math.round(tVal);
+    const newHash = buildHash(cur.section, params);
+    const want = newHash ? ('#' + newHash) : (location.pathname + location.search);
+    if ((location.hash || '') !== ('#' + newHash) && newHash !== '') {
+      history.replaceState(null, '', want);
+    } else if (newHash === '' && location.hash) {
+      // Both defaults — drop the hash entirely if we control it
+      if (!cur.section) history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
+
+  // Identify the section currently in view (topmost visible h2).
+  function currentSection() {
+    const headings = Array.from(document.querySelectorAll('h2[id]'));
+    const scroll = window.scrollY + 140;  // account for fixed header offset
+    let best = '';
+    for (const h of headings) {
+      if (h.offsetTop <= scroll) best = h.id;
+      else break;
+    }
+    return best;
+  }
+
+  // -------- Initial hash restoration ---------------------------------
+  // Wait one tick so picker/scrubber IIFEs have attached their listeners.
+  setTimeout(() => {
+    const { section, params } = parseHash();
+    if (Object.keys(params).length) applyState(params);
+    if (section) {
+      // Re-scroll because we might have stripped query from hash visually
+      const target = document.getElementById(section);
+      if (target) {
+        // Smooth-scroll honors prefers-reduced-motion via html.scroll-behavior
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, 0);
+
+  // -------- Wire up live URL updates ---------------------------------
+  if (fsdSlider)   fsdSlider.addEventListener('input', scheduleWrite);
+  if (scrubSlider) scrubSlider.addEventListener('input', scheduleWrite);
+
+  // -------- Hashchange (e.g. user clicked a TOC link, pasted URL) ----
+  window.addEventListener('hashchange', () => {
+    const { params } = parseHash();
+    if (Object.keys(params).length) applyState(params);
+  });
+
+  // -------- Share button --------------------------------------------
+  function showToast(msg) {
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  // Public site URL — used when the page is opened via file:// so the
+  // copied link is shareable. Adjust here if the GitHub Pages URL changes.
+  const PUBLIC_URL = 'https://bukhorizainun.github.io/rcfd-buoyant-jet-step1/';
+
+  function publicBase() {
+    const isLocal = location.protocol === 'file:' ||
+                    /^(localhost|127\.|0\.0\.0\.0|::1)/.test(location.hostname || '');
+    if (isLocal) return PUBLIC_URL;
+    // Preserve current host + path (e.g. someone forked the repo and
+    // hosts it elsewhere — still shareable).
+    return location.origin + location.pathname;
+  }
+
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      // Compose hash from current state + current section in view
+      const fsdVal = fsdSlider ? parseInt(fsdSlider.value, 10) : null;
+      const tVal   = scrubSlider ? parseFloat(scrubSlider.value) : null;
+      const params = {};
+      if (fsdVal !== null && fsdVal !== 3) params.fsd = fsdVal;
+      if (tVal   !== null && Math.round(tVal) > 0) params.t = Math.round(tVal);
+      const section = currentSection();
+      const hash = buildHash(section, params);
+      const url  = publicBase() + (hash ? '#' + hash : '');
+
+      // Try Clipboard API first; fall back to a hidden textarea
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      } catch (e) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = url;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus(); ta.select();
+          copied = document.execCommand('copy');
+          document.body.removeChild(ta);
+        } catch (ee) { copied = false; }
+      }
+      showToast(copied ? 'Link copied to clipboard' : 'Could not copy — URL: ' + url);
+      // Also reflect into the URL bar so the user sees the share state
+      if (hash) history.replaceState(null, '', '#' + hash);
+    });
+  }
+})();
+</script>
+
+</main>
+
+<footer>
+  <div>© 2026 <span class="author">Mochamad Bukhori Zainun</span> · k12438440</div>
+  <div style="margin-top: 0.4em">Department of Particulate Flow Modelling · Johannes Kepler University Linz</div>
+</footer>
+
+<!-- ANNOTATION FEATURE START (script) -->
+<script defer src="annotation.js"></script>
+<!-- ANNOTATION FEATURE END -->
+
+</body>
+</html>

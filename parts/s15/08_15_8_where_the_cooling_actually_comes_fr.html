@@ -1,0 +1,36 @@
+<h3 id="budget">15.8 &mdash; Where the cooling actually comes from</h3>
+
+<p>Everything above reads as a ladder of captured cooling, and it invites one assumption: that a run higher on the ladder must be pulling more heat through the cooled surface. That assumption is wrong, and checking it changed which operator was worth building next.</p>
+
+<p>The tank is not closed. The inlet and the outlet both sit at mid height, so the mean temperature can fall for two different reasons: the wall takes heat out, or warm fluid leaves through the outlet. Both are measurable. The mass stays constant, so $\Delta H = m\,c_p\,\Delta T_\text{mean}$ with $m = 85.1$ g, taken from the CFD reference's own enthalpy and temperature traces. The wall term is the sink power the replay already writes out. What is left is the export.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>after the inflow stops ($t=320$ s to end)</th><th class="num">$\Delta H$ (J)</th><th class="num">wall (J)</th><th class="num">outlet (J)</th><th class="num">outlet share</th><th class="num">capture</th></tr>
+</thead>
+<tbody>
+<tr><td>plain replay, adiabatic database</td><td class="num">4426</td><td class="num">718</td><td class="num">3709</td><td class="num">84%</td><td class="num">29%</td></tr>
+<tr><td>+ mixed layer</td><td class="num">4594</td><td class="num">876</td><td class="num">3717</td><td class="num">81%</td><td class="num">36%</td></tr>
+<tr><td>+ entrainment at the layer base</td><td class="num">4440</td><td class="num">718</td><td class="num">3723</td><td class="num">84%</td><td class="num">30%</td></tr>
+<tr><td>+ mixing profile 75 mm, $c=1$</td><td class="num">5266</td><td class="num">850</td><td class="num">4417</td><td class="num">84%</td><td class="num">44%</td></tr>
+<tr><td>+ prescribed roll, 20 mm/s</td><td class="num">5566</td><td class="num">776</td><td class="num">4790</td><td class="num">86%</td><td class="num">69%</td></tr>
+<tr><td>plain replay, heat-loss database</td><td class="num">4915</td><td class="num">903</td><td class="num">4013</td><td class="num">82%</td><td class="num">35%</td></tr>
+<tr class="best"><td>+ mixing profile 75 mm, $c=1$, heat-loss DB</td><td class="num">5484</td><td class="num">831</td><td class="num">4653</td><td class="num">85%</td><td class="num">52%</td></tr>
+<tr><td>+ prescribed roll 20 mm/s, heat-loss DB</td><td class="num">5755</td><td class="num">790</td><td class="num">4964</td><td class="num">86%</td><td class="num">74%</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Four fifths of the cooling leaves through the outlet in every single run, and the whole spread between the operators sits in that column: 3709 to 4790 J on the adiabatic database, while the wall column moves only from 718 to 876 J. The ladder of captured cooling is a ladder of advective export.</p>
+
+<p>So the wall side was never the problem. The replays extract 1.7&ndash;2.0 kJ over the run and the CFD extracts about 1.5&ndash;1.8 kJ. The CFD never wrote its sink power out, so that figure was measured from its frames: the sink depends only on the top-layer temperature, the colour scale is fixed, and the same estimate applied to a replay reproduces its known sink energy to within 8&ndash;20%. Nothing in this study needed to improve the wall term, because it already matched.</p>
+
+<p>If the export is what has to change, which property of an operator changes it? Four levers were swept and only one mattered. How far a parcel travels does nothing: the sorting adjustment at ten, thirty and fifty sweeps gives the same 2248 J of wall energy and the same end temperature to two decimals. How strong the operator is at one place saturates: an entrainment exchange placed at the layer base, with its amount fixed by the surface heat loss, gives 36% and stays there even when multiplied by twenty-five, because past a point the pair at the base is simply mixed out. How deep a weak profile reaches buys three points for a five-fold change in depth. What moves the number is how much of the column is stirred at full strength: 41% at 35 mm, 43% at 50 mm, 44% at 75 mm, 52% on the recorded cooling flow, and 69&ndash;74% for a circulation that stirs the whole tank.</p>
+
+<p>That restates an earlier reading of this study. The bound we had put at roughly a third of the CFD cooling belongs to operators confined near the surface; given the whole column at full strength a local rule reaches 52%. The bound is about extent, not about being local.</p>
+
+<p>Two operators are new here and both are worth keeping for what they rule out. The <em>mixed layer</em> sets its own depth from the heat already removed, $h=\sqrt{2(E/A)/(\rho c_p \Gamma)}$, with the stratification $\Gamma$ measured in the field every step, so nothing in it is tuned. It reaches 36% and 43% on the two databases, and its depth comes out at 20&ndash;25 mm, close to the value that had been set by hand. The <em>entrainment</em> form keeps that depth but puts the exchange at the layer base, where the measurement said the transport belongs, and it changes almost nothing. Both are silent in an adiabatic replay by construction: with the sink off no heat accumulates, the layer stays at its floor, and the end temperature is 307.62 K, the plain adiabatic value to the last digit.</p>
+
+<p>This is the honest close of the transport line. The operators that reach the CFD's cooling stir fluid the buoyancy forcing cannot justify stirring, since the cold lower half is stably stratified and nothing asks for strong mixing there. The operators whose magnitude is set by the forcing itself move too little heat to matter. Between those two sentences lies the reason the replay cannot be made to match this case at the hook: the export the CFD achieves comes from a flow that rearranges the whole tank in response to its own temperature field, and a recorded flow cannot be asked to do that. What does help, without a single new constant, is recording the right flow. Every operator gains six to eight points when the database comes from the cooling run instead of the adiabatic one.</p>
+

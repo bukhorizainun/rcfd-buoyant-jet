@@ -1,0 +1,65 @@
+<h2 id="cfdheat">11 — The CFD Reference with Heat Loss</h2>
+
+<p>First the ground truth. We re-ran the full CFD with the heat-loss sink switched on and compared it to the sealed adiabatic CFD. The physical value for a water surface in still air is gentle ($h = 8$ W/m²K), and at that value the cooling is small and easy to miss. To make the cooling, and the gap it opens, clearly visible, we turn the dial up to $h = 100$ W/m²K and use that as the reference case here. All numbers below are read at a common time $t = 600$ s, the span the rCFD replay also covers. We report three diagnostics: the mean temperature $T_\text{mean}$, the height of the heat $CoG_y$, and a new one, $\delta T_\text{mean}$, the average spread of temperature around the mean, i.e. how <em>uneven</em> the field is:</p>
+
+<p>$$ \delta T_\text{mean} = \frac{\sum_i m_i\,\lvert T_i - T_\text{mean}\rvert}{\sum_i m_i}. $$</p>
+
+<p>This $\delta T_\text{mean}$ is the <strong>mass-weighted mean absolute deviation</strong> (MAD) of the temperature from its mean. A closely related measure of spread is the <strong>standard deviation</strong>, $\sigma_T = \sqrt{\sum_i m_i\,(T_i - T_\text{mean})^2 / \sum_i m_i}$. Both say how uneven the field is; we report the MAD because it is less swayed by the few very hot cells in the warm cap, but the two track each other closely (for any field $\sigma_T \ge \delta T_\text{mean}$, and for a near-normal spread $\sigma_T \approx 1.25\,\delta T_\text{mean}$). The standard-deviation form needs only one extra term in the same cell loop, so it could be reported as well from a short re-run.</p>
+
+<p>Before the table, here is the reference run playing out: the flow pattern, next to the temperature layering it builds up over time.</p>
+
+<div class="note">The clip starts from a flow that is already developed, so the warm jet is established from the very first frame. The heat-loss run restarts from a saved Step-1 state instead of re-running the cold spin-up; this is a standard restart that only reuses work already done. It does not affect the result, because what we report is the <em>cooling</em>, the difference between the heat-loss and adiabatic runs, and both start from the same state, so that common starting point cancels. The flow is also already physical, so the heat loss acts on a developed jet rather than on an artificial transient.</div>
+
+<style>
+  .syncp-bar{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.7rem;flex-wrap:wrap;}
+  .syncp-btn{font:600 0.82rem Inter,sans-serif;padding:0.35rem 0.85rem;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;}
+  .syncp-btn.sec{background:transparent;color:var(--accent);}
+  .syncp-slider{flex:1 1 150px;max-width:320px;accent-color:var(--accent);}
+  .syncp-pct{font:600 0.78rem JetBrains Mono,monospace;color:var(--ink-soft);min-width:2.8em;text-align:right;}
+  .syncp-grid{display:flex;flex-wrap:wrap;gap:0.8rem;justify-content:center;}
+  .syncp-cell{flex:1 1 300px;max-width:360px;min-width:0;}
+  .syncp-cell.wide{flex:1 1 640px;max-width:680px;}
+  .syncp-cell video{width:100%;border-radius:6px;border:1px solid var(--accent-soft);display:block;background:#eef1f6;}
+  .syncp-lab{text-align:center;font-size:0.82rem;color:var(--ink-soft);margin-top:0.35rem;}
+</style>
+
+<figure class="wide">
+  <div class="syncp" data-syncp>
+    <div class="syncp-bar">
+      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
+      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
+      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
+      <span class="syncp-pct">0%</span>
+    </div>
+    <div class="syncp-grid">
+      <div class="syncp-cell wide">
+        <video class="syncp-vid" muted playsinline preload="metadata"><source src="assets/videos/CFD_Tpath_h100.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">Temperature (left) &middot; flow pattern (right) &middot; $h = 100$</div>
+      </div>
+    </div>
+  </div>
+  <figcaption><span class="label">Figure 8c.</span> The CFD reference with heat loss, played over the whole run. Press Play, or drag the slider to stop at any moment. Left: the temperature field (293&ndash;333 K). Warm light water collects on top of cold water and a sharp layer forms between them, the stratification the tank builds up. Right: velocity pathlines coloured by speed (0&ndash;0.05 m/s). The jet comes in at mid-height and the water turns over in a slow loop. This is the flow pattern the rCFD replay has to stand in for.</figcaption>
+</figure>
+
+<figure class="wide">
+  <video autoplay loop muted playsinline controls preload="metadata" poster="assets/figures/fig_topo_adia_vs_hl_h100.png" style="max-width:980px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/cfd_topo_adia_vs_hl_h100.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 8d.</span> How much does strong heat loss change the flow itself? Left: the adiabatic flow. Middle: the flow with heat loss at $h = 100$, streamlines coloured by speed (0&ndash;0.05 m/s). Right: their difference (heat loss &minus; adiabatic), where blue marks extra downflow. At the gentle physical $h = 8$ the two flows are almost identical, and that is what lets us reuse the adiabatic database at all. At $h = 100$ the difference is large: the cooled surface water turns heavy and sinks, which sets up an overturning loop the sealed run never had. This is the cooling-driven flow the frozen replay cannot make, and it is the main reason the replay misses most of the heat loss (§12).</figcaption>
+</figure>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Case</th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$CoG_y$ (m)</th><th class="num">$\delta T_\text{mean}$ (K)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD — adiabatic</td><td class="num">309.28</td><td class="num">0.0385</td><td class="num">18.45</td></tr>
+<tr><td>CFD — heat loss ($h=100$)</td><td class="num">299.49</td><td class="num">0.0379</td><td class="num">7.32</td></tr>
+<tr class="best"><td>difference</td><td class="num">−9.79</td><td class="num">−0.0006</td><td class="num">−11.13</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>So in the real CFD, strong heat loss cools the tank by about <strong>9.79 K</strong> at $t = 600$ s, and it also makes the field <em>much more even</em>: $\delta T_\text{mean}$ drops by 11.13 K, because cooling the warm top pulls the surface back toward the bulk. $CoG_y$ hardly moves. This 9.79 K is the number rCFD has to match. (At the gentle physical $h = 8$ the tank cools by only about 1.45 K. Turning $h$ up is what makes the cooling, and the gap below, easy to see.)</p>
+

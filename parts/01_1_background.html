@@ -1,0 +1,9 @@
+<h2 id="background">1 — Background</h2>
+
+<p>Running a full CFD simulation for a long time is expensive. The flow itself settles into a repeating pattern within a few seconds, but the things we care about (heat, mixing, stratification) may need minutes or hours to develop. Doing a full Navier-Stokes solve for that long is wasteful.</p>
+
+<p><strong>Recurrence CFD</strong> (rCFD), introduced by Lichtenegger and Pirker in 2016 <a href="#ref-lichtenegger2016">[1]</a>, uses this repetition. After a short CFD run, the velocity field is saved as a database of cell-to-cell (C2C) shift patterns. The temperature is then moved through the chamber by applying these saved patterns over and over again. No Navier-Stokes solve is needed during this replay phase.</p>
+
+<p>The catch is that the C2C shifts only move things around; they do not mix anything. To bring back the missing mixing we need a small diffusion step, controlled by one dimensionless number: the face-swap diffusion $f_{sd}$. This page shows how we built the workflow (Step 1a) and how we then tuned $f_{sd}$ (Step 1b).</p>
+
+<!-- =========================================================== -->

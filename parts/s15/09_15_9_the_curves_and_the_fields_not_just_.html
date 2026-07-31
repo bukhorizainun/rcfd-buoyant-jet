@@ -1,0 +1,38 @@
+<h3 id="curves">15.9 &mdash; The curves and the fields, not just the endpoint</h3>
+
+<p>Everything so far compares one number per run. The replay writes three field diagnostics and the CFD writes the same three, so the curves can be laid on top of each other instead. The replay's monitor now also carries the spatial heterogeneity $\delta T_\text{mean} = \sum m |T - T_\text{mean}| / \sum m$, with the definition the CFD side uses, so the third panel below is a direct comparison and not a proxy. Adding that column changed nothing else: the four runs were repeated with the new monitor and reproduced their archived end temperatures to the last digit.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_nadb_metrics.png" alt="Three panels comparing mean temperature, thermal centre of gravity and spatial heterogeneity of the replays against the CFD" style="max-width:820px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 22.</span> The three field metrics on the heat-loss database, against the CFD (dashed). The panels do not agree on a ranking, which is the point. The 20 mm/s roll is closest on mean temperature and overshoots on heterogeneity; the strong mixing profile lands on the CFD's heterogeneity and stops short on the mean.</figcaption>
+</figure>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>run on the heat-loss database</th><th class="num">capture</th><th class="num">$\delta T_\text{mean}$ (K)</th><th class="num">front width (mm)</th><th class="num">renewal $\tau_{50}$ (s)</th><th class="num">front roughness</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, $h=100$</td><td class="num">&mdash;</td><td class="num">6.76</td><td class="num">4.48</td><td class="num">14.7</td><td class="num">0.0051</td></tr>
+<tr><td>plain replay</td><td class="num">35%</td><td class="num">9.30</td><td class="num">8.81</td><td class="num">19.5</td><td class="num">0.0067</td></tr>
+<tr><td>+ mixed layer</td><td class="num">43%</td><td class="num">8.62</td><td class="num">13.83</td><td class="num">&mdash;</td><td class="num">&mdash;</td></tr>
+<tr class="best"><td>+ mixing profile 75 mm, $c=1$</td><td class="num">52%</td><td class="num">6.57</td><td class="num">11.89</td><td class="num">18.9</td><td class="num">0.0120</td></tr>
+<tr><td>+ roll at the convective scale $w^*$</td><td class="num">53%</td><td class="num">8.31</td><td class="num">12.73</td><td class="num">67.4</td><td class="num">0.0100</td></tr>
+<tr><td>+ prescribed roll, 20 mm/s</td><td class="num">74%</td><td class="num">5.45</td><td class="num">16.12</td><td class="num">91.8</td><td class="num">0.0288</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Two of these runs are new. The <em>roll at the convective scale</em> answers the objection that the prescribed roll has a hand-set speed. A layer of depth $h$ cooled from above overturns at $w^* = (g\,\alpha\,(Q/\rho c_p A)\,h)^{1/3}$, and every input is already in the run: the sink power of the step, the cooled area, and the height of the roll band, with the expansion coefficient taken from the same density table the CFD uses. That gives $w^* \approx 3.6$ mm/s and a capture of 53%, just above the best local rule, with no constant left to choose. The 20 mm/s roll that reaches 74% runs at five and a half times $w^*$, so the difference between the two is exactly the part the buoyancy forcing does not pay for.</p>
+
+<p>The second new run does not work, and it is worth recording why, because the mistake was ours. It was built to smooth the front inside the mixed layer rather than sharpen it, on the reading that the replay's front was already too thin. That reading came from a width measured in file order, which put the CFD's heat-loss front at 32 mm and the replay's at 8.9 mm. Measured properly, sorting by height and dropping the boundary sample, the CFD front is 4.48 mm and the plain replay 8.81 mm: the replay front is too <em>broad</em>, not too thin, so smoothing it is the wrong direction. The run recovers 1.2 of the 13 points that sharpening costs and its heterogeneity gets worse. The switch stays in the code at zero.</p>
+
+<p>That correction also settles how to read the sharpening operator here. The CFD keeps a sharp thermocline under heat loss, 4.48 mm against 5.56 mm in the adiabatic reference, so sharpening is aimed at a real defect: the vertical normal takes the front from 8.81 to 5.07 mm, the closest match of any run. It still costs cooling, and the transport operators still smear the front to 12&ndash;16 mm while gaining it. No operator in the table improves both.</p>
+
+<p>Read across the columns, the strong mixing profile is the best compromise of the set: within $0.2$ K of the CFD heterogeneity, renewing its pattern in 18.9 s against the reference's 14.7 s, and capturing 52%. The roll at $w^*$ captures the same amount but holds its pattern for 67.4 s, so its own geometry is still visible in the field, and the 20 mm/s roll wins the capture column while losing every other one.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_nadb_candidates_montage.png" alt="Montage: CFD, plain replay and the two candidate operators at mid-run and end of run" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 23.</span> Mid-run and end of run: CFD reference, plain replay, and the two candidates. The reference keeps a thin interface throughout and drains its upper layer through narrow cold fingers, visible along the top of the last frame. Every replay carries a broader interface, and none of them shows the fingers.</figcaption>
+</figure>
+

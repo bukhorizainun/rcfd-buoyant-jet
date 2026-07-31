@@ -1,0 +1,29 @@
+<h2 id="step1b">6 — Step 1b: The Parameter Sweep</h2>
+
+<p>Step 1b uses seven values of $f_{sd}$ that cover more than two orders of magnitude. The CFD reference and the C2C database stay the same for every case &mdash; only the rCFD replay (and its UDF library) is rebuilt with the new value.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Case</th><th>$f_{sd}$</th><th class="num">Inner sweeps</th><th>Role in the sweep</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>0.000</td><td class="num">1</td><td>Pure C2C shift, no mixing</td></tr>
+<tr><td>2</td><td>0.125</td><td class="num">1</td><td>rCFD source default</td></tr>
+<tr><td>3</td><td>0.375</td><td class="num">3</td><td>Moderate mixing</td></tr>
+<tr><td>4</td><td>0.500</td><td class="num">4</td><td>Intermediate value around the optimum</td></tr>
+<tr><td>5</td><td>0.750</td><td class="num">6</td><td>Step 1a value</td></tr>
+<tr><td>6</td><td>1.500</td><td class="num">12</td><td>Strong mixing</td></tr>
+<tr><td>7</td><td>3.000</td><td class="num">24</td><td>Extreme mixing (expected to over-smooth)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Three PowerShell scripts under <code>step1b/</code> handle the edit-recompile-run-archive loop, so that one case never overwrites another. Without the per-step image files, each rCFD replay finishes in about $0.8$–$4.7$ minutes and the whole seven-case sweep runs in roughly $20$ minutes. The CFD reference solver takes about $569$ minutes (its $583$-minute total minus the time it spent saving images), so rCFD is about $263\times$ faster than CFD on this case. The earlier figure of $37\times$ was dominated by image-saving, which was a small part of the CFD cost but most of the old rCFD runtime.</p>
+
+<figure class="wide" id="wallClockFigure">
+  <img src="assets/figures/fig_step1b_wallclock.png" alt="Wall-clock time: CFD reference vs rCFD per case (linear and log scale)" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 4.</span> Wall-clock time per simulation run. Left: the rCFD replay cost rises with $f_{sd}$ (from about $0.8$ min at $f_{sd}=0$ to $4.7$ min at $f_{sd}=3$), because a larger $f_{sd}$ needs more inner face-swap sweeps; the mean is $2.16$ minutes. Right (log scale): the same rCFD curve against the CFD reference, whose solver takes about $569$ minutes. For a fair comparison both times count only the calculation and leave out the time spent saving image files, so rCFD comes out about $263\times$ faster on average, and $120$–$701\times$ across the sweep.</figcaption>
+</figure>
+
+<!-- =========================================================== -->

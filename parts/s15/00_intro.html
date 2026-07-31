@@ -1,0 +1,30 @@
+<h2 id="rebuild">15 — Rebuilding the Database with Heat Loss</h2>
+
+<p>Section 12 pinned the gap on a missing flow pattern: the adiabatic database never saw the cooling-driven down-flow, so the replay cannot make it. The obvious fix is to build the database from a run that already has the heat loss in it, so those down-flows are recorded from the start. We did that. We re-ran the CFD with the $h = 100$ wall loss switched on, recorded a fresh 600-frame C2C database from it (the <em>non-adiabatic</em> database), and replayed the same heat-loss case on it. Everything else was held fixed: $f_{sd} = 0.5$, $h = 100$, read at $t = 600$ s.</p>
+
+<p>The result is the surprise of Step 2. The rebuilt database does <em>not</em> close the gap. Measured the fair way, the cooling each method reaches from its own no-loss baseline, it does a little <em>worse</em>:</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>at $t = 600$ s</th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$CoG_y$ (mm)</th><th class="num">$\delta T_\text{mean}$ (K)</th><th class="num">cooling (K)</th><th class="num">recovered</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, heat loss</td><td class="num">299.49</td><td class="num">37.9</td><td class="num">7.32</td><td class="num">9.79</td><td class="num">&mdash;</td></tr>
+<tr><td>rCFD, adiabatic database</td><td class="num">304.46</td><td class="num">38.2</td><td class="num">10.78</td><td class="num">3.03</td><td class="num">31%</td></tr>
+<tr><td>rCFD, non-adiabatic database</td><td class="num">303.83</td><td class="num">38.1</td><td class="num">9.05</td><td class="num">2.52</td><td class="num">26%</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="wide">
+  <img src="assets/figures/fig_nonadiab_3metric.png" alt="Three-metric comparison at h=100: CFD reference versus rCFD on the adiabatic and non-adiabatic databases" style="max-width:1040px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 12.</span> The three metrics over time at $h = 100$: mean temperature, centre of gravity, and temperature spread. CFD reference (black), rCFD on the rebuilt non-adiabatic database (red), and rCFD on the reused adiabatic database (blue dashed). The two replays sit almost on top of each other and both fall well short of the CFD cooling. The non-adiabatic one is a touch lower in $T_\text{mean}$, while its spread $\delta T_\text{mean}$ runs closer to the CFD &mdash; the one place the rebuild helps. CFD time is shifted so both start cold at $t = 0$; numbers are read at $t = 600$ s.</figcaption>
+</figure>
+
+<p>So the rebuilt database recovers about $26\%$ of the cooling, against $31\%$ for the reused adiabatic one. Rebuilding did not help; if anything it cost a few points. That is worth sitting with, because it is the opposite of what the rebuild was meant to do.</p>
+
+<p>The reason is in how the non-adiabatic run settles. With the loss on, the jet runs colder, so it is less buoyant, so its circulation is weaker. The database records that weaker loop. A weaker loop carries less warm fluid up to the surface where the loss acts, so the frozen flow, even though it was born under cooling, moves less heat to where it can leave. The deeper point is that the real cooling is a <em>transient</em>. The flow starts hot and vigorous and slows as the tank cools, passing through a whole sequence of regimes. A single database freezes one of them: the adiabatic one freezes the hot, vigorous end, the non-adiabatic one freezes the cold, weak end. Neither holds the sequence, and the sequence is what the heat loss needs.</p>
+
+<p>One thing the rebuild <em>does</em> improve is the evenness of the field. $\delta T_\text{mean}$ drops from $10.78$ K on the adiabatic database to $9.05$ K, a step toward the CFD's $7.32$ K, because the recorded cooled flow is already better mixed. Pushing the face-swap up to $f_{sd} = 0.75$ takes it a little further, to $\delta T_\text{mean} = 8.36$ K and $T_\text{mean} = 303.01$ K. But that is a sensitivity check, not a fix: more face-swap is more <em>diffusion</em>, and the gap is <em>advective</em>, so the cooling saturates well short of the CFD, the same lesson as the $h$-sweep in §13. We keep $f_{sd} = 0.5$ as the value to report, the one anchored by the local-diffusion field in §9.3.</p>
+

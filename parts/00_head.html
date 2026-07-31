@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data-based Numerical Simulation of Buoyant Jet Flow — Step 1 &amp; 2 Summary</title>
+<meta name="description" content="Progress summary of the master's thesis: Step 1 (CFD reference, recurrence-CFD workflow, and a face-swap-diffusion parameter sweep) and Step 2 (heat loss on the buoyant-jet test case).">
+<meta name="author" content="Mochamad Bukhori Zainun">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
+<!-- KaTeX for math -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+
+<!-- Plotly.js for interactive plot -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+
+<!-- Time-series data (CORS-safe under file://) -->
+<script src="assets/data/step1b_traces.js"></script>
+<script src="assets/data/step2_traces.js"></script>
+<script src="assets/data/localdiff_traces.js"></script>
+
+<link rel="stylesheet" href="styles.css">
+
+<!-- ANNOTATION FEATURE START (stylesheet) -->
+<link rel="stylesheet" href="annotation.css">
+<!-- ANNOTATION FEATURE END -->
+
+<!-- Step 2+ additions (TOC groups, part dividers, heat-loss animation) -->
+<style>
+  /* ---- Collapsible TOC groups ---- */
+  nav.toc .toc-group { margin-bottom: 0.5em; }
+  nav.toc .toc-group > summary {
+    cursor: pointer; list-style: none; font-weight: 600; color: var(--ink);
+    padding: 0.28em 0; display: flex; align-items: center; gap: 0.45em; font-size: 0.9rem;
+  }
+  nav.toc .toc-group > summary::-webkit-details-marker { display: none; }
+  nav.toc .toc-group > summary::before {
+    content: '\25B8'; color: var(--accent); font-size: 0.8em;
+    transition: transform 0.15s ease; display: inline-block;
+  }
+  nav.toc .toc-group[open] > summary::before { transform: rotate(90deg); }
+  nav.toc .toc-group .step-status {
+    margin-left: auto; font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; padding: 0.08em 0.5em; border-radius: 10px;
+    background: var(--accent); color: #fff;
+  }
+  nav.toc .toc-group .step-status.wip  { background: var(--warn); }
+  nav.toc .toc-group .step-status.plan { background: var(--ink-faint); }
+  nav.toc .toc-group ol {
+    list-style: none; counter-reset: none; margin: 0.25em 0 0.5em 0.85em;
+    padding-left: 0.8em; border-left: 1px solid var(--ink-faint);
+  }
+  nav.toc .toc-group li { counter-increment: none; margin: 0.32em 0; }
+  nav.toc .toc-group li::before { content: ''; }
+  nav.toc .toc-group a { font-size: 0.84rem; }
+
+  /* ---- Part dividers (Step banners) ---- */
+  .part-divider {
+    margin: 3.4rem 0 1.5rem; padding: 1.05rem 1.25rem;
+    border-radius: 10px; border-left: 5px solid var(--accent); background: var(--note-bg);
+  }
+  .part-divider .kicker {
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    font-weight: 700; color: var(--accent);
+  }
+  .part-divider .part-title { font-size: 1.45rem; font-weight: 700; margin: 0.12em 0 0.3em; color: var(--ink); line-height: 1.2; }
+  .part-divider p { margin: 0; color: var(--ink-soft); font-size: 0.95rem; }
+  .part-divider.wip { border-left-color: var(--warn); }
+  .part-divider.wip .kicker { color: var(--warn); }
+  .part-divider .chip {
+    display: inline-block; margin-top: 0.55rem; font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em; padding: 0.18em 0.65em;
+    border-radius: 12px; background: var(--warn); color: #fff;
+  }
+  .part-divider .chip.plan { background: var(--ink-faint); }
+
+  /* ---- "key finding" callout ---- */
+  .keybox {
+    border: 1px solid var(--accent-soft); border-left: 5px solid var(--accent);
+    background: var(--note-bg); border-radius: 0 8px 8px 0;
+    padding: 0.9rem 1.1rem; margin: 1.5rem 0;
+  }
+  .keybox h4 { margin: 0 0 0.35rem; color: var(--accent); font-size: 0.95rem; }
+  .keybox p:last-child { margin-bottom: 0; }
+
+  /* ---- WIP placeholder ---- */
+  .wip-card { border: 1px dashed var(--ink-faint); border-radius: 10px; padding: 1.1rem 1.3rem; margin: 1.4rem 0; }
+  .wip-card ul { margin: 0.5rem 0 0; }
+
+  /* ---- Heat-loss animation ---- */
+  .hl-anim { display: block; max-width: 560px; margin: 0.5rem auto 0; width: 100%; }
+  .hl-anim .hl-tank   { fill: none; stroke: var(--ink-soft); stroke-width: 2.5; }
+  .hl-anim .hl-surface{ stroke: var(--accent-soft); stroke-width: 2; stroke-dasharray: 4 4; }
+  .hl-anim .hl-label  { fill: var(--ink-soft); font: 600 12px Inter, sans-serif; }
+  .hl-anim .hl-label.cool { fill: var(--accent); }
+  .hl-anim .hl-label.warm { fill: var(--warn); }
+  .hl-flux  { stroke: var(--accent); stroke-width: 2; opacity: 0.85; }
+  .hl-flux-dot { fill: var(--accent); }
+  .hl-parcel-cool { fill: var(--accent); opacity: 0.85; }
+  .hl-parcel-warm { fill: var(--warn); opacity: 0.8; }
+  @keyframes hlFlux { 0%,100% { transform: translateY(0); opacity: 0.25; } 50% { transform: translateY(-9px); opacity: 1; } }
+  @keyframes hlSink { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 0.9; } 88% { opacity: 0.9; } 100% { transform: translateY(70px); opacity: 0; } }
+  @keyframes hlRise { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 0.85; } 88% { opacity: 0.85; } 100% { transform: translateY(-70px); opacity: 0; } }
+  .hl-anim .hl-flux-g    { animation: hlFlux 1.9s ease-in-out infinite; }
+  .hl-anim .hl-flux-g.d2 { animation-delay: 0.4s; }
+  .hl-anim .hl-flux-g.d3 { animation-delay: 0.8s; }
+  .hl-anim .hl-parcel-cool { animation: hlSink 3.4s ease-in infinite; }
+  .hl-anim .hl-parcel-warm { animation: hlRise 3.4s ease-out infinite; animation-delay: 1.0s; }
+  .hl-anim.adiabatic .hl-parcel-cool,
+  .hl-anim.adiabatic .hl-parcel-warm { animation: none; opacity: 0; }
+  .hl-cap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 640px) { .hl-cap-grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) {
+    .hl-anim .hl-flux-g, .hl-anim .hl-parcel-cool, .hl-anim .hl-parcel-warm { animation: none !important; }
+  }
+</style>
+
+<!-- Apply theme before paint to avoid flash -->
+<script>
+(function() {
+  try {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = saved || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+</head>
+<body>
+
+<button class="share-btn" id="shareLinkBtn" type="button"
+        title="Copy a link to this view (current section + selected f_sd + time)"
+        aria-label="Copy link to this view">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+  </svg>
+  <span class="share-btn-label">Share view</span>
+</button>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<button class="theme-toggle" id="themeToggle" type="button"
+        title="Toggle light/dark mode" aria-label="Toggle dark mode">
+  <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+  <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+  </svg>
+</button>
+
+<nav class="toc">
+  <h4>Contents</h4>
+
+  <details class="toc-group">
+    <summary>Step 1 — Foundations<span class="step-status">done</span></summary>
+    <ol>
+      <li><a href="#background">Background</a></li>
+      <li><a href="#testcase">The Test Case</a></li>
+      <li><a href="#rcfd">rCFD in a Nutshell</a></li>
+      <li><a href="#fsd">Face-Swap Diffusion</a></li>
+      <li><a href="#step1a">Step 1a Results</a></li>
+      <li><a href="#step1b">Step 1b: Sweep</a></li>
+      <li><a href="#quantitative">Quantitative Results</a></li>
+      <li><a href="#visual">Visual Comparison</a></li>
+      <li><a href="#discussion">Discussion</a></li>
+      <li><a href="#localdiff-step1">Diffusivity from the Database</a></li>
+      <li><a href="#negdiff">Sharpening the Front: Negative Diffusivity</a></li>
+    </ol>
+  </details>
+
+  <details class="toc-group" open>
+    <summary>Step 2 — Heat Loss<span class="step-status wip">in progress</span></summary>
+    <ol>
+      <li><a href="#heatmodel">The Heat-Loss Model</a></li>
+      <li><a href="#cfdheat">CFD Reference with Heat Loss</a></li>
+      <li><a href="#heatgap">rCFD vs CFD: the Gap</a></li>
+      <li><a href="#hsweep">Turning the Dial: h-Sweep</a></li>
+      <li><a href="#localdiff">Does Local Diffusion Help?</a></li>
+      <li><a href="#negdiff-heatloss">Sharpening under Heat Loss</a></li>
+      <li><a href="#rebuild">Rebuilding the Database with Heat Loss</a></li>
+    </ol>
+  </details>
+
+  <details class="toc-group">
+    <summary>Step 3 — Finalization<span class="step-status plan">planned</span></summary>
+    <ol>
+      <li><a href="#sinkaudit">What the Reference Removes</a></li>
+      <li><a href="#matched">The Family on a Matched Sink</a></li>
+      <li><a href="#otherwork">Other Work</a></li>
+      <li><a href="#step3">Writing &amp; Finalization</a></li>
+    </ol>
+  </details>
+
+  <ol style="list-style:none;counter-reset:none;padding:0;margin:0.6em 0 0;">
+    <li style="margin:0;"><a href="#references">References</a></li>
+  </ol>
+</nav>
+
+<header class="article-header">
+  <div class="inner">
+    <div class="eyebrow">Master's thesis — Progress summary</div>
+    <h1>Data-based Numerical Simulation of Buoyant Jet Flow</h1>
+    <div class="subtitle">Step 1 — CFD reference, rCFD workflow, and face-swap-diffusion sweep · Step 2 — heat loss</div>
+    <div class="meta">
+      <span><strong>Mochamad Bukhori Zainun</strong> — k12438440</span>
+      <span>Supervisor: <strong>Prof. Stefan Pirker</strong></span>
+      <span>Department of Particulate Flow Modelling, JKU Linz</span>
+      <span>July 2026</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<div class="tldr">
+  <h3>TL;DR</h3>
+  <p>Step 1 sets up the full ANSYS Fluent workflow on Windows 11 for a buoyant-jet test case, runs a CFD reference of the jet (its Reynolds number is low, $Re \approx 100$, so the flow is laminar), builds a recurrence-CFD (rCFD) database from it, and then replays that database to reproduce the temperature transport at a fraction of the original cost. We then sweep seven values of the rCFD mixing parameter $f_{sd}$. The best value depends on the metric: $f_{sd}=0.000$ gives the best mean temperature, while $f_{sd}=0.500$ gives the best thermal stratification ($CoG_y$). Step 2 then lets the tank lose heat at the top and tests how far the reused adiabatic database stretches: at the physical $h = 8$, and more visibly at a stronger $h = 100$, the replay captures only about a third of the cooling the full CFD shows, because it cannot reproduce the cooling-driven flow it never recorded. A field-based local diffusivity, read straight from the database, reproduces the hand-tuned $f_{sd} = 0.5$ with no tuning at all. A bounded negative diffusivity — an overshoot guard borrowed from flux-corrected transport, plus a directional weight — now sharpens the thermal front the replay used to smear: at strength $0.4$ it reproduces the CFD front width with no overshoot (§9.4). Under heat loss the same step makes the replay <em>worse</em>, its natural counterpart — a convective adjustment that mixes the unstable cold film downward — buys only a bounded share back (31% to 39% of the CFD cooling), and a prescribed circulation roll breaks that bound (73% at 20 mm/s, saturating near 82% at the top of the CFD speed range). Together they pin the remaining gap on the missing overturning flow, whose clean home is the database (§14.1). Rebuilding that database from the cooling flow itself — this time with the local-diffusivity field stored — lifts the plain replay to 35%; on it the sharpening family all sit <em>below</em> the plain replay (a stability guard, which skips the unstable cold film, recovers part of the loss but a sharpening step can be kept from hurting the cooling, not made to add it), while a transport term — a mixing profile or a prescribed roll — sits <em>above</em>, the roll reaching 81% and an end state within half a Kelvin of the CFD (§15.3–15.5). What none of it reproduces is the plume-by-plume feedback of the real cooling, the texture that still tells replay and reference apart.</p>
+  <button class="quick-tour-trigger" id="quickTourBtn" type="button"
+          title="Auto-scroll through the five key figures (~60 s)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    </svg>
+    <span>Take the 60-second tour</span>
+  </button>
+</div>
+
+<p>This page brings together Step 1 (the workflow and the $f_{sd}$ sweep) and Step 2 (heat loss). It explains the buoyant-jet problem, how rCFD works, what each $f_{sd}$ value does to the temperature field, how a field-based local diffusivity replaces the hand-tuned $f_{sd}$, and how far the reused database holds up once the tank loses heat.</p>
+
+<!-- =========================================================== -->
+<div class="part-divider" id="part-step1">
+  <div class="kicker">Step 1 · done</div>
+  <div class="part-title">Foundations — the adiabatic baseline</div>
+  <p>The Fluent workflow, a laminar CFD reference of the buoyant jet, the rCFD replay, and tuning the single mixing knob&nbsp;$f_{sd}$. Everything here is the groundwork that Step 2 builds on.</p>
+</div>
+

@@ -1,0 +1,20 @@
+<h3 id="anim-vs-metric">15.2 — The animation against the number</h3>
+
+<p>It is tempting to judge the replay by eye. Here is the rebuilt-database replay, drawn like the CFD reference, temperature on the left and flow on the right:</p>
+
+<figure class="wide">
+  <video autoplay loop muted playsinline controls preload="metadata" poster="assets/figures/fig_rcfd_nonadiab_tpath_h100.png" style="max-width:980px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/rCFD_nonadiab_Tpath_h100.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 13.</span> The rCFD replay on the rebuilt <em>non-adiabatic</em> database, heat loss $h = 100$, in the same view as the CFD reference (Figure 8c): temperature left (293&ndash;333 K), flow right (speed 0&ndash;0.05 m/s). The warm cap thins and cools over the run, but the flow on the right stays the same frozen loop throughout, recorded once and replayed unchanged.</figcaption>
+</figure>
+
+<p>For much of the run its temperature field does look like the CFD: a warm layer floating on cold water, the same broad split top to bottom. That is the trap. Set the two side by side, frame for frame, and you can see where they part:</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_nonadiab_vs_cfd_frames.png" alt="rCFD non-adiabatic replay versus the CFD reference at t=300 s and t=600 s" style="max-width:1040px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 14.</span> The rebuilt replay (left column) against the CFD (right column), mid-run and late. At $t \approx 300$ s the temperature fields look alike. By $t \approx 600$ s the CFD's cap has faded to green as the cooled fluid mixes down, while the replay's stays yellow, several Kelvin warmer; and the flow on the right of each panel churns and overturns in the CFD but stays a frozen pair of vortices in the replay.</figcaption>
+</figure>
+
+<p>Two things give the gap away. The temperature keeps cooling in the CFD but stalls in the replay: by $t = 600$ s the CFD cap has faded from orange to green while the replay's is still yellow, several Kelvin warmer, and that warmer cap is the $\sim 4$&ndash;$5$ K bias the metric reports. The flow tells the rest, the CFD overturns the whole run as the cooled surface water turns heavy and sinks, while the replay never moves off the frozen adiabatic loop. That missing overturning is the advection gap of §12, here as a picture. So the animation does not say "same as CFD"; it says the replay gets the easy part right, the warm jet and the broad layering the recorded advection carries, and misses the cooling-driven flow that the number, and the flow panel, both catch.</p>
+

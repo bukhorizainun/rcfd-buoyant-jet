@@ -1,0 +1,417 @@
+<h2 id="visual">8 — Visual Comparison</h2>
+
+<h3>8.1 — CFD reference vs rCFD per case</h3>
+
+<p>Figure 7 pairs the CFD reference contour with each rCFD case at the same moment, $t=300$ s. All panels use the same colour scale and are cropped to the chamber only, so the comparison is as direct as it can be.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_step1b_cfd_vs_rcfd_snapshots.png" alt="Side-by-side CFD vs rCFD snapshot grid" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 7.</span> CFD reference versus rCFD per $f_{sd}$ at $t=300$ s. Blue = 293 K, red = 333 K. Only the chamber is shown (inlet/outlet bars and the CFD streamline panel are removed).</figcaption>
+</figure>
+
+<h3>8.2 — Pick one case, compare against the CFD reference</h3>
+
+<p>Drag the slider below (or click a tick label) to pick an $f_{sd}$ value. The right-hand panel switches to that case while the left-hand panel keeps showing the CFD reference. Both panels play together on the same timeline as the gallery below, so the scrubber controls everything at once.</p>
+
+<div class="fsd-picker" id="fsdPicker">
+  <div class="picker-header">
+    <span class="picker-label">Current $f_{sd}$:</span>
+    <span class="picker-value" id="fsdValueDisplay">0.500</span>
+    <span class="picker-best" id="fsdBestBadge" style="display:none">best CoG_y</span>
+  </div>
+  <div class="fsd-slider-wrap">
+    <input class="fsd-slider" type="range" id="fsdSlider"
+           min="0" max="6" step="1" value="3">
+    <div class="fsd-ticks" id="fsdTicks">
+      <span class="tick" data-i="0" style="left: 0%">0.000</span>
+      <span class="tick" data-i="1" style="left: 16.6%">0.125</span>
+      <span class="tick" data-i="2" style="left: 33.3%">0.375</span>
+      <span class="tick active" data-i="3" style="left: 50%">0.500</span>
+      <span class="tick" data-i="4" style="left: 66.6%">0.750</span>
+      <span class="tick" data-i="5" style="left: 83.3%">1.500</span>
+      <span class="tick" data-i="6" style="left: 100%">3.000</span>
+    </div>
+  </div>
+
+  <div class="fsd-display">
+    <div class="panel">
+      <div class="panel-label">CFD reference</div>
+      <video data-sync class="js-sync-video" muted playsinline preload="metadata">
+        <source src="assets/videos/CFD_reference.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="panel">
+      <div class="panel-label">rCFD replay <span id="fsdPanelLabel">at f<sub>sd</sub> = 0.500</span></div>
+      <div class="video-stack" id="fsdVideoStack">
+        <video data-sync data-fsd-pick="0" class="js-sync-video" muted playsinline preload="metadata"><source src="assets/videos/rCFD_diff_000.mp4"  type="video/mp4"></video>
+        <video data-sync data-fsd-pick="1" class="js-sync-video" muted playsinline preload="metadata"><source src="assets/videos/rCFD_diff_0125.mp4" type="video/mp4"></video>
+        <video data-sync data-fsd-pick="2" class="js-sync-video" muted playsinline preload="metadata"><source src="assets/videos/rCFD_diff_0375.mp4" type="video/mp4"></video>
+        <video data-sync data-fsd-pick="3" class="js-sync-video active" muted playsinline preload="metadata"><source src="assets/videos/rCFD_diff_05.mp4"   type="video/mp4"></video>
+        <video data-sync data-fsd-pick="4" class="js-sync-video" muted playsinline preload="metadata"><source src="assets/videos/rCFD_diff_075.mp4"  type="video/mp4"></video>
+        <video data-sync data-fsd-pick="5" class="js-sync-video" muted playsinline preload="metadata"><source src="assets/videos/rCFD_diff_15.mp4"   type="video/mp4"></video>
+        <video data-sync data-fsd-pick="6" class="js-sync-video" muted playsinline preload="metadata"><source src="assets/videos/rCFD_diff_30.mp4"   type="video/mp4"></video>
+      </div>
+    </div>
+  </div>
+
+  <div class="fsd-metrics" id="fsdMetrics">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<script>
+(function() {
+  // -------- f_sd picker: switch the right-hand video + metrics card --
+  // Metrics taken from Tables 7.1 and 7.2 (Hyndman & Koehler 2006 metrics).
+  const cases = [
+    { val: 0.000, label: '0.000', biasT: -0.377, mae_T: 0.761, rmseT: 1.076, maxT: 2.569,
+                                   biasC: -0.046, mae_C: 0.087, rmseC: 0.116, maxC: 0.268 },
+    { val: 0.125, label: '0.125', biasT: +0.340, mae_T: 0.852, rmseT: 1.080, maxT: 2.278,
+                                   biasC: -0.057, mae_C: 0.071, rmseC: 0.097, maxC: 0.218 },
+    { val: 0.375, label: '0.375', biasT: +0.556, mae_T: 1.062, rmseT: 1.360, maxT: 2.834,
+                                   biasC: -0.057, mae_C: 0.059, rmseC: 0.074, maxC: 0.154 },
+    { val: 0.500, label: '0.500', biasT: +0.572, mae_T: 1.147, rmseT: 1.459, maxT: 2.955,
+                                   biasC: -0.059, mae_C: 0.060, rmseC: 0.069, maxC: 0.129 },
+    { val: 0.750, label: '0.750', biasT: +0.575, mae_T: 1.297, rmseT: 1.634, maxT: 3.162,
+                                   biasC: -0.066, mae_C: 0.068, rmseC: 0.072, maxC: 0.108 },
+    { val: 1.500, label: '1.500', biasT: +0.630, mae_T: 1.726, rmseT: 2.142, maxT: 3.879,
+                                   biasC: -0.112, mae_C: 0.114, rmseC: 0.137, maxC: 0.260 },
+    { val: 3.000, label: '3.000', biasT: +0.899, mae_T: 2.512, rmseT: 3.045, maxT: 5.394,
+                                   biasC: -0.223, mae_C: 0.231, rmseC: 0.281, maxC: 0.501 }
+  ];
+  // Best values across all 7 cases (smallest absolute)
+  const bestRmseT = Math.min(...cases.map(c => c.rmseT));
+  const bestRmseC = Math.min(...cases.map(c => c.rmseC));
+  const bestMAE_T = Math.min(...cases.map(c => c.mae_T));
+  const bestMAE_C = Math.min(...cases.map(c => c.mae_C));
+  const bestBiasT = Math.min(...cases.map(c => Math.abs(c.biasT)));
+  const bestBiasC = Math.min(...cases.map(c => Math.abs(c.biasC)));
+
+  const slider     = document.getElementById('fsdSlider');
+  const valDisplay = document.getElementById('fsdValueDisplay');
+  const panelLabel = document.getElementById('fsdPanelLabel');
+  const bestBadge  = document.getElementById('fsdBestBadge');
+  const metricsEl  = document.getElementById('fsdMetrics');
+  const stack      = document.getElementById('fsdVideoStack');
+  const ticks      = document.querySelectorAll('#fsdTicks .tick');
+
+  function sign(x, digits) {
+    const s = x.toFixed(digits);
+    return (x > 0 ? '+' : '') + s;
+  }
+
+  function fmt(val, unit, isBest) {
+    const cls = isBest ? 'fsd-metric best' : 'fsd-metric';
+    return `<div class="${cls}">
+              <span class="key">${val.key}</span>
+              <span class="val">${val.text}<span class="unit"> ${unit}</span></span>
+            </div>`;
+  }
+
+  function render(idx) {
+    const c = cases[idx];
+    valDisplay.textContent = c.label;
+    panelLabel.innerHTML   = `at f<sub>sd</sub> = ${c.label}`;
+
+    // best-CoG_y badge
+    if (c.rmseC === bestRmseC) {
+      bestBadge.style.display = '';
+      bestBadge.textContent = 'best CoG_y';
+    } else if (c.rmseT === bestRmseT) {
+      bestBadge.style.display = '';
+      bestBadge.textContent = 'best T_mean';
+    } else {
+      bestBadge.style.display = 'none';
+    }
+
+    // switch active video in the stack
+    stack.querySelectorAll('video').forEach(v => v.classList.remove('active'));
+    const target = stack.querySelector(`video[data-fsd-pick="${idx}"]`);
+    if (target) target.classList.add('active');
+
+    // tick highlight
+    ticks.forEach(t => t.classList.toggle('active', parseInt(t.dataset.i, 10) === idx));
+
+    // metrics card
+    const items = [
+      { group: 'T_mean',
+        cells: [
+          { key: 'Bias',  text: sign(c.biasT, 3), unit: 'K', best: Math.abs(c.biasT) === bestBiasT },
+          { key: 'MAE',   text: c.mae_T.toFixed(3), unit: 'K', best: c.mae_T === bestMAE_T },
+          { key: 'RMSE',  text: c.rmseT.toFixed(3), unit: 'K', best: c.rmseT === bestRmseT },
+          { key: '|Δ|max',text: c.maxT.toFixed(3),  unit: 'K', best: false }
+        ]
+      },
+      { group: 'CoG_y',
+        cells: [
+          { key: 'Bias',  text: sign(c.biasC, 3), unit: 'mm', best: Math.abs(c.biasC) === bestBiasC },
+          { key: 'MAE',   text: c.mae_C.toFixed(3), unit: 'mm', best: c.mae_C === bestMAE_C },
+          { key: 'RMSE',  text: c.rmseC.toFixed(3), unit: 'mm', best: c.rmseC === bestRmseC },
+          { key: '|Δ|max',text: c.maxC.toFixed(3),  unit: 'mm', best: false }
+        ]
+      }
+    ];
+
+    let html = '';
+    items.forEach((group, gi) => {
+      group.cells.forEach((cell, ci) => {
+        const head = ci === 0 ? `<div style="grid-column: 1/-1; font-size: 0.78rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: -0.4rem; margin-top: ${gi > 0 ? '0.4rem' : '0'}">${group.group}</div>` : '';
+        html += head + `<div class="fsd-metric${cell.best ? ' best' : ''}">
+                          <span class="key">${cell.key}</span>
+                          <span class="val">${cell.text}<span class="unit"> ${cell.unit}</span></span>
+                        </div>`;
+      });
+    });
+    metricsEl.innerHTML = html;
+
+    // re-typeset KaTeX in the panel labels
+    if (window.renderMathInElement) {
+      try { window.renderMathInElement(document.querySelector('.picker-header')); } catch (e) {}
+    }
+  }
+
+  slider.addEventListener('input', () => render(parseInt(slider.value, 10)));
+  ticks.forEach(t => {
+    t.addEventListener('click', () => {
+      const i = parseInt(t.dataset.i, 10);
+      slider.value = i;
+      render(i);
+    });
+  });
+
+  render(3);  // default: f_sd = 0.500
+})();
+</script>
+
+<h3>8.3 — Synchronised animation gallery</h3>
+
+<p>The eight clips below all play the same $600$ s of simulated time at $15$ fps. The scrubber controls all of them at the same time, so you can pause at any moment and compare what every case looks like side by side. The CFD reference is shown first, then the seven rCFD cases in order of $f_{sd}$.</p>
+
+<div class="scrubber" id="scrubber">
+  <div class="scrubber-row">
+    <button class="scrub-btn" id="scrubPlay">Play</button>
+    <button class="scrub-btn secondary" id="scrubReset">Reset</button>
+    <input class="scrub-slider" type="range" id="scrubSlider" min="0" max="600" step="0.1" value="0">
+    <span class="scrub-time" id="scrubTime">t = 0 s</span>
+  </div>
+  <div class="scrubber-row">
+    <span class="scrub-label">Speed:</span>
+    <div class="scrub-speed" role="group" aria-label="Playback speed">
+      <button data-speed="0.5">0.5&times;</button>
+      <button data-speed="1" class="active">1&times;</button>
+      <button data-speed="2">2&times;</button>
+      <button data-speed="4">4&times;</button>
+    </div>
+    <span class="scrub-label" style="margin-left:auto">Drag the slider to scrub all clips together.</span>
+  </div>
+</div>
+
+<div class="hero-video">
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="metadata"
+           poster="assets/figures/fig_step1b_cfd_vs_rcfd_snapshots.png">
+      <source src="assets/videos/CFD_reference.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="label">CFD reference.</span> The full CFD run. A sharp warm zone fills the upper half while the inlet is hot, and slowly relaxes once the inlet cools.</figcaption>
+  </figure>
+</div>
+
+<div class="gallery">
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="metadata">
+      <source src="assets/videos/rCFD_diff_000.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.000$</span>Pure C2C shift, no mixing. The warm and cold halves stay separated by a sharp interface.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="metadata">
+      <source src="assets/videos/rCFD_diff_0125.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.125$</span>The rCFD source default. A thin mixing band appears between the warm and cold zones.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="metadata">
+      <source src="assets/videos/rCFD_diff_0375.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.375$</span>A clear mixing layer covers about the middle third of the chamber.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="metadata">
+      <source src="assets/videos/rCFD_diff_05.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.500$</span>The best match to the CFD reference on the stratification metric $CoG_y$.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="metadata">
+      <source src="assets/videos/rCFD_diff_075.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 0.750$</span>The Step 1a value. A broad smooth gradient fills the lower half of the chamber.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="metadata">
+      <source src="assets/videos/rCFD_diff_15.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 1.500$</span>Mixing takes over from the shift map. The warm cap shrinks and the bottom warms up too quickly.</figcaption>
+  </figure>
+
+  <figure>
+    <video data-sync class="js-sync-video" muted playsinline preload="metadata">
+      <source src="assets/videos/rCFD_diff_30.mp4" type="video/mp4">
+    </video>
+    <figcaption><span class="fsd">$f_{sd} = 3.000$</span>Extreme mixing. The field becomes a near-uniform vertical ramp and the physical jet structure is lost.</figcaption>
+  </figure>
+
+</div>
+
+<script>
+(function() {
+  // -------- Mobile adaptation ---------------------------------------
+  // Touch devices (especially iOS Safari) only allow a few <video>
+  // elements to play simultaneously. The gallery has eight videos,
+  // which is too many. On touch devices we drop them from the synced
+  // scrubber and give them native controls so the user can play one
+  // at a time.
+  const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+  if (isCoarse) {
+    document.querySelectorAll('.gallery video[data-sync]').forEach(v => {
+      v.removeAttribute('data-sync');
+      v.setAttribute('controls', '');
+      v.preload = 'metadata';
+    });
+    const note = document.createElement('div');
+    note.className = 'scrub-label';
+    note.style.cssText = 'margin-top:0.7rem;color:var(--ink-soft);font-size:0.78rem;font-style:italic;line-height:1.5;';
+    note.textContent = 'On touch devices the eight gallery clips below play individually — tap each to view. The scrubber controls the picker pair above.';
+    const scrubberEl = document.getElementById('scrubber');
+    if (scrubberEl) scrubberEl.appendChild(note);
+  }
+
+  // -------- Synchronised scrubber for all <video data-sync> elements --
+  // Each video is 40 s real time, 600 frames at 15 fps,
+  // representing 600 s of simulated time. We treat real time = simulated time
+  // by mapping slider 0..600 (simulated seconds) to videoTime 0..40 s.
+  const videos    = Array.from(document.querySelectorAll('video[data-sync]'));
+  const slider    = document.getElementById('scrubSlider');
+  const playBtn   = document.getElementById('scrubPlay');
+  const resetBtn  = document.getElementById('scrubReset');
+  const timeOut   = document.getElementById('scrubTime');
+  const speedBtns = document.querySelectorAll('.scrub-speed button');
+
+  const SIM_DURATION   = 600;        // simulated seconds (full sweep)
+  const VIDEO_DURATION = 40;         // 600 frames / 15 fps
+  const TIME_SCALE     = VIDEO_DURATION / SIM_DURATION;    // 0.0667
+
+  let isPlaying = false;
+  let speed     = 1;
+  let rafId     = null;
+  let simTime   = 0;                 // simulated seconds 0..600
+
+  // Apply currentTime to every video (used when scrubbing or resetting).
+  function syncCurrentTimeToAll(vt) {
+    videos.forEach(v => {
+      if (Number.isFinite(v.duration) && vt <= v.duration) {
+        try { v.currentTime = vt; } catch (e) {}
+      }
+    });
+  }
+
+  function setSimTime(t) {
+    simTime = Math.max(0, Math.min(SIM_DURATION, t));
+    slider.value = simTime.toFixed(2);
+    timeOut.textContent = 't = ' + Math.round(simTime) + ' s';
+    syncCurrentTimeToAll(simTime * TIME_SCALE);
+  }
+
+  // Native HTML5 video playback: needed for iOS Safari and some Android
+  // browsers which only update video frames after .play() has been called
+  // inside a user-gesture handler. We use the first video's currentTime
+  // as the master clock and drive the slider from it.
+  function setPlaying(p) {
+    isPlaying = p;
+    playBtn.textContent = isPlaying ? 'Pause' : 'Play';
+    if (isPlaying) {
+      videos.forEach(v => {
+        try { v.playbackRate = speed; } catch (e) {}
+        const pp = v.play();
+        if (pp && typeof pp.catch === 'function') {
+          pp.catch(() => {});   // ignore autoplay-blocked rejections
+        }
+      });
+      rafId = requestAnimationFrame(tick);
+    } else {
+      videos.forEach(v => { try { v.pause(); } catch (e) {} });
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  }
+
+  function tick() {
+    if (!isPlaying) return;
+    const master = videos[0];
+    if (master && Number.isFinite(master.currentTime)) {
+      simTime = master.currentTime / TIME_SCALE;
+      slider.value = simTime.toFixed(2);
+      timeOut.textContent = 't = ' + Math.round(simTime) + ' s';
+      if (master.ended || simTime >= SIM_DURATION) {
+        setPlaying(false);
+        return;
+      }
+      // Periodic drift correction: if other videos drift more than ~0.15 s
+      // (~2 frames) from the master, snap them back. Cheap on desktop,
+      // also helps mobile keep the gallery in lock-step.
+      const mt = master.currentTime;
+      for (let i = 1; i < videos.length; i++) {
+        const v = videos[i];
+        if (!Number.isFinite(v.duration)) continue;
+        if (Math.abs(v.currentTime - mt) > 0.15) {
+          try { v.currentTime = mt; } catch (e) {}
+        }
+      }
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  playBtn.addEventListener('click', () => setPlaying(!isPlaying));
+  resetBtn.addEventListener('click', () => {
+    setPlaying(false);
+    setSimTime(0);
+  });
+  slider.addEventListener('input', () => {
+    // Pause while scrubbing; the user can hit play again afterwards.
+    if (isPlaying) {
+      videos.forEach(v => { try { v.pause(); } catch (e) {} });
+      isPlaying = false;
+      playBtn.textContent = 'Play';
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    setSimTime(parseFloat(slider.value));
+  });
+  speedBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      speedBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      speed = parseFloat(btn.dataset.speed);
+      // Update live if currently playing
+      videos.forEach(v => { try { v.playbackRate = speed; } catch (e) {} });
+    });
+  });
+
+  // Render first frame on each video as soon as metadata is ready, so the
+  // gallery is not blank before the user hits Play.
+  videos.forEach(v => {
+    v.addEventListener('loadedmetadata', () => {
+      try { v.currentTime = 0; } catch (e) {}
+    });
+  });
+  setSimTime(0);
+})();
+</script>
+
+<!-- =========================================================== -->

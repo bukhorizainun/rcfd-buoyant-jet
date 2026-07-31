@@ -1,0 +1,253 @@
+<h2 id="heatgap">12 — rCFD vs CFD: the Gap</h2>
+
+<p>One check before the comparison. With the loss switched off ($h = 0$), the replay gives back the Step 1 result exactly: $T_\text{mean}$ and $CoG_y$ match the no-loss run with no difference, and $Q_\text{wall}$ stays at zero the whole time. So any cooling we see below comes only from the heat-loss term, not from a side effect of the code. The balance accounting that carries that term is checked separately in the $h$-sweep (§13), where it closes to about $0.03\%$.</p>
+
+<p>Now the cheap side. We kept the existing <em>adiabatic</em> C2C database from Step 1 (no rebuild) and simply added the heat-loss source term to the replay. Because the absolute rCFD temperature already carries a small replay bias from Step 1, the fair thing to compare is the <em>cooling itself</em>, i.e. how much each method drops when heat loss is turned on:</p>
+
+<figure class="wide" id="heatGapFigure">
+  <div id="plotHeatGap" style="width:100%; min-height:430px;">
+    <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
+  </div>
+  <figcaption><span class="label">Figure 9 (interactive).</span> The three diagnostics over time, for the CFD reference and the rCFD replay, each with and without heat loss: the mean temperature $T_\text{mean}$, the height of the heat $CoG_y$, and the temperature spread $\delta T_\text{mean}$. In the first panel the heat-loss curve sits below its adiabatic twin, and that gap <em>is</em> the cooling, much wider for CFD than for rCFD. $CoG_y$ barely moves (heat loss hardly shifts where the warm fluid sits), while $\delta T_\text{mean}$ drops. The spread runs higher for CFD than for rCFD the whole way, because the resolved flow keeps sharper temperature gradients that the replay smooths out. Hover for values; click a legend entry to toggle that case.</figcaption>
+</figure>
+
+<style>
+  .lmp { background:var(--note-bg); border:1px solid var(--accent-soft); border-radius:12px; padding:1rem 1.1rem; }
+  .lmp .lmp-top { display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin-bottom:0.85rem; }
+  .lmp .lmp-cap { font-size:0.82rem; color:var(--ink-soft); font-weight:600; }
+  .lmp .lmp-case button { font:600 0.8rem Inter,sans-serif; padding:0.28em 0.7em; border-radius:7px; border:1px solid var(--accent-soft); background:var(--bg); color:var(--ink); cursor:pointer; }
+  .lmp .lmp-case button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .lmp .lmp-play { font:600 0.85rem Inter,sans-serif; padding:0.3em 0.95em; border-radius:7px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  .lmp input[type=range] { flex:1; min-width:130px; accent-color:var(--accent); }
+  .lmp .lmp-t { font:700 0.85rem JetBrains Mono,monospace; color:var(--ink-soft); min-width:84px; text-align:right; }
+  .lmp .lmp-gauges { display:grid; grid-template-columns:repeat(3,1fr); gap:0.8rem; }
+  @media (max-width:560px){ .lmp .lmp-gauges { grid-template-columns:1fr; } }
+  .lmp .lmp-g { background:var(--bg); border-radius:9px; padding:0.7rem 0.8rem; text-align:center; border:1px solid var(--accent-soft); }
+  .lmp .lmp-g .lab { font-size:0.78rem; color:var(--ink-soft); }
+  .lmp .lmp-g .val { font:700 1.45rem JetBrains Mono,monospace; color:var(--accent); }
+  .lmp .lmp-g .unit { font-size:0.72rem; color:var(--ink-faint); }
+</style>
+
+<figure class="wide">
+  <div class="lmp" id="lmp">
+    <div class="lmp-top">
+      <span class="lmp-cap">Case:</span>
+      <span class="lmp-case">
+        <button data-case="rcfd" class="on" type="button">rCFD (heat loss)</button>
+        <button data-case="cfd" type="button">CFD (heat loss)</button>
+      </span>
+      <button class="lmp-play" id="lmpPlay" type="button">▶ Play</button>
+      <input type="range" id="lmpRange" min="0" max="120" value="120" step="1" aria-label="Time">
+      <span class="lmp-t" id="lmpT">t = 600 s</span>
+    </div>
+    <div class="lmp-gauges">
+      <div class="lmp-g"><div class="lab">Mean temperature T<sub>mean</sub></div><div class="val" id="lmpTmean">—</div><div class="unit">K</div></div>
+      <div class="lmp-g"><div class="lab">Spread δT<sub>mean</sub></div><div class="val" id="lmpDt">—</div><div class="unit">K</div></div>
+      <div class="lmp-g"><div class="lab">Heat height CoG<sub>y</sub></div><div class="val" id="lmpCog">—</div><div class="unit">mm</div></div>
+    </div>
+  </div>
+  <figcaption><span class="label">Playback for Figure 9.</span> Scrub or play the timeline to watch the three diagnostics evolve, read straight from the same data. Both cases now read right across the run, including the spread δT<sub>mean</sub>.</figcaption>
+</figure>
+
+<script>
+(function(){
+  var root=document.getElementById('lmp'); if(!root) return;
+  function start(){
+    if(!window.step2Traces) return setTimeout(start,90);
+    var d=window.step2Traces, n=d.t.length, caseSel='rcfd';
+    var range=document.getElementById('lmpRange'); range.max=String(n-1); range.value=String(n-1);
+    var elT=document.getElementById('lmpT'), elTm=document.getElementById('lmpTmean'),
+        elDt=document.getElementById('lmpDt'), elCog=document.getElementById('lmpCog'),
+        play=document.getElementById('lmpPlay'), timer=null;
+    function fmt(v,p){ return (v==null||isNaN(v))?'—':(+v).toFixed(p); }
+    function render(i){
+      i=Math.max(0,Math.min(n-1,i|0));
+      elT.textContent='t = '+Math.round(d.t[i])+' s';
+      elTm.textContent=fmt(caseSel==='rcfd'? d.rcfd_h100[i] : d.cfd_h100[i],2);
+      elCog.textContent=fmt(caseSel==='rcfd'? d.rcfd_h100_cog[i] : d.cfd_h100_cog[i],1);
+      elDt.textContent = fmt(caseSel==='rcfd'? d.rcfd_h100_dt[i] : d.cfd_h100_dt[i], 2);
+      // move the time marker on the Figure 9 plot (all three panels)
+      var tt=d.t[i]; window._step2PlayT=tt;
+      var gd=document.getElementById('plotHeatGap');
+      if(gd && gd._fullLayout && window.Plotly){
+        try{ window.Plotly.relayout(gd, {'shapes[0].x0':tt,'shapes[0].x1':tt,'shapes[1].x0':tt,'shapes[1].x1':tt,'shapes[2].x0':tt,'shapes[2].x1':tt}); }catch(e){}
+      }
+    }
+    function stop(){ if(timer){ clearInterval(timer); timer=null; play.textContent='▶ Play'; } }
+    function step(){ var v=+range.value; if(v>=n-1){ stop(); return; } v++; range.value=String(v); render(v); }
+    range.addEventListener('input', function(){ stop(); render(+range.value); });
+    play.addEventListener('click', function(){
+      if(timer){ stop(); return; }
+      if(+range.value>=n-1) range.value='0';
+      play.textContent='❚❚ Pause'; render(+range.value); timer=setInterval(step,120);
+    });
+    root.querySelectorAll('.lmp-case button').forEach(function(b){
+      b.addEventListener('click', function(){
+        caseSel=b.getAttribute('data-case');
+        root.querySelectorAll('.lmp-case button').forEach(function(x){ x.classList.toggle('on', x===b); });
+        render(+range.value);
+      });
+    });
+    render(n-1);
+  }
+  start();
+})();
+</script>
+
+<p>Here are all three diagnostics side by side, taken at the end of the run:</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Method</th><th>Case</th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$CoG_y$ (mm)</th><th class="num">$\delta T_\text{mean}$ (K)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD</td><td>adiabatic</td><td class="num">309.28</td><td class="num">38.5</td><td class="num">18.45</td></tr>
+<tr><td>CFD</td><td>heat loss ($h=100$)</td><td class="num">299.49</td><td class="num">37.9</td><td class="num">7.32</td></tr>
+<tr><td>rCFD</td><td>adiabatic</td><td class="num">307.49</td><td class="num">38.5</td><td class="num">14.35</td></tr>
+<tr><td>rCFD</td><td>heat loss ($h=100$)</td><td class="num">304.46</td><td class="num">38.2</td><td class="num">10.78</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Heat loss lowers the spread $\delta T_\text{mean}$ by about $11.1$ K in CFD but only about $3.6$ K in rCFD, again roughly a third. The rCFD spread is also lower overall ($\approx 14$ K against $\approx 18$ K adiabatic), because the frozen replay and the global face-swap smooth the field more than the resolved CFD does. $CoG_y$ hardly moves in either case, which fits a loss that only touches a thin top layer.</p>
+
+<div class="keybox">
+  <h4>The key Step-2 result</h4>
+  <p>The reused adiabatic database captures only about <strong>a third</strong> of the real heat loss: at $h = 100$ rCFD cools by <strong>3.03 K</strong> against the CFD's <strong>9.79 K</strong> (a ratio of ≈ 0.31), both read at $t = 600$ s. The same ordering shows up in $\delta T_\text{mean}$, where rCFD picks up only about a third of the CFD change. (At the gentle physical $h = 8$ the gap is even wider, rCFD 0.36 K against CFD 1.45 K, a ratio of ≈ 0.25, but the cooling there is so small it is hard to see; turning $h$ up makes the shortfall plain.)</p>
+</div>
+
+<p>Why does it fall so far short, with roughly <strong>two-thirds</strong> of the heat loss missing? Because we reused the adiabatic database from Step 1, the fluid flow in the replay is completely <em>frozen</em>: it only knows the motion that was recorded with the lid closed. In the real CFD, once the water at the top cools it gets heavier and sinks, and warm water rises to take its place. This is the convective overturning loop from Figure 8, and it keeps feeding warm fluid to the surface, so the heat loss keeps going. The replay does not contain that loop, because nothing was cooling when the database was recorded. So in the replay the top water cools in place: the surface difference $T_\text{top} - T_\infty$ shrinks, and the loss slows down. The missing piece is a <em>flow pattern</em>, not a diffusion setting, so we call it an <strong>advection gap</strong>. It fits how rCFD splits transport in the first place: the recorded shifts carry the advection, while diffusion only adds the small-scale mixing on top <a href="#ref-abbasi2020">[5]</a>. The Step-1 replay bias (~1.7 K on the absolute level) accounts for only a small part of the gap; the frozen flow is the main cause. This is the limit of reusing an adiabatic database and adding a source term on top, and it is the result Step 2 was meant to show. It is also a known soft spot of the method: applied to heat transfer in a fluidised bed, transport-based rCFD smeared out the sharp, localised heat-transfer layer that the flow drives <a href="#ref-pirker2018">[2]</a>. Our under-captured cold cap is the buoyant-jet version of the same difficulty, reproducing a localised, flow-driven thermal structure on a frozen flow.</p>
+
+<style>
+  .mechfig .mech-head { font-weight:600; color:var(--ink); margin-bottom:0.8rem; text-align:center; }
+  .mechfig .mech-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.8rem; }
+  @media (max-width:640px){ .mechfig .mech-grid { grid-template-columns:1fr; } }
+  .mechfig .mech-card { background:var(--note-bg); border-radius:10px; padding:0.9rem 1rem; border-top:3px solid var(--ink-faint); }
+  .mechfig .mech-card.ok  { border-top-color:#3a9d5d; }
+  .mechfig .mech-card.mid { border-top-color:var(--warn); }
+  .mechfig .mech-card.no  { border-top-color:#c0392b; }
+  .mechfig .mech-icon { width:34px; height:34px; display:block; margin-bottom:0.3rem; }
+  .mechfig .mech-card.ok  { color:#3a9d5d; }
+  .mechfig .mech-card.mid { color:var(--warn); }
+  .mechfig .mech-card.no  { color:#c0392b; }
+  .mechfig .mech-status { font:700 0.78rem Inter,sans-serif; }
+  .mechfig .mech-card h5 { margin:0.25rem 0 0.4rem; color:var(--ink); font-size:1.02rem; }
+  .mechfig .mech-card p { margin:0; font-size:0.88rem; color:var(--ink-soft); }
+</style>
+
+<figure class="wide mechfig">
+  <div class="mech-head">rCFD transport = recorded shifts + face-swap diffusion + heat-loss source</div>
+  <div class="mech-grid">
+    <div class="mech-card ok">
+      <svg class="mech-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20 H31"/><path d="M24 13 L32 20 L24 27"/></svg>
+      <div class="mech-status">✓ Captured</div>
+      <h5>Advection</h5>
+      <p>The bulk motion is carried by the recorded cell-to-cell shift maps, replayed step by step.</p>
+    </div>
+    <div class="mech-card mid">
+      <svg class="mech-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 24 C13 14 19 14 20 20 C21 26 27 26 33 16"/></svg>
+      <div class="mech-status">△ Partly captured</div>
+      <h5>Small-scale mixing</h5>
+      <p>Added on top by face-swap diffusion (the $f_{sd}$ knob), which smooths the field but does not move fluid around.</p>
+    </div>
+    <div class="mech-card no">
+      <svg class="mech-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7 V31"/><path d="M13 24 L20 32 L27 24"/></svg>
+      <div class="mech-status">✗ Not represented</div>
+      <h5>Cooling-driven down-flow</h5>
+      <p>The buoyant overturning that heat loss sets up was never in the adiabatic database, so the replay cannot produce it.</p>
+    </div>
+  </div>
+  <figcaption><span class="label">Figure 9b.</span> What a reused adiabatic database can and cannot do under heat loss. The recorded shifts carry advection, and face-swap diffusion adds mixing, but the cooling-driven down-flow is a new flow pattern the database never saw. That missing piece is the advection gap behind the shortfall (about two-thirds of the cooling at $h = 100$, and wider still at the gentle $h = 8$).</figcaption>
+</figure>
+
+<div class="insightbox">
+  <h4>What the gap really measures</h4>
+  <p>It helps to read the shortfall as a test of database reuse, not just a heat-loss result. The recurrence database was recorded once, from the adiabatic flow, and Step 2 reuses it under a boundary condition it never saw. The roughly two-thirds shortfall at $h = 100$ (wider at the gentle $h = 8$) is then a direct measure of how far that one database stretches: the physics it did record (the advection in the shift maps) still carries over, while the physics it never recorded (the cooling-driven down-flow) cannot appear no matter how the source term is tuned. So the number to keep from Step 2 is not the cooling itself but how much of it a reused adiabatic database can recover, which §15 takes up by rebuilding the database from a heat-loss run.</p>
+</div>
+
+<p>The shortfall is not a fixed offset; it grows as the run goes on. The figure below tracks the cooling itself over time at $h = 100$: how much each method has cooled relative to its own adiabatic baseline.</p>
+
+<figure class="wide" id="errGrowthFigure">
+  <div id="plotErrGrowth" style="width:100%; min-height:380px;">
+    <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
+  </div>
+  <figcaption><span class="label">Figure 9c (interactive).</span> How the cooling gap grows at $h = 100$. The CFD reference (black) keeps cooling because the overturning loop keeps feeding warm fluid to the surface; the rCFD replay (blue) flattens early because its flow is frozen. The shaded band between them is the shortfall, the part of the heat loss the reused adiabatic database cannot reproduce, and it widens with time. By $t = 600$ s the CFD has cooled by about 9.8 K while the replay reaches only 3.0 K, so the band is roughly two-thirds of the total.</figcaption>
+</figure>
+
+<script>
+(function(){
+  function tc(){
+    var cs=getComputedStyle(document.documentElement);
+    var dark=document.documentElement.getAttribute('data-theme')==='dark';
+    return { bg:cs.getPropertyValue('--bg').trim()||'#ffffff', text:cs.getPropertyValue('--ink').trim()||'#1a1a1a',
+      grid:dark?'#2a3038':'#e6e6e6', accent:cs.getPropertyValue('--accent').trim()||'#00467f', cfd:dark?'#f0f0f0':'#111111' };
+  }
+  function draw(){
+    if (typeof Plotly==='undefined' || !window.step2Traces) return setTimeout(draw,90);
+    var d=window.step2Traces, c=tc();
+    var T=[
+      { x:d.t, y:d.cool_rcfd, name:'rCFD cooling', line:{color:c.accent,width:2.4},
+        hovertemplate:'rCFD<br>t=%{x:.0f} s<br>ΔT=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.cool_cfd, name:'CFD cooling (truth)', line:{color:c.cfd,width:2.4}, fill:'tonexty',
+        fillcolor:'rgba(192,57,43,0.16)',
+        hovertemplate:'CFD<br>t=%{x:.0f} s<br>ΔT=%{y:.2f} K<extra></extra>' }
+    ];
+    var layout={
+      xaxis:{ title:{text:'Time (s)'}, range:[0,600], gridcolor:c.grid, zeroline:false, color:c.text },
+      yaxis:{ title:{text:'cooling ΔT<sub>mean</sub> (K)'}, rangemode:'tozero', gridcolor:c.grid, zeroline:false, color:c.text },
+      legend:{ orientation:'h', x:0.5, xanchor:'center', y:-0.22, font:{size:11,color:c.text}, bgcolor:'rgba(0,0,0,0)' },
+      margin:{ t:16, b:70, l:62, r:16 }, hovermode:'x unified',
+      annotations:[{ x:470, y:4.6, xref:'x', yref:'y', text:'shortfall', showarrow:false, font:{size:12, color:'#c0392b'} }],
+      paper_bgcolor:c.bg, plot_bgcolor:c.bg, font:{family:'Inter, sans-serif', size:12, color:c.text }
+    };
+    layout.uirevision='err-growth';
+    Plotly.react('plotErrGrowth',T,layout,{ responsive:true, displaylogo:false, modeBarButtonsToRemove:['lasso2d','select2d','autoScale2d'], toImageButtonOptions:{format:'png',filename:'step2_error_growth',scale:2} });
+  }
+  draw();
+  document.addEventListener('themechange', function(){ if(window.step2Traces) draw(); });
+})();
+</script>
+
+<h3 id="rcfd-heatloss-anim">12.1 — Watching it happen</h3>
+
+<p>Figure 8c showed the CFD reference under heat loss. Here is the rCFD replay of the same case, drawn the same way: temperature on the left, flow on the right. Setting the two clips next to each other is the quickest way to see what the replay keeps and what it loses.</p>
+
+<figure class="wide">
+  <video autoplay loop muted playsinline controls preload="metadata" poster="assets/figures/fig_rcfd_tpath_h100.png" style="max-width:980px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/rCFD_Tpath_h100.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 9d.</span> The rCFD replay with heat loss at $h = 100$, in the same view as the CFD reference (Figure 8c). Left: the temperature field (293&ndash;333 K). Right: the flow, coloured by speed (0&ndash;0.05 m/s). Put it next to Figure 8c and two things stand out. The warm cap is softer here, because the face-swap step mixes a little extra on top of the saved flow, so the sharp line the CFD holds gets smoothed. And the flow on the right is frozen: it is the steady adiabatic loop recorded in Step 1, the same for any $h$. It never picks up the cooling-driven downflow the CFD develops, which is why the replay misses about two-thirds of the heat loss.</figcaption>
+</figure>
+
+<p>That frozen flow is the whole story. With the loop fixed, the replay cannot let the cooled surface water sink and bring warm water up to be cooled in turn, so the cold cap never deepens the way it does in the CFD. The two-thirds of the cooling that goes missing is exactly that absent overturning, here as a picture rather than a number.</p>
+
+<script>
+(function(){
+  function wire(root){
+    var vids=[].slice.call(root.querySelectorAll('.syncp-vid'));
+    if(!vids.length) return;
+    var play=root.querySelector('.syncp-play'), reset=root.querySelector('.syncp-reset'),
+        slider=root.querySelector('.syncp-slider'), pct=root.querySelector('.syncp-pct'),
+        lead=vids[0], on=false, raf=null;
+    function show(f){ slider.value=Math.round(f*1000); pct.textContent=Math.round(f*100)+'%'; }
+    function seek(f){ f=Math.max(0,Math.min(1,f)); vids.forEach(function(v){ if(v.duration) v.currentTime=f*v.duration; }); show(f); }
+    function loop(){
+      if(!on) return;
+      if(lead.ended || (lead.duration && lead.currentTime>=lead.duration-0.04)){ vids.forEach(function(v){ v.currentTime=0; v.play(); }); }
+      show(lead.duration ? lead.currentTime/lead.duration : 0);
+      raf=requestAnimationFrame(loop);
+    }
+    play.addEventListener('click', function(){
+      on=!on;
+      if(on){ vids.forEach(function(v){v.play();}); play.innerHTML='&#10074;&#10074; Pause'; raf=requestAnimationFrame(loop); }
+      else { vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); }
+    });
+    reset.addEventListener('click', function(){ on=false; vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); seek(0); });
+    slider.addEventListener('input', function(){ on=false; vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); seek((+slider.value)/1000); });
+    vids.forEach(function(v){ if(v.readyState>=1){try{v.currentTime=0.001;}catch(e){}} else { v.addEventListener('loadedmetadata',function(){try{v.currentTime=0.001;}catch(e){}},{once:true}); } });
+  }
+  document.querySelectorAll('[data-syncp]').forEach(wire);
+})();
+</script>
+

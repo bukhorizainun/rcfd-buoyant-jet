@@ -1,0 +1,253 @@
+<h2 id="discussion">9 — Discussion</h2>
+
+<h3>9.1 — Why the best value depends on the metric</h3>
+
+<p>$T_\text{mean}$ is just an average over the whole volume; it does not care where the warm fluid sits. Face-swap diffusion conserves mass, but it also <em>speeds up</em> how fast the warm inlet spreads through the chamber. The real CFD needs finite time for advection to do this; rCFD with a high $f_{sd}$ does it almost instantly. As a result, rCFD ends up hotter than CFD during the warm phase, and the higher $f_{sd}$ is, the bigger this overshoot becomes. So the best case for $T_\text{mean}$ is $f_{sd}=0$.</p>
+
+<p>$CoG_y$ measures <em>where</em> the warm region sits in height. Without any face-swap mixing, the rCFD field stays too sharp and the centre of gravity sits too high. With too much mixing, it sits too low. The best value is the one that matches the small-scale mixing in the CFD reference that the shift map alone cannot reproduce. In our sweep that value is $f_{sd}=0.500$.</p>
+
+<h3>9.2 — How sure are we?</h3>
+
+<p>The margin at the $CoG_y$ optimum is small: $0.069$ mm at $f_{sd}=0.500$ against $0.072$ mm at $f_{sd}=0.750$ and $0.074$ mm at $f_{sd}=0.375$, which is about four percent. The minimum is real, but it is also shallow. Any value in the range $[0.375, 0.750]$ would be defensible if there were a separate reason to prefer it.</p>
+
+<h3 id="localdiff-step1">9.3 — A physical alternative to the $f_{sd}$ knob: local diffusion</h3>
+
+<p>In §6 we picked $f_{sd}$ by hand and kept the value that fit the CFD reference best. There is a more physical option that needs no tuning. Instead of one global number, rCFD can read a diffusion value for every cell straight from the database (<code>local_diff_on = 1</code>). This per-cell value comes from the second moment of the propagator, as in Lumetzberger et al. <a href="#ref-lumetzberger2025">[3]</a> and Abbasi et al. <a href="#ref-abbasi2020">[5]</a>. The database has to store this field while it is being prepared, so it needs its own field-based build. We built one and ran it without heat loss, then put the result next to the §6 hand-tuned $f_{sd}$ sweep. If the database-derived diffusion is sound, the no-tuning local curve should land on one of the hand-tuned $f_{sd}$ values.</p>
+
+<figure class="wide" id="localDiffFigure">
+  <div id="plotLocalDiff" style="width:100%; min-height:400px;">
+    <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
+  </div>
+  <figcaption><span class="label">Figure 7b (interactive).</span> Adiabatic comparison: mean temperature $T_\text{mean}(t)$ (left) and the thermal centre of gravity $CoG_y(t)$ (right), for the CFD reference (black), the hand-tuned global face-swap at $f_{sd} = 0.375, 0.5, 0.75$ (blue dashed), and the no-tuning local diffusion (green). The local curve lands on the $f_{sd} = 0.5$ line and sits between the $0.375$ and $0.75$ ones. Hover for values; click a legend entry to show or hide a trace.</figcaption>
+</figure>
+
+<script>
+(function(){
+  function tc(){
+    var cs=getComputedStyle(document.documentElement);
+    var dark=document.documentElement.getAttribute('data-theme')==='dark';
+    return { bg:cs.getPropertyValue('--bg').trim()||'#ffffff', text:cs.getPropertyValue('--ink').trim()||'#1a1a1a',
+      grid:dark?'#2a3038':'#e6e6e6', accent:cs.getPropertyValue('--accent').trim()||'#00467f',
+      cfd:dark?'#f0f0f0':'#111111', local:'#3a9d5d' };
+  }
+  function draw(){
+    if (typeof Plotly==='undefined' || !window.localDiffTraces) return setTimeout(draw,90);
+    var d=window.localDiffTraces, c=tc(), dash='dash';
+    var T=[
+      { x:d.t, y:d.cfd,   name:'CFD reference', legendgroup:'cfd', line:{color:c.cfd,width:2.4}, xaxis:'x', yaxis:'y',
+        hovertemplate:'CFD<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.g0375, name:'global f<sub>sd</sub>=0.375', legendgroup:'g0', line:{color:'#9ecae1',width:1.8,dash:dash}, xaxis:'x', yaxis:'y',
+        hovertemplate:'f<sub>sd</sub>=0.375<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.g05,   name:'global f<sub>sd</sub>=0.5', legendgroup:'g5', line:{color:c.accent,width:1.8,dash:dash}, xaxis:'x', yaxis:'y',
+        hovertemplate:'f<sub>sd</sub>=0.5<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.g075,  name:'global f<sub>sd</sub>=0.75', legendgroup:'g7', line:{color:'#08519c',width:1.8,dash:dash}, xaxis:'x', yaxis:'y',
+        hovertemplate:'f<sub>sd</sub>=0.75<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.local, name:'local diffusion (no tuning)', legendgroup:'l', line:{color:c.local,width:2.8}, xaxis:'x', yaxis:'y',
+        hovertemplate:'local<br>t=%{x:.0f}s<br>T=%{y:.2f} K<extra></extra>' },
+      { x:d.t, y:d.cfd_cog,   legendgroup:'cfd', showlegend:false, line:{color:c.cfd,width:2.4}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'CFD<br>CoG=%{y:.2f} mm<extra></extra>' },
+      { x:d.t, y:d.g0375_cog, legendgroup:'g0', showlegend:false, line:{color:'#9ecae1',width:1.8,dash:dash}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'f<sub>sd</sub>=0.375<br>CoG=%{y:.2f} mm<extra></extra>' },
+      { x:d.t, y:d.g05_cog,   legendgroup:'g5', showlegend:false, line:{color:c.accent,width:1.8,dash:dash}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'f<sub>sd</sub>=0.5<br>CoG=%{y:.2f} mm<extra></extra>' },
+      { x:d.t, y:d.g075_cog,  legendgroup:'g7', showlegend:false, line:{color:'#08519c',width:1.8,dash:dash}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'f<sub>sd</sub>=0.75<br>CoG=%{y:.2f} mm<extra></extra>' },
+      { x:d.t, y:d.local_cog, legendgroup:'l', showlegend:false, line:{color:c.local,width:2.8}, xaxis:'x2', yaxis:'y2',
+        hovertemplate:'local<br>CoG=%{y:.2f} mm<extra></extra>' }
+    ];
+    var layout={
+      grid:{rows:1,columns:2,pattern:'independent',xgap:0.12},
+      xaxis:{ domain:[0,0.46], title:{text:'Time (s)'}, range:[0,600], gridcolor:c.grid, zeroline:false, color:c.text },
+      yaxis:{ title:{text:'T<sub>mean</sub> (K)'}, gridcolor:c.grid, zeroline:false, color:c.text },
+      xaxis2:{ domain:[0.54,1], title:{text:'Time (s)'}, range:[0,600], gridcolor:c.grid, zeroline:false, color:c.text },
+      yaxis2:{ title:{text:'CoG<sub>y</sub> (mm)'}, gridcolor:c.grid, zeroline:false, color:c.text },
+      legend:{ orientation:'h', x:0.5, xanchor:'center', y:-0.22, font:{size:11,color:c.text}, bgcolor:'rgba(0,0,0,0)' },
+      margin:{ t:16, b:70, l:62, r:16 }, hovermode:'x unified',
+      paper_bgcolor:c.bg, plot_bgcolor:c.bg, font:{family:'Inter, sans-serif', size:12, color:c.text }, uirevision:'localdiff'
+    };
+    Plotly.react('plotLocalDiff',T,layout,{ responsive:true, displaylogo:false, modeBarButtonsToRemove:['lasso2d','select2d','autoScale2d'], toImageButtonOptions:{format:'png',filename:'step1_local_diffusion',scale:2} });
+  }
+  draw();
+  document.addEventListener('themechange', function(){ if(window.localDiffTraces) draw(); });
+})();
+</script>
+
+<p>The no-tuning local diffusion lands right on the hand-tuned $f_{sd} = 0.5$ curve. At the end of the run it gives $T_\text{mean} = 307.49$ K, the same as $f_{sd} = 0.5$ (the two stay within $0.02$ K of each other for the whole run), and it sits between $f_{sd} = 0.375$ ($307.83$ K) and $f_{sd} = 0.75$ ($306.91$ K). So the diffusivity the database carries on its own matches the value we had to pick by hand in §6. This is the Step-1 result: local diffusion can replace the manual sweep.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Adiabatic, end of run</th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$CoG_y$ (mm)</th><th class="num">bias vs CFD (K)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD reference</td><td class="num">309.16</td><td class="num">38.5</td><td class="num">—</td></tr>
+<tr><td>no diffusion (advection only)</td><td class="num">308.90</td><td class="num">38.6</td><td class="num">−0.26</td></tr>
+<tr><td>global face-swap $f_{sd}=0.375$</td><td class="num">307.83</td><td class="num">38.5</td><td class="num">−1.33</td></tr>
+<tr><td>global face-swap $f_{sd}=0.5$</td><td class="num">307.49</td><td class="num">38.5</td><td class="num">−1.67</td></tr>
+<tr><td>global face-swap $f_{sd}=0.75$</td><td class="num">306.91</td><td class="num">38.4</td><td class="num">−2.25</td></tr>
+<tr><td>local diffusion (no tuning)</td><td class="num">307.49</td><td class="num">38.5</td><td class="num">−1.67</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>To see how much the field is doing, we also ran the replay with every diffusion model switched off, so heat moves by the recorded flow alone. The tank then ends at $308.90$ K. The database's local field brings this down to $307.49$ K, the same level as the hand-tuned $f_{sd} = 0.5$. So the field is not idle: on its own it adds about $1.4$ K of mixing, and it lands on the value §6 had to find by hand.</p>
+
+<p>So local diffusion reaches the right level on its own, with no $f_{sd}$ to set by hand: it picks out the same effective mixing as $f_{sd} = 0.5$, the value §6 kept as best for $CoG_y$.</p>
+
+<p>The single number $f_{sd}$ hides what local diffusion actually does. Figure 7c puts the two side by side: on the left, the per-cell diffusivity $\kappa_\text{eff}$ the database carries, none of it set by hand; on the right, the hand-tuned global face-swap, which is one constant for the whole tank. Local diffusion makes the mixing strong along the warm jet and the rising plume, and weak in the still corners. These are physical diffusivities in m²/s, not a dimensionless knob. The database sets them as it is built, from how far the recorded flow spreads the content of each cell. Across the tank they run from about $7\times10^{-7}$ to $6\times10^{-5}$ m²/s, with a mean near $4\times10^{-6}$ m²/s, a few to a few hundred times the molecular thermal diffusivity of water ($1.4\times10^{-7}$ m²/s). Averaged over the tank it comes out near $f_{sd} = 0.5$, which is why the two agree in Figure 7b, but it is clearly not a single constant.</p>
+
+<figure class="wide">
+  <video autoplay loop muted playsinline controls preload="metadata" poster="assets/figures/fig_kappa_eff.png" style="max-width:760px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/kappa_evolution.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 7c (animated).</span> Left: the per-cell local diffusivity $\kappa_\text{eff}$ the database carries, read at run time with no tuning, high along the warm jet and the rising plume and low in the still corners; it shifts frame to frame as the replay moves through the recorded flow. Right: the hand-tuned $f_{sd} = 0.5$, which acts like the same mixing applied uniformly everywhere (the tank-average of $\kappa_\text{eff}$, $\approx 4\times10^{-6}$ m²/s) and never changes. Same average, very different detail: local diffusion is a living per-cell field, $f_{sd}$ is one frozen constant.</figcaption>
+</figure>
+
+<p><strong>Why the two end up so close.</strong> In the propagator picture that local diffusion is built on, transport splits into two parts: an advective part (the first moment, the recorded cell-to-cell shifts) and a diffusive part (the second moment, which is $\kappa_\text{eff}$) <a href="#ref-lumetzberger2025">[3]</a>. The bulk numbers here, $T_\text{mean}$ and $CoG_y$, are set mostly by the advective part and by the global balance that holds the total scalar to its target; the diffusive part only rearranges heat locally. So the two runs match in the bulk as long as their <em>total</em> diffusion agrees, and it does: the tank-average of the local field sits right at $f_{sd} = 0.5$, the value the §6 sweep had already picked as best. The same split is why local diffusion does not help the heat-loss gap in §14: that gap is advective (a missing flow pattern), and changing the diffusion, uniform or local, cannot put back advection that was never recorded <a href="#ref-abbasi2020">[5]</a>. What local diffusion does add is the spatial detail of the mixing (Figure 7c, left), which it gets right per cell without any tuning.</p>
+
+<p>We come back to local diffusion under heat loss in §14.</p>
+
+<h3 id="negdiff">9.4 — Sharpening the front: a bounded negative diffusivity</h3>
+
+<p>§9.3 replaced the hand-tuned $f_{sd}$ with a value the database carries on its own. This section looks at the one thing no setting of $f_{sd}$ can give back: the sharpness of the thermal front. It started here as a concept; it is now implemented, validated and swept, and the results are below.</p>
+
+<p>The replay gets the mean temperature and the position of the front right, but not its thickness. Two ingredients of the transport act like a diffusion. The cell-to-cell shift map carries some numerical smearing of its own, and the face-swap step adds more of it on purpose, because some mixing is needed for the stratification to develop at the right rate. The price shows up at the interface between the warm upper bulk and the cold bottom layer. Measured over the chamber centreline at the end of the run, the CFD front is about 6 mm thick. In the replay the same front is roughly three times as wide.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_problem_t300.png" alt="CFD reference vs rCFD replay at t = 300 s: the CFD keeps a thin thermal front, the replay smears it into a wide band" style="max-width:1040px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 7d.</span> The problem, at $t = 300$ s and on the same colour scale. The CFD reference (left) keeps a thin, sharp interface between the warm bulk and the cold bottom layer. The replay at $f_{sd} = 0.5$ (right) puts the interface in the right place but smears it into a wide band.</figcaption>
+</figure>
+
+<p>This matters beyond appearance. The quantities an engineer reads off a stratified field live exactly at that front: how much of the hot layer is usable, how thick the thermocline is, when the interface reaches an outlet. A field with the right mean but a smeared front answers such questions wrongly.</p>
+
+<p>The deeper point from the §6 sweep is that no value of $f_{sd}$ can repair this. Diffusion only works in one direction: it can reduce a gradient, but it cannot rebuild one that has been washed out. Lowering $f_{sd}$ helps the mean temperature and hurts the stratification timing; raising it does the opposite. The method is missing the inverse operation. That inverse is a <strong>negative diffusivity</strong>: the same face exchange, run the other way, so that it sharpens instead of smooths. A normal diffusive exchange carries heat down the temperature gradient, from warm to cold. The sharpening step is its mirror image: it acts exactly where the exchange flux would run against the gradient, $(\nabla T) \cdot \vec{q} < 0$, and carries heat from the colder to the warmer side. Applied to a smeared front, it drains the blurred transition zone: the warm side gets warmer, the cold side gets colder, and the interface contracts back towards a step.</p>
+
+<p><strong>The overshoot guard.</strong> Left alone, this process is unstable. Pure anti-diffusion does not know when to stop: it keeps steepening until cell values pass the physical limits, producing water hotter than the inlet or colder than the initial fill. So the operator is only usable together with a rule that bounds it. The classical rule comes from Flux-Corrected Transport <a href="#ref-borisbook1973">[8]</a> <a href="#ref-zalesak1979">[9]</a>: no exchange may create a <em>new local extremum</em>. Every cell carries the minimum and maximum temperature over itself and its face neighbours, recomputed before each application. A cell that receives heat may rise at most to its local maximum; a cell that gives heat away may fall at most to its local minimum. The admissible exchange across a face is limited by these two headrooms, and the step takes only a fraction $s$ of the smaller one. A front can steepen until it is one cell wide, but no value can ever leave the range spanned by its neighbours, so no overshoot is possible by construction. The picture to keep in mind is an unsharp mask in image processing: sharpening, with a guard against halos.</p>
+
+<div class="codeblock">
+  <div class="cb-cap">Bounded negative diffusivity — one application per replay step</div>
+  <pre><code>/* stage 1: local bounds */
+for each cell i:
+    Tmin[i] = min( T[i], T[neighbours of i] )
+    Tmax[i] = max( T[i], T[neighbours of i] )
+
+/* stage 2: limited up-gradient exchange, in energy */
+for each interior face (c0, c1):
+    hot  = the warmer of c0, c1;  cold = the other
+    if T[hot] == T[cold]: skip               /* no gradient        */
+    C_hot  = rho cp V[hot]                   /* cell heat capacity */
+    C_cold = rho cp V[cold]
+    head_hot  = C_hot  * (Tmax[hot] - T[hot])     /* J, room to rise */
+    head_cold = C_cold * (T[cold] - Tmin[cold])   /* J, room to fall */
+    dq = s * min(head_hot, head_cold)        /* moved energy       */
+    dE[hot]  += dq                           /* heat moves         */
+    dE[cold] -= dq                           /*   cold -&gt; warm     */
+
+/* stage 3: convert back and clamp (safety net) */
+for each cell i:
+    T[i] += dE[i] / (rho cp V[i])
+    T[i]  = min( max( T[i], Tmin[i] ), Tmax[i] )</code></pre>
+</div>
+
+<p>The head-rooms are compared as <em>energies</em>, not as temperatures: each side is weighted with the cell heat capacity $C = \rho c_p V$, and each cell converts the moved energy back with its own $C$. For equal cells this reduces to plain temperature differences; on a general mesh it matches the volume weighting of the positive face swap the step undoes. Four properties follow directly. The step is <em>conservative</em>: every exchange is pairwise, $+dq$ on one side and $-dq$ on the other, so the total heat is untouched. It is <em>bounded</em>: stage 2 respects both headrooms and stage 3 clamps whatever remains, so no cell can leave its local neighbour range. It is <em>self-limiting</em>: at a sharp front the headrooms vanish, because each cell already sits at its local extremum, so the operator switches itself off instead of over-steepening. And it is <em>cheap</em>: three loops over the mesh per application, negligible next to the replay itself.</p>
+
+<p><strong>Where it lives in the code.</strong> The rCFD library already sketches this idea. The face-swap routine in <code>src/rCFD_swap.h</code> accepts a negative swap value and carries a small <code>// neg. diff.</code> branch for it. That branch, though, bounds the exchange with the fixed limits 0 and 1, which is natural for a concentration field; our transported temperature spans about 0 to 40 K relative to the 293 K reference, so the local min/max bounds of stage 1 replace those constants. The operator itself lives entirely in the user file (<code>rCFD_user_run.h</code>), as the hook <code>user_access_data_after_swap</code> that the run loop calls after the face-swap smoothing and before the balance belt of §4.1 — after the smoothing it counteracts, before the safety net that re-secures the global heat. It is written through the public accessors only (<code>rcfd_get_face_c0</code>, <code>rcfd_get_face_c1</code>, cell data and volumes), sits behind an on/off switch, and with the switch off the replay reproduces the baseline bit for bit. The core solver is untouched — the same pattern as the heat-loss source of §10.1.</p>
+
+<p><strong>The expected side effect, and the cure.</strong> An anti-diffusion sharpens every gradient it sees, including the small irregularities that the replay field always carries along the front. The smoothing step normally hides them; the sharpening step pulls them out, so a strong isotropic sharpening returns the front thin but saw-toothed — the same trade-off as in an unsharp mask, where sharpening also raises the grain. This is exactly what happened, and it is what the <em>direction</em> of the exchange fixes. The waviness comes from the sideways faces: they sharpen ripples along the front instead of the front itself. So the operator carries a directional weight, $\cos^2\theta$ between the cell link and the front normal: faces across the front act in full, sideways faces barely act. The normal can be prescribed (here the front is horizontal, so the vertical) or taken from the local temperature gradient, which removes the last hand-set choice; we tested both.</p>
+
+<p><strong>The sweep.</strong> All runs use the local-diffusivity base of §9.3, so the mixing comes from the database and the sharpening strength $s$ is the only free knob left. One number first: with six faces per cell, strengths $s \le 1/6$ are strictly safe — even the summed claims of all faces stay inside a cell's head-room, so the clamp can never be needed. We swept that range, continued above it to $s = 0.9$, and ran both directional forms over the moderate-to-high strengths: twenty-one replays in all, each of 600 episodes.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_ld_sweep.png" alt="End-state metrics over the strength sweep: mixing-layer width, mean temperature error, and centre-of-gravity error, for the isotropic and the two directional forms" style="max-width:1040px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 7e.</span> The strength sweep on the local-diffusivity base. Left: the end-state front width against the CFD reference (dashed). Middle: the mean $T_\text{mean}$ deviation over the replay. Right: the $CoG_y$ deviation. Inside the safe range ($s \le 1/6$, dotted) the mean improves but the width barely moves. The isotropic form (blue) reaches the CFD width only at $s = 0.9$, with the roughest profile of the set. Both directional forms get there around $s = 0.4$; the prescribed vertical normal (orange) is also the most accurate on the mean, the gradient-based normal (purple) sits in between.</figcaption>
+</figure>
+
+<p>The reading is short. Below $s = 1/6$ the operator is safe by a margin and improves the mean temperature monotonically (1.15 K down to 0.98 K against the CFD trace), but the front hardly thins: small strengths repair the mean, not the smeared front. The isotropic form buys the CFD width only at $s = 0.9$ and pays with a saw-toothed, mottled field. The directional form with the vertical normal wins on every metric at once: at $s = 0.4$ it reproduces the CFD front width (5.5 mm against 5.6 mm), more than halves the mean deviation (0.54 K against 1.15 K), and produces the <em>smoothest</em> end profile of the whole sweep — smoother than the uncorrected replay itself, because the sideways ripple-amplification is switched off. The gradient-based normal beats the isotropic form everywhere and finds the width at the same strength, but stays behind the vertical one: at a ripple, the local gradient points along the ripple's own normal, so the data-driven weight sharpens ripples as readily as the front. Where the front orientation is known, prescribing it wins. No run overshoots: every end field stays inside 293–333 K, by construction.</p>
+
+<p>The strength can come from the field as well (the pink series in Figure 7e). Reading the recorded local-diffusion field of §9.3 at run time would be the natural source, but the library exposes that field in preparation mode only, so a front sensor stands in: each face runs at $s_\text{face} = s\,(1 - \Delta T_\text{face}/\Delta T_\text{local})$ — full strength deep inside a smeared ramp, tapering to zero as a pair approaches its local extrema, ahead of the hard limiter. With the vertical normal, the sensor at a reference strength of $0.6$ reproduces the fixed working point in every metric at once, so what remains of $s$ is a single calibration constant, not a spatial tuning.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_ld_traces.png" alt="Mean temperature and centre of gravity over the replay for the CFD reference, the base replay, the isotropic form at s = 0.9 and the directional form at s = 0.4" style="max-width:780px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 7f.</span> The same story over time. The base replay overshoots the CFD mean while the inlet is warm and falls below it in the cooling phase; the directional form at $s = 0.4$ (red) tracks the reference through both phases. The isotropic form at $s = 0.9$ (green) — the setting it needs for the width — lags during the filling phase and disturbs $CoG_y$ the most.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_ld_profiles.png" alt="End-state centreline temperature profiles: CFD reference, base replay, isotropic s = 0.9, directional s = 0.4" style="max-width:620px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 7g.</span> The end-state centreline profiles, widths in the legend. The isotropic form at $s = 0.9$ matches the CFD width but wobbles in the hot layer; the directional form at $s = 0.4$ reproduces the reference front and stays clean above it.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_negdiff_montage_ld.png" alt="Contour montage: CFD reference, base replay, isotropic s = 0.9, directional s = 0.4 and 0.5, at mid-run and end of run" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 7h.</span> The pictures behind the numbers, at mid-run (top) and the end of the replay (bottom), same colour scale everywhere. The isotropic front at $s = 0.9$ is thin but saw-toothed; the directional fronts are thin <em>and</em> straight, with no scallops at either time.</figcaption>
+</figure>
+
+<figure class="wide">
+  <div class="syncp" data-syncp>
+    <div class="syncp-bar">
+      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
+      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
+      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
+      <span class="syncp-pct">0%</span>
+    </div>
+    <div class="syncp-grid">
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="metadata"><source src="assets/videos/CFD_reference.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">CFD reference</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="metadata"><source src="assets/videos/rCFD_diff_05.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">replay, no sharpening</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="metadata"><source src="assets/videos/rCFD_ld_s090_iso.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">isotropic, $s = 0.9$</div>
+      </div>
+      <div class="syncp-cell">
+        <video class="syncp-vid" muted playsinline preload="metadata"><source src="assets/videos/rCFD_ld_dir_s040.mp4" type="video/mp4"></video>
+        <div class="syncp-lab">directional, $s = 0.4$</div>
+      </div>
+    </div>
+  </div>
+  <figcaption><span class="label">Figure 7i.</span> The whole replay, side by side and in sync. The base replay smears the front into a wide band; the isotropic sharpening at the strength it needs turns saw-toothed; the directional form at $s = 0.4$ keeps a thin, straight front through the whole run. Every re-run behind these clips reproduced the temperature trace of its sweep run bit for bit.</figcaption>
+</figure>
+
+<figure class="wide">
+  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_adia_cfd_dir_adir.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 7j.</span> The two directional normals over the whole adiabatic replay: CFD reference (left), vertical normal at $s = 0.4$ (centre), gradient-based normal at $s = 0.4$ (right). Both cut a thin front. The difference shows below it at mid-run: the gradient-based form drags a half-mixed band under the interface — its own sharpened ripples — while the vertical normal keeps the front compact.</figcaption>
+</figure>
+
+<p>Two refinements probe how far the data-driven normal can be pushed. <em>Smoothing</em> the gradient field before it steers the weight — each sweep averages a cell's gradient with its face neighbours — changes almost nothing: the deviation falls from $0.740$ to $0.730$ K after six sweeps and the width stays at $5.9$ mm. So the gradient form's penalty does not come from grid-scale noise in the direction field; it comes from the operator sharpening coherent structures of its own making, which survive any local averaging. <em>Blending</em> the data normal with the vertical prior works better: $\mathbf{n} = a\,\hat{\mathbf{e}}_y + (1-a)\,\nabla T/|\nabla T|$, one blend factor. At $a = 0.5$ the deviation drops to $0.581$ K, and at $a = 0.7$ the run matches the vertical working point in every metric at once ($0.554$ K against $0.543$, width $5.54$ mm against $5.52$, the same smoothness) while still carrying a thirty-percent data component. In this chamber the prior is the active ingredient; what the blend shows is that it can be kept at no cost, which is what a case with an unknown front orientation would need.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>adiabatic replay, $s=0.4$</th><th class="num">mean $|\Delta T|$ (K)</th><th class="num">front width (mm)</th></tr>
+</thead>
+<tbody>
+<tr><td>base (no sharpening)</td><td class="num">1.146</td><td class="num">17.02</td></tr>
+<tr class="best"><td>directional, vertical</td><td class="num">0.543</td><td class="num">5.52</td></tr>
+<tr><td>directional, gradient</td><td class="num">0.740</td><td class="num">5.89</td></tr>
+<tr><td>gradient, smoothed (6 sweeps)</td><td class="num">0.730</td><td class="num">5.90</td></tr>
+<tr><td>blend, $a=0.5$</td><td class="num">0.581</td><td class="num">5.61</td></tr>
+<tr><td>blend, $a=0.7$</td><td class="num">0.554</td><td class="num">5.54</td></tr>
+<tr><td>CFD reference</td><td class="num">&mdash;</td><td class="num">5.59</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The replay thus gains what §9.3 promised for the smoothing side, now for the sharpening side too: the mixing comes from the database, the direction comes from the geometry (or, where unknown, the data), and one number remains — the strength. Our working point from this material is the directional form with the vertical normal at $s = 0.4$. What sharpening cannot do is a different question, and heat loss answers it in §14.1.</p>
+
+<!-- =========================================================== -->
+<div class="part-divider wip" id="part-step2">
+  <div class="kicker">Step 2 · in progress · robustness test</div>
+  <div class="part-title">Stress-testing recurrence CFD under heat loss</div>
+  <p>Step 1 calibrated rCFD against a sealed, adiabatic tank. Step 2 changes the rules: the tank is now allowed to lose heat at its top surface, a thermal boundary condition the recurrence database never saw. We add the loss as a local source/sink, account for it in the energy balance, and ask the real test question: how well does a database built on adiabatic flow hold up when the physics shifts under it? It helps to read this section as a robustness test, not just "adding heat loss". The results below are our current findings.</p>
+  <p class="stage-strip" aria-label="Where Step 2 sits in the project">
+    <span>Step 1 · calibration</span>
+    <span class="now">Step 2 · robustness test</span>
+  </p>
+  <span class="chip">in progress</span>
+</div>
+

@@ -1,0 +1,26 @@
+<h2 id="testcase">2 — The Buoyant-Jet Test Case</h2>
+
+<p>The test case is a closed rectangular tank filled with water at $293$ K. A small horizontal jet enters at mid-height. From $t=0$ to $t=315$ s the jet is warm ($T_\text{high}=333$ K); after $t=315$ s it switches back to cold. The warm water is lighter than the cold water, so it rises to the top of the tank and a vertical thermal layer builds up.</p>
+
+<p>How big and how fast is this jet? The tank is about $7.5$ cm tall, and the mesh is made of small cubic cells of $1$ mm. The jet comes in through a small opening of $5$ mm $\times$ $5$ mm in the middle of the wall, at a speed of $U = 0.02$ m/s. For water the kinematic viscosity is about $\nu = 1.0\times10^{-6}$ m²/s. From these numbers we get the jet Reynolds number:</p>
+
+<p>$$ Re = \frac{U\,D}{\nu} = \frac{0.02 \times 0.005}{1.0\times10^{-6}} \approx 100. $$</p>
+
+<p>A water jet only becomes turbulent at a much higher value, around $Re \sim 2000$. Here $Re \approx 100$ is about $20$ times smaller, so the flow stays laminar. This is the reason a laminar model fits this case better than a turbulence model.</p>
+
+<p>We follow the temperature field with three numbers:</p>
+
+<ul>
+  <li>The <strong>mean temperature</strong> $T_\text{mean}(t)$, which tells us how much heat is in the tank.</li>
+  <li>The <strong>mean temperature rise</strong> $\Delta T_\text{mean}(t) = T_\text{mean}(t) - 293$ K, which tells us how much the tank has warmed above its starting point.</li>
+  <li>The <strong>vertical centre of gravity of the heat</strong> $CoG_y(t)$, which tells us how high or low the warm fluid sits.</li>
+</ul>
+
+<p>Both values are written to <code>rCFD_temperature.out</code> at every rCFD step, and the same numbers are computed for the CFD reference.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_01_spinup_energy.png" alt="CFD spin-up energy convergence" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 1.</span> Energy in the tank during the CFD spin-up. After a few tens of seconds the energy stops changing, which means the flow has reached a steady, repeating regime. This is what rCFD needs before we can build a useful database.</figcaption>
+</figure>
+
+<!-- =========================================================== -->

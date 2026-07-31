@@ -1,0 +1,63 @@
+<h3 id="feedback">15.15 &mdash; What happens when the feedback is switched back on</h3>
+
+<p>Every operator in §15.4 to §15.14 works on the scalar while the transport stays frozen. The reference does something none of them can imitate: fluid that the lid has cooled becomes heavy, sinks, and <em>changes the flow that carries it</em>. So the fair question is not "which operator draws plumes" but "what would the replay field do if it were handed back to a solver".</p>
+
+<p>That test needs care, because the replay case cannot be solved as it stands. Two things had gone unnoticed, for a good reason &mdash; the replay never solves energy, the temperature lives in the rCFD scalar:</p>
+
+<ul>
+  <li>the <strong>energy model is switched off</strong>: the equation list holds only <code>flow</code>;</li>
+  <li>the <strong>enthalpy field sits at a uniform 293 K</strong> while the temperature field carries the replay values.</li>
+</ul>
+
+<p>Enthalpy is what the energy equation marches on, so the first solver step recomputes the temperature from it and the field is gone. Measured on the replay state: the maximum falls from 332.998 K to 293.000 K within one second of solver time. An earlier attempt at this test therefore returned a run identical, to the last digit, to the run without it &mdash; the solver had wiped the field and the replay carried on from its own array.</p>
+
+<p>The transfer is done on the data files instead. The CFD case keeps its own setup &mdash; energy equation, wall sink, buoyancy through the density function &mdash; and receives the replay's temperature, the enthalpy computed to match it, and the recorded velocity, so the test does not start from rest. Then the solver runs.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>solver time</th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$\delta T$ (K)</th><th class="num">fastest descent (mm/s)</th><th class="num">cells falling &gt; 2 mm/s</th></tr>
+</thead>
+<tbody>
+<tr><td>0 s (replay state)</td><td class="num">317.383</td><td class="num">14.56</td><td class="num">&minus;7.9</td><td class="num">1 001</td></tr>
+<tr><td>5 s</td><td class="num">316.127</td><td class="num">14.41</td><td class="num">&minus;36.0</td><td class="num">9 107</td></tr>
+<tr><td>20 s</td><td class="num">314.618</td><td class="num">13.91</td><td class="num">&minus;12.9</td><td class="num">12 694</td></tr>
+<tr><td>40 s</td><td class="num">314.881</td><td class="num">13.92</td><td class="num">&minus;15.9</td><td class="num">10 199</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="wide">
+  <img src="assets/figures/fig_burst.png" alt="The replay field handed back to the solver: chamber and the band under the lid at 0, 5, 20 and 40 seconds" style="max-width:1100px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 32.</span> The replay field handed back to the solver. Top: the chamber; bottom: the band under the lid, stretched. With the flow frozen the field is smooth and nothing hangs from the lid. Five seconds after the solver may act, the plunging inflow has rolled up and the first cold streaks appear at the lid; by twenty and forty seconds they are a row of fingers reaching down into the warm layer. Nothing was added to the case &mdash; the replay state was already unstable, and what appears is the response a frozen recording cannot carry.</figcaption>
+</figure>
+
+<p>The answer is immediate. Within five seconds the fastest descent grows by a factor of 4.6 and the number of falling cells nine-fold; by twenty seconds it is nearly thirteen times the starting count and the tank has lost 2.8 K, about ten times the rate any operator here reaches. Nothing was tuned for it. The state was already unstable; the only thing added was the fluid's ability to act on it.</p>
+
+<p><strong>That is the limit, measured rather than asserted.</strong> The operators, and the recorded flux beside them, act on a field whose transport cannot answer them, and the descent the reference builds <em>is</em> that answer. The renewal-time column says the same thing: everything driven by the recording stays near 20 s, and the rule that matches the integral numbers best sits at 100 s, while the reference renews in 14.7 s. The burst is a diagnosis, not a method &mdash; for those seconds the solver does the work, which is the cost the replay exists to avoid.</p>
+
+<h4 style="margin:1.4em 0 0.4em; color:var(--ink); font-size:1.02em;">Handing it over, and taking it back</h4>
+
+<p>The test above ends where the solver ends. What it leaves open is what the replay does with the field afterwards, and answering that needs the pause to happen <em>inside</em> a running replay: the episode loop stops at 315 s, the solver takes the field for twenty seconds, and the replay carries on from what it produced.</p>
+
+<p>Two things make that possible. The replay now writes the enthalpy that matches its temperature at every step, so the state the solver inherits is consistent instead of a uniform 293 K, and the energy equation is switched on in the case before the loop starts. At the first step after the pause the whole field, 85 625 cells, is read back out of the solver into the replay data.</p>
+
+<p><strong>The hand-over works.</strong> The field the solver returns is 3.6 K colder than the one it received, 313.769 against 317.383 K, with the cells descending faster than 2 mm/s grown from 1 001 to 4 643 &mdash; and the replay picks that up: one step after the pause it carries 314.584 K where the same run without the pause carries 317.344 K.</p>
+
+<p><strong>Then the replay gives it back.</strong> By $t = 400$ s the two runs are level, 309.34 against 308.79 K, with the burst run now marginally the warmer of the two; at the end it reaches 302.951 K against 302.754 K, a capture of 45.9&thinsp;% against 47.8&thinsp;%. Twenty seconds of real physics leave no lasting trace.</p>
+
+<p>That is the cleanest statement of the limit this study can make. The cooling and the falling structure are not missing because the replay was never given them &mdash; they were given, in full, and the frozen transport returned the field to its own trajectory within about a minute of replay time. A mechanism cannot be handed over once. It has to be present while the field evolves, and that is the one thing a recording, of any channel, does not carry.</p>
+
+<div class="keybox">
+  <h4>A property worth recording</h4>
+  <p>Reading the enthalpy field against the temperature field gives the case's own specific heat: $H = c_p\,(T - 298.15)$ with $c_p = 1006.43$ J/kg&thinsp;K, and the same value in the CFD case and in the preparation. The material named <em>water</em> carries the specific heat, the thermal conductivity (0.0242 W/m&thinsp;K) and the molecular weight (28.966 kg/kmol) of <em>air</em>; only the density, through the temperature-dependent function, and the viscosity belong to water. It disturbs no comparison here, since both sides of every comparison share it, and it cancels in the recorded flux, where the same $c_p$ appears in the stored flux and in the cell heat capacity that turns it back into a temperature. It does matter for any statement about the fluid itself, and for the diffusion floor, which on these properties is 0.22 mm rather than the 0.53 mm quoted for molecular water in §15.12.</p>
+</div>
+
+<!-- =========================================================== -->
+<div class="part-divider wip" id="part-step3">
+  <div class="kicker">Step 3 · planned</div>
+  <div class="part-title">Thesis writing &amp; finalization</div>
+  <p>Pulling Steps 1 and 2 into the written thesis.</p>
+  <span class="chip plan">planned</span>
+</div>
+

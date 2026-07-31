@@ -1,0 +1,34 @@
+<h2 id="hsweep">13 — Turning the Dial: the h-Sweep</h2>
+
+<p>To make sure the sink and the balance accounting behave the way they should, we turned $h$ up well past its physical value and watched the cooling grow. Because the source is registered in the balance, the response should be clean and monotonic in $h$ &mdash; rising smoothly with no runaway &mdash; and it is:</p>
+
+<figure class="wide" id="hsweepFigure">
+  <div id="plotHsweep" style="width:100%; min-height:380px;">
+    <noscript><p style="text-align:center;color:var(--ink-soft)">Interactive plot needs JavaScript.</p></noscript>
+  </div>
+  <figcaption><span class="label">Figure 10 (interactive).</span> rCFD cooling against the heat-transfer coefficient $h$. The response is monotonic and smooth, but slightly <em>sub-linear</em> (it saturates): doubling $h$ less than doubles the cooling, because as the top cools the surface difference $T_\text{top}-T_\infty$ that drives the loss shrinks. The black marker is the CFD reference at the physical $h = 8$ (1.45 K): rCFD only reaches that much cooling at around $h \approx 40$. We have since re-run the full CFD at $h = 100$ as well, where it cools by 9.79 K (§11&ndash;12) while rCFD reaches only 3.03 K. So the gap is not an artefact of the tiny physical value: it persists, now with CFD ground truth, at strong cooling. Turning $h$ up is still not a fix, it over-drives the surface sink rather than restoring the missing overturning flow.</figcaption>
+</figure>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th class="num">$h$ (W/m²K)</th><th class="num">$T_\text{mean}$ end (K)</th><th class="num">max cooling (K)</th><th class="num">energy removed (J)</th><th class="num">max $Q_\text{wall}$ (W)</th></tr>
+</thead>
+<tbody>
+<tr><td class="num">8</td><td class="num">307.14</td><td class="num">0.36</td><td class="num">179</td><td class="num">0.34</td></tr>
+<tr><td class="num">50</td><td class="num">305.64</td><td class="num">1.85</td><td class="num">966</td><td class="num">1.94</td></tr>
+<tr><td class="num">100</td><td class="num">304.46</td><td class="num">3.03</td><td class="num">1680</td><td class="num">3.57</td></tr>
+<tr><td class="num">200</td><td class="num">303.04</td><td class="num">4.45</td><td class="num">2707</td><td class="num">6.33</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The energy removed and $Q_\text{wall}$ both rise smoothly with $h$ &mdash; sub-linearly, as the cooling saturates &mdash; and in every case the global balance stays healthy: target and actual energy agree to within about $0.03\%$. That is the main check here: a local sink can be carried through the heat balance correctly, and the safety belt does not cancel it.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_step2_balance.png" alt="rCFD heat-loss sweep over time: mean temperature, cooling, cumulative energy lost, and wall heat-loss rate" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 11.</span> The heat-loss sweep over time, for $h = 8, 50, 100, 200$ W/m²K. Top row: the mean temperature $T_\text{mean}$ and the cooling $\Delta T_\text{mean}$ against the adiabatic baseline (the black line is the CFD truth at $h=8$; the full CFD has since also been run at $h=100$, giving 9.79 K, §11&ndash;12). Bottom row: the cumulative energy removed $\int Q_\text{wall}\,dt$ and the wall heat-loss rate $Q_\text{wall}(t)$. Both grow smoothly with $h$ (sub-linearly, as the cooling saturates), and the energy booked out matches the global balance to within $\approx 0.03\%$, the check that the local sink is carried correctly through the heat balance.</figcaption>
+</figure>
+
+<p>Two things to read off this. The model is well-behaved, with no runaway and no sign that the balance belt is cancelling the loss. And rCFD under-predicts at every $h$ where we have a CFD reference, both the physical $h = 8$ and the stronger $h = 100$; a much larger $h$ would be needed to make the reused database match reality, but that would be papering over the missing flow with an unphysical coefficient, not a real fix.</p>
+

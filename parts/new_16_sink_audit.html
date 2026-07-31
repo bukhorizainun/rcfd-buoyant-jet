@@ -1,0 +1,66 @@
+<h2 id="sinkaudit">16 — What the Reference Actually Removes</h2>
+
+<p>Every number on this page that says how much of the CFD cooling the replay captures is a ratio, and the bottom of that ratio is the cooling of the reference. That bottom had been taken on trust. It is worth measuring, because the replay copies the reference's own sink formula, so the two ought to be removing the same heat from the same cells.</p>
+
+<p>They are not, and the difference is large enough to change how everything above should be read.</p>
+
+<h3>16.1 — Measuring the lid term</h3>
+
+<p>The heat-loss case and the adiabatic case share a mesh, an inlet schedule and a mass flow. They differ in one thing, the sink at the lid. Their fields are stored every 15 s, so each term of the heat balance can be read straight out of them: what is stored in the tank, what enters at the inlet, what leaves at the outlet, and what the lid takes.</p>
+
+<p>Reading both cases and subtracting one balance from the other is better than reading either alone, because whatever bias the flux estimates carry is the same on both sides and cancels. The two inlet integrals agree to 1.3 J out of 25.3 kJ, which is the check that the pair really is a controlled one. What is left after the subtraction is the heat the lid took: <strong>6581 J</strong>.</p>
+
+<p>The formula the case declares gives a different answer. Evaluated on the reference's own fields, $h A (T_\text{cell} - T_\infty)$ with $h = 100$ W/m²K over the 1125 lid cells integrates to <strong>1575 J</strong> over the same window. The reference removes <strong>4.18 times</strong> the heat its stated boundary condition accounts for.</p>
+
+<p>Three further routes agree. The global balance of the heat-loss case on its own asks for 6763 J. A control volume drawn around the lid cell row, fed by advection and conduction from below, asks for 8586 J. And the replay, applying the declared formula to its own lid row, removes 1930 J. The replay is faithful to the boundary condition it was given. It is the reference that is not.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_wall_sink_finding.png" alt="Heat leaving through the lid: the reference measured against its own formula, and the replay" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 33.</span> Left: the heat leaving through the lid. The reference's own formula (dashed) and the replay under the declared coefficient sit together near 3.5 W, while the heat the reference actually loses (solid) runs about four times higher. Raising the replay's coefficient puts it on the measured curve. Right: the mean temperature that follows. Under the declared coefficient the replay tracks the <em>adiabatic</em> reference far more closely than the heat-loss one.</figcaption>
+</figure>
+
+<h3>16.2 — Why the gap looked like a limit</h3>
+
+<p>This changes how the earlier sections read. A replay removing 1930 J was being scored against a reference removing 6581 J, so most of the distance between them was never a transport problem. It was a boundary condition the two sides did not share.</p>
+
+<p>The shape of the error says the same. In the plain replay the upper layer ended 7.8 K too warm, and it was too warm almost <em>uniformly</em>: the difference map at the end of the run showed the whole region above the thermocline in one flat colour, at a mean absolute difference of 5.20 K. That is a level error, not a shape error. A sharpening step moves heat between neighbouring cells and changes the shape of a front. It cannot lower the temperature of a whole well-mixed layer, because inside that layer there is nowhere for the heat to go. So every form of the step was tried against an error it had no way of reaching, and the family looked as though it had met a ceiling.</p>
+
+<p>The montages carried the same signature and were read the same way. Frame after frame showed a warm upper layer that no operator would shift, and the natural reading was that the recorded motion did not carry enough heat downward. Part of that reading survives, and it is the front. The larger part does not.</p>
+
+<p>One earlier remark needs correcting in the light of this. Section 13 turned $h$ up and called the result <em>papering over the missing flow with an unphysical coefficient</em>. On the evidence above, raising the replay's coefficient is not papering over anything: it is setting the replay to remove the heat the reference actually removes. The physical objection was reasonable when the reference's own lid term had not been measured. It no longer holds.</p>
+
+<h3>16.3 — What the extra removal is not</h3>
+
+<p>The number invites an obvious question: where does the extra heat go? The source term was instrumented so it could answer for itself. It records the value it hands the solver into a user memory, and a hook sums that over the field at the end of every time step. Over a window inside the hot plateau it reports 3.44 W over exactly 1125 cells. That is the declared formula, over the intended cells. The source term is not saying one thing and doing another.</p>
+
+<p>Six further candidates were then run rather than argued about, each as a short window restarted from the same stored field.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Control</th><th class="num">Unaccounted removal (W)</th></tr>
+</thead>
+<tbody>
+<tr><td>As built</td><td class="num">+9.76</td></tr>
+<tr><td>Source linearisation removed</td><td class="num">+9.66</td></tr>
+<tr><td>Inner iterations raised from 30 to 100</td><td class="num">+9.63</td></tr>
+<tr><td>Time step cut from 0.2 to 0.05 s</td><td class="num">+9.67</td></tr>
+<tr><td>Outlet backflow</td><td class="num">none, 0 faces</td></tr>
+<tr><td>Domain mass</td><td class="num">differs by 0.03%</td></tr>
+<tr><td><strong>Coefficient set to zero (null control)</strong></td><td class="num"><strong>−1.16</strong></td></tr>
+<tr><td>Density held constant (buoyancy off)</td><td class="num">≈ 0.2 to 2</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The null control is the one that matters most, because it tests the measurement rather than the case: with the coefficient set to zero the budget closes to −1.16 W. The method is sound, and the imbalance appears only when the sink is switched on. With the density held constant, so that the cooled lid can no longer drive any overturning, the imbalance largely goes with it.</p>
+
+<p>The extra removal is therefore tied to the buoyancy-driven convection the sink sets off, and not to the sink's own value, its linearisation, the time step or the iteration count. That is as far as the present evidence reaches. The cause is left open, the number is reported as measured, and every comparison below is made against the heat the reference actually removes.</p>
+
+<h3>16.4 — The sign of the wall term</h3>
+
+<p>One reading of the wall term deserves its own test, because if it held it would overturn all of the above. The term is written here with the heat that <em>leaves</em> as the positive quantity: the cell is cooled by $-q$, and the balance target is lowered by the same amount. It can also be written as a signed source, in which $q$ is what the cell <em>receives</em> and is therefore negative above ambient. The second convention is the more common one, so the question is whether the result depends on the choice.</p>
+
+<p>It does not. Rewriting the block in the signed convention, with every downstream sign following, reproduces the original run byte for byte across all 601 samples. The convention is a way of writing it down, not a physical choice.</p>
+
+<p>The mistake that the convention invites is a different matter, and it was run as well. If the field is cooled while the balance target is <em>raised</em> by the same amount, the global-balance correction has to put the heat back. That run ends at 307.93 K against 303.81 K for the code as it stands: <strong>+4.12 K</strong>, and warmer than a run with no sink at all. The cooling disappears completely. The replay does the opposite, ending 2.5 K below its own adiabatic run, which is the direct evidence that it is not making that slip.</p>

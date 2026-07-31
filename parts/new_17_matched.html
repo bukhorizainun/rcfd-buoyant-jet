@@ -1,0 +1,95 @@
+<h2 id="matched">17 — The Operator Family on a Matched Sink</h2>
+
+<p>With both sides removing the same heat, the operators can be compared on their own merits. The runs below all use a lid coefficient set so that the replay removes 6623 J against the reference's 6581 J. Nothing else about the database, the schedule or the limiter changes.</p>
+
+<p>Setting the sink alone, with no operator at all, already moves most of the distance. The end profile falls from an RMS departure of 5.15 K to 2.26 K, the mean temperature from 4.11 to 1.10 K over the run, and the top of the tank from 7.8 K too warm to 3.0 K too cold. Whatever is left after that is what the local rules have to work on, and it is a different problem from the one the earlier sections were solving.</p>
+
+<h3>17.1 — One change that was hiding the rest</h3>
+
+<p>The first result had nothing to do with which operator is used. It is <em>when</em> the operator is allowed to run.</p>
+
+<p>The earlier work split the replay into two windows and stopped the sharpening when the inflow stopped, at 315 s. That choice was made for good reasons at the time: run from the start and left running, the step was seen to interfere with the rising jet. On a matched sink the split costs most of what the operator can give. The directional operator with the vertical normal, at the same strength, reaches an end-profile RMS of <strong>2.18 K</strong> when it stops at 315 s and <strong>0.42 K</strong> when it is left running for the whole replay.</p>
+
+<p>The reason is visible in the cooling phase. After the inflow stops, the lid keeps working and the thermocline keeps being eroded by the film it produces. That is exactly when a sharpening step has something to hold, and the split schedule switched it off at that moment. On the earlier, weaker sink there was little film to speak of, so the loss was small and the split looked harmless.</p>
+
+<h3>17.2 — A fair ladder for each operator</h3>
+
+<p>The second result concerns how the operators were ranked. Each was given its own strength ladder, on the same schedule and the same sink, because a single shared strength flatters whichever operator happens to peak there.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Operator</th><th class="num">$s=0.3$</th><th class="num">0.45</th><th class="num">0.5</th><th class="num">0.6</th><th class="num">0.7</th><th class="num">0.85</th></tr>
+</thead>
+<tbody>
+<tr><td>no operator, matched sink only</td><td class="num" colspan="6">2.26</td></tr>
+<tr><td>isotropic</td><td class="num"><strong>1.92</strong></td><td class="num">—</td><td class="num">2.09</td><td class="num">—</td><td class="num">2.19</td><td class="num">—</td></tr>
+<tr><td>directional, gradient normal</td><td class="num">1.16</td><td class="num">—</td><td class="num"><strong>1.05</strong></td><td class="num">—</td><td class="num">1.22</td><td class="num">—</td></tr>
+<tr><td>directional, vertical normal</td><td class="num">0.77</td><td class="num">—</td><td class="num"><strong>0.59</strong></td><td class="num">—</td><td class="num">1.13</td><td class="num">—</td></tr>
+<tr><td>&nbsp;&nbsp;+ stability test</td><td class="num">0.80</td><td class="num"><strong>0.34</strong></td><td class="num">0.37</td><td class="num">0.61</td><td class="num">—</td><td class="num">—</td></tr>
+<tr><td>&nbsp;&nbsp;+ adaptive strength</td><td class="num">1.31</td><td class="num">—</td><td class="num">0.68</td><td class="num">—</td><td class="num"><strong>0.36</strong></td><td class="num">0.53</td></tr>
+<tr><td>&nbsp;&nbsp;+ local-diffusivity strength</td><td class="num">—</td><td class="num">0.41</td><td class="num"><strong>0.36</strong></td><td class="num">0.52</td><td class="num">0.75</td><td class="num">1.06</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><span class="label">Table.</span> Each operator on its own strength ladder, same schedule and same sink. The entry is the RMS departure of the end profile from the reference, in kelvin.</p>
+
+<p>The adaptive strength shows why a single-strength comparison is not safe. At $s = 0.5$ it reads 0.68 K and looks clearly beaten. Its own optimum is at $s = 0.7$, where it reads 0.36 K and is level with the best. Had the ladder not been run, the study would have reported it as a failure.</p>
+
+<p>Three further switches inside the family were tried on the matched sink and none of them helps: restricting the operator to a band under the lid gives 2.27 K, gating it on the strength of the local gradient 1.74 K, smoothing the gradient normal over neighbours 1.03 K, and blending the gradient normal with the vertical one 0.45 K.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_family_metrics.png" alt="The four monitored metrics for each operator of the family against the CFD" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 34.</span> The family on the four monitored quantities, each operator at its own best strength, all on the matched sink and the same schedule. The ordering is the same in every panel: the isotropic operator furthest from the reference, the gradient normal next, the vertical normal closest, with the stability test and the database-set strength lying on top of one another. The grey curve is the sink alone, with no operator.</figcaption>
+</figure>
+
+<h3>17.3 — Letting the database set the strength</h3>
+
+<p>There is one more variant, and it fits the rest of the study better than a tuned constant does. The strength need not be a number chosen by hand. The database already stores, frame by frame and cell by cell, the sub-grid mixing the CFD actually had. Where that recorded diffusivity is large, the broad front the replay carries is largely physical and should be left alone. Where it is small, the width is numerical, and that is where an up-gradient step belongs. Writing the weight as</p>
+
+<p style="text-align:center">$w \;=\; 1 - D_\text{face} / D_\text{ref}$</p>
+
+<p>with $D_\text{ref}$ the largest recorded value in the field at that step, taken by reduction, the strength follows the recording instead of a constant. Nothing is tuned by hand except the overall level.</p>
+
+<p>Its ladder peaks at $s = 0.5$ with an end-profile RMS of 0.36 K, level with the two best fixed-strength operators. It is taken as the working point, not because it wins on the numbers, which it does not do by any margin worth claiming, but because it carries one assumption fewer and because it is the same idea the rest of the study rests on: the recording, not a global constant, decides what the replay does.</p>
+
+<h3>17.4 — Where the working point stands</h3>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th></th><th class="num">CFD</th><th class="num">declared sink</th><th class="num">working point</th></tr>
+</thead>
+<tbody>
+<tr><td>End profile, RMS (K)</td><td class="num">—</td><td class="num">5.15</td><td class="num"><strong>0.36</strong></td></tr>
+<tr><td>&nbsp;&nbsp;bulk / front / top (K)</td><td class="num">—</td><td class="num">+2.28 / +1.91 / +7.83</td><td class="num">+0.20 / −0.18 / +0.17</td></tr>
+<tr><td>Mean temperature, RMS (K)</td><td class="num">—</td><td class="num">4.11</td><td class="num"><strong>0.54</strong></td></tr>
+<tr><td>Heterogeneity, RMS (K)</td><td class="num">—</td><td class="num">2.42</td><td class="num"><strong>1.65</strong></td></tr>
+<tr><td>Centre of gravity, RMS (mm)</td><td class="num">—</td><td class="num">0.09</td><td class="num"><strong>0.04</strong></td></tr>
+<tr><td>Field distance (K)</td><td class="num">—</td><td class="num">3.51</td><td class="num"><strong>1.46</strong></td></tr>
+<tr><td>&nbsp;&nbsp;after 400 s</td><td class="num">—</td><td class="num">3.88</td><td class="num"><strong>0.60</strong></td></tr>
+<tr><td>Layering anomaly $A$</td><td class="num">0.0184</td><td class="num">0.0315</td><td class="num"><strong>0.0183</strong></td></tr>
+<tr><td>Front roughness $R$</td><td class="num">0.0051</td><td class="num">0.0067</td><td class="num"><strong>0.0051</strong></td></tr>
+<tr><td>Pattern renewal $\tau_{50}$ (s)</td><td class="num">14.7</td><td class="num">19.5</td><td class="num">9.6</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The amplitude of the field structure now matches the reference almost exactly, and so does the roughness of the front. The one number that does not fall into place is the renewal time: the replay's pattern turns over in 9.6 s against 14.7 s in the CFD, so its structures are born and die faster than the reference's. That is not a strength setting — across the ladder it stays between 8.6 and 9.6 s — and it appears to belong with the sink rather than with the sharpening.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_family_vs_cfd_montage.png" alt="Temperature fields: CFD against the plain replay and each operator of the family" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 35.</span> The fields themselves, on one colour scale from 293 to 333 K and one view. Top row the reference, then the plain replay under the declared coefficient, then the family, each at its own best strength; the columns are the middle of the hot inflow and the end of the run. At $t = 300$ s the reference holds a sharp interface. The plain replay smears it and keeps the layer above too warm, and the isotropic operator tears the layer below into fingers that have no counterpart in the reference. The two directional forms and the working point reproduce both the interface and the layer.</figcaption>
+</figure>
+
+<figure class="wide">
+  <img src="assets/figures/fig_family_montage.png" alt="Replay minus CFD for each operator of the family" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 36.</span> Replay minus reference for the family, on the same colour scale, in the middle of the hot inflow (top) and at the end (bottom). The isotropic operator builds a warm bulge with a scalloped edge that has no counterpart in the reference; the two directional forms remove it. In the top row the working point carries a tighter but more intense line at the thermocline than the gradient normal, which is why its mean there reads slightly higher; every other measure, including the end state below, puts it in front.</figcaption>
+</figure>
+
+<h3>17.5 — What is left</h3>
+
+<p>One defect survives the matched sink, and it shows up in two places at once. The heterogeneity lags through the whole heating phase: the reference rises to 15.6 K by 100 s and holds, while the replay climbs more slowly and reaches 14.1 K by 310 s, running 1.5 to 4 K low throughout. The same thing appears in the difference maps as a thin line at the thermocline while the inflow is hot. After the inflow stops, both close and stay closed.</p>
+
+<p>So the front builds too slowly and too softly while the tank is filling, and everything else follows. That is a smaller and much better posed question than the one this study began with, and it is where the next round belongs.</p>

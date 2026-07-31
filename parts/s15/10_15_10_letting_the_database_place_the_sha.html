@@ -1,0 +1,67 @@
+<h3 id="ldsharp">15.10 &mdash; Letting the database place the sharpening</h3>
+
+<p>Every table so far judges the sharpening by the cooling it costs. That is the wrong yardstick for what the operator is meant to do, and once the field measures are read instead, two things change.</p>
+
+<p>First, the database can say <em>where</em> to sharpen. The stored local diffusivity is the sub-grid mixing the CFD actually had at that cell and frame, and it is what the face swap applies: the volume a face swaps is $D\,A/d\,\Delta t$, which on this cubic mesh is $D\,c_s\,\Delta t$. So where the recorded value is large, part of the width the replay carries is physical and the up-gradient step should hold back; where it is small, the width is numerical and the step belongs there. The strength is therefore scaled by $w = 1 - D_\text{face}/D_\text{ref}$, with $D_\text{ref}$ the largest recorded value in the field that step, taken by reduction, so nothing in the weight is set by hand. Reading that field during a replay needed a small read-only addition to the library: the existing reader is limited to preparation mode and to frame 0, while a replay needs the state and frame the swap itself is using.</p>
+
+<p>Second, the step can be gated to the front. The $\cos^2\theta$ weight says which way to move heat but not where, so a weak ripple in the well-mixed upper layer whose gradient happens to point the right way is sharpened as hard as the thermocline. Scaling by the squared face gradient against the largest gradient in the field removes that, and the exponent $p$ in $(|\nabla T|/|\nabla T|_\text{max})^p$ decides how much of the front's flanks the step still reaches.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>sharpening on the heat-loss database</th><th class="num">capture</th><th class="num">$\delta T_\text{mean}$ (K)</th><th class="num">front width (mm)</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, $h=100$</td><td class="num">&mdash;</td><td class="num">6.76</td><td class="num">4.48</td></tr>
+<tr><td>plain replay</td><td class="num">35%</td><td class="num">9.30</td><td class="num">8.81</td></tr>
+<tr><td>vertical normal, $s=0.4$</td><td class="num">22%</td><td class="num">12.30</td><td class="num">5.07</td></tr>
+<tr class="best"><td>gradient normal, $s=0.4$</td><td class="num">16%</td><td class="num">11.20</td><td class="num">4.97</td></tr>
+<tr><td>vertical + local diffusivity</td><td class="num">24%</td><td class="num">12.20</td><td class="num">5.54</td></tr>
+<tr><td>gradient + local diffusivity</td><td class="num">19%</td><td class="num">11.27</td><td class="num">5.46</td></tr>
+<tr><td>gradient + front gate, $p=1$</td><td class="num">27%</td><td class="num">10.36</td><td class="num">6.96</td></tr>
+<tr><td>gradient + front gate, $p=2$</td><td class="num">31%</td><td class="num">9.81</td><td class="num">7.96</td></tr>
+<tr><td>gradient + gate + local diffusivity</td><td class="num">32%</td><td class="num">9.78</td><td class="num">8.06</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The table is monotone and there is no gap in it. The more the operator is held back, by the local diffusivity or by the gate, the closer the capture and the heterogeneity come to the plain replay and the wider the front grows; the more it is let go, the closer the front comes to the reference and the worse the other two get. No setting improves the heterogeneity below the plain replay's 9.30 K. The front is what this operator can deliver, and it does deliver it: 8.81 mm down to 4.97 mm against the reference's 4.48 mm.</p>
+
+<p>The second change looks at first like a reversal. Judged on captured cooling the vertical normal leads the gradient-based one, 22% against 16%. Judged on the two field numbers in the table above the order turns over: the gradient normal has both the thinner front, 4.97 against 5.07 mm, and the lower heterogeneity, 11.20 against 12.30 K.</p>
+
+<p>Neither of those is the same as asking how close the picture is, so we measured that directly. Both sources render temperature over the same fixed scale, so a frame can be decoded back to Kelvin and subtracted from the reference frame of the same second. The mean of $|T_\text{replay} - T_\text{CFD}|$ over the chamber, averaged over 108 frames of the cooling window, is one number per run.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>distance of the field from the reference</th><th class="num">mean $|\Delta T|$ (K)</th><th class="num">after 400 s (K)</th></tr>
+</thead>
+<tbody>
+<tr><td>prescribed roll, 20 mm/s</td><td class="num">2.09</td><td class="num">2.33</td></tr>
+<tr><td>roll at the convective scale $w^*$</td><td class="num">2.20</td><td class="num">2.66</td></tr>
+<tr><td>step encroachment</td><td class="num">2.55</td><td class="num">3.65</td></tr>
+<tr><td>mixing profile 75 mm, $c=1$</td><td class="num">2.93</td><td class="num">2.51</td></tr>
+<tr><td>plain replay</td><td class="num">3.51</td><td class="num">3.88</td></tr>
+<tr><td>vertical normal, $s=0.4$</td><td class="num">3.74</td><td class="num">4.82</td></tr>
+<tr><td>gradient normal, $s=0.4$</td><td class="num">4.26</td><td class="num">5.50</td></tr>
+</tbody>
+</table>
+</div>
+
+<p style="color:var(--ink-soft);font-size:0.92em">The tank is located in every frame rather than assumed. The renderer does not always return the same camera, and three different views turned up across the runs of this study, so a fixed crop ends up comparing one tank against a differently sized one elsewhere in the picture. Two numbers in the table moved when that was corrected, step encroachment from 2.26 to 2.55 K and the gradient normal from 4.14 to 4.26 K.</p>
+<p>That ordering is uncomfortable and it should be stated plainly. On the measure that comes closest to the question, the transport operators are nearest to the reference field and the sharpening operators are furthest, further than doing nothing at all: 3.51 K for the plain replay against 3.74 and 4.26 K for the two normals. The gradient normal, which leads on front width and on heterogeneity, is last here. The reason is area. A front is a few millimetres of the chamber while the layers are the rest of it, and sharpening leaves those layers several Kelvin too warm, so whatever it wins at the interface it loses over the area around it.</p>
+
+<p>So the earlier reading of this section needs correcting: it is not that the gradient normal is preferable for the appearance of the field. Neither normal improves the appearance. What the sharpening line delivers is the front, and the front alone.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_nadb_sharpening_zoom.png" alt="Montage: CFD, plain replay, vertical and gradient sharpening at mid-run and end of run" style="max-width:1120px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 24.</span> Mid-run and end of run on the heat-loss database. At mid-run both sharpened runs cut the broad interface of the plain replay back towards the reference. At the end the split is plain to see: the sharpened fields hold the thin interface but their upper layer stays orange, several Kelvin warmer than the reference's green, while the plain replay has the closer shade and the broader interface. None of them has the reference's cold fingers. The bottom row is there because the colour scale misleads: on a fixed 293&ndash;333 K rainbow a thin front is compressed into a few narrow bands and reads as a line drawn across the picture, so the eye judges the front well and the layers badly, which is the wrong way round. Enlarged, the line is what it is, a transition a few millimetres thick, and the reference's sits higher than any of the replays'. The dashed marks on the middle row show which band the bottom row stretches, so that row is a wide strip and not a square by design.</figcaption>
+</figure>
+
+<p>That figure is the honest summary of this line. In the adiabatic case one operator was enough, because the only defect was a smeared front. Here there are two, the front and the vertical distribution of heat, and sharpening reaches only the first. What the montage still misses once the front is repaired is the shade, and a step that rearranges heat without carrying it cannot supply that.</p>
+
+<div class="keybox">
+  <h4>Where this leaves the heat-loss case</h4>
+  <p>The wall term was matched from the start: the replays extract 1.7&ndash;2.0 kJ against about 1.5&ndash;1.8 kJ in the reference. What is missing is the advective export, and that is produced in the CFD by a flow which rearranges the whole tank in response to its own temperature field. A recorded flow cannot be asked to do that, so the hook can only imitate it. Rebuilding the database from the cooling run is what helps without a single new constant, lifting every operator by six to eight points, and a circulation whose speed comes from the convective scale reaches 53% with nothing left to tune. Beyond that, the capture column keeps rising only when the operator stirs more of the tank than the buoyancy forcing pays for, and the field metrics show the cost.</p>
+</div>
+
