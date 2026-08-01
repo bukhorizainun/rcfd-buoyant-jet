@@ -239,11 +239,31 @@
     };
   }
 
+  // Browsers cap a canvas at 16384 px per side. This layer spans the whole
+  // document, so on a long page the backing store silently fails to allocate
+  // and the element paints as an opaque sheet over everything below it: the
+  // page goes white with no console error. Past the cap the layer is switched
+  // off instead, which loses annotation on that page and keeps it readable.
+  var MAX_CANVAS_SIDE = 16384;
+
   // Resize the backing store to the full page and redraw the model.
   function resizeCanvas() {
     var s = docSize();
     state.docW = s.w; state.docH = s.h;
     state.dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+
+    var tooTall = Math.round(s.h * state.dpr) > MAX_CANVAS_SIDE ||
+                  Math.round(s.w * state.dpr) > MAX_CANVAS_SIDE;
+    if (tooTall) {
+      canvas.style.display = 'none';
+      canvas.width = 1;
+      canvas.height = 1;
+      state.disabled = true;
+      return;
+    }
+
+    canvas.style.display = '';
+    state.disabled = false;
     canvas.style.width = s.w + 'px';
     canvas.style.height = s.h + 'px';
     canvas.width = Math.round(s.w * state.dpr);
