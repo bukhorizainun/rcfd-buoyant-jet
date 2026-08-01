@@ -2630,13 +2630,6 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <p>The two numbers agree, 49% against 50%, but the video is where the two homes stop agreeing. Run the roll-at-hook and the roll-in-database panels side by side and the database roll's own geometry becomes hard to miss: two counter-rotating cells, prescribed as a single streamfunction spanning the tank, print themselves onto the field as two warm islands that never fully clear. At the hook the same roll is superimposed step by step on a replay field the recorded flow is already stirring, and the two mix well enough that no cell pattern survives to the end; baked into the database, the roll is the recorded motion, so its two-cell fingerprint replays identically every frame and never gets rubbed out. The CFD, by contrast, drains through many small plumes, triggered where and when the film happens to break, not through two large fixed cells. Same total amount, same speed, and still a different picture, because the geometry that produces the number is not hidden in a single end-state frame the way it is in motion.</p>
 
 <figure class="wide">
-  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-    <source src="assets/videos/vid_hl_rolldb5_hook_cfd.mp4" type="video/mp4">
-  </video>
-  <figcaption><span class="label">Figure 11i.</span> CFD reference (left), the roll at the hook (centre, 69%), and the same roll baked into the database at 5 mm/s (right, 49%). Watch the last few seconds: the hook panel ends on a fairly even shade, while the database panel settles into two warm patches, the footprint of the roll's own two-cell geometry.</figcaption>
-</figure>
-
-<figure class="wide">
   <img src="assets/figures/fig_negdiff_ld_hl_ladder.png" alt="Bar chart: share of the CFD cooling captured by each stand-in, from sharpening at 13 percent through local rules near a third to the prescribed roll rungs that flatten near 77 percent and the CFD at 100" style="max-width:860px;width:100%;display:block;margin:0 auto;border-radius:6px;" loading="lazy" decoding="async">
   <figcaption><span class="label">Figure 11f.</span> The ladder as one picture, computed from the raw temperature traces. Local rules cluster in the shaded band; only the prescribed circulation climbs out of it, and it climbs with its speed until it flattens at the top of the CFD speed range.</figcaption>
 </figure>
@@ -2837,13 +2830,6 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
     <source src="assets/videos/vid_nadb_cfd_vs_adir.mp4" type="video/mp4">
   </video>
   <figcaption><span class="label">Figure 19.</span> CFD reference (left) against the local-gradient-based sharpening on the heat-loss database (right), $s = 0.4$. The front is thin and the mid-run structure holds, but the upper bulk ends warmer than the plain replay. The data-driven weight parks a green intrusion inside the hot layer: the sealing that costs the cooling, in motion.</figcaption>
-</figure>
-
-<figure class="wide">
-  <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-    <source src="assets/videos/vid_nadb_cfd_vs_best.mp4" type="video/mp4">
-  </video>
-  <figcaption><span class="label">Figure 20.</span> CFD reference (left) against the closest replay (right): the prescribed roll at 30 mm/s with the vertical sharpening, $81\%$ of the cooling, end temperature within half a Kelvin. The end state matches, but the route does not. What still tells the two apart, watched closely, is the texture of the cooling. The CFD drains its film through narrow, short-lived plumes, while the roll stirs the whole layer on a fixed schedule.</figcaption>
 </figure>
 
 <p>The physics behind that last sentence is the honest limit of the whole exercise. The CFD cools through a feedback loop: the film chills, turns heavy <em>locally</em>, breaks into a plume, and the plume renews the surface behind it. The loop repeats, intermittent and plume-sized. Every replay in the table reaches its end state by some other route, whether smearing, sharpening, or a steady prescribed roll. The one thing a recorded or prescribed motion cannot do is respond to the temperature field the replay is creating. The transport runs close the amount, and even the end-state look. What stays different is the texture of the cooling in between. That residue is the feedback itself, and it is the cleanest statement so far of what the frozen flow leaves out.</p>
@@ -3244,6 +3230,13 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <figure class="wide">
   <img src="assets/figures/fig_family_montage.png" alt="Replay minus CFD for each operator of the family" loading="lazy" decoding="async">
   <figcaption><span class="label">Figure 36.</span> Replay minus reference for the family, on the same colour scale, in the middle of the hot inflow (top) and at the end (bottom). The isotropic operator builds a warm bulge with a scalloped edge that has no counterpart in the reference; the two directional forms remove it. In the top row the working point carries a tighter but more intense line at the thermocline than the gradient normal, which is why its mean there reads slightly higher; every other measure, including the end state below, puts it in front.</figcaption>
+</figure>
+
+<figure class="wide">
+  <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_nadb_cfd_vs_workingpoint.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 37.</span> The whole run, reference on the left and the working point on the right, same colour scale and same view. The interface forms at the same height and holds there, and the layer above cools at the same rate. What is still visible is the build-up: while the inflow is hot the replay's front is the softer of the two.</figcaption>
 </figure>
 
 <h3>17.5 — What is left</h3>
