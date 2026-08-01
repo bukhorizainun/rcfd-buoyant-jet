@@ -17,7 +17,9 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 S = "parts/"
 S15 = "parts/s15/"
 
-# kept, but under their own heading: each adds transport the family does not
+# Held out of the page entirely. Each adds transport the local rules do not
+# contain, so it answers a different question. The sources stay in parts/ so
+# the work is not lost and can be put back by adding them to ORDER.
 OTHER_BODY = [
     S15 + "05_15_5_turning_the_same_test_around_and_gi.html",
     S15 + "11_15_11_the_base_of_the_layer_a_thickness_.html",
@@ -56,8 +58,7 @@ ORDER = [
     S15 + "14_15_14_the_number_the_picture_and_whether.html",
     S + "new_16_sink_audit.html",
     S + "new_17_matched.html",
-    S + "new_18_other_work.html",
-] + OTHER_BODY + [
+] + [
     S + "16_16_step_3_writing_finalization.html",
     S + "17_references.html",
 ]
