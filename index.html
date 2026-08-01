@@ -3075,6 +3075,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>That is the honest state of it. One route reaches the numbers with a field that barely moves; the other keeps the field moving and reaches half the numbers; putting them in the same run trades one for the other rather than adding them. What separates the reference from all of them is still the same thing the difference maps show at the lid: a row of cold fingers that form, fall and disappear, which needs the cooled fluid to change the flow that carries it &mdash; and that feedback is exactly what a frozen recording does not contain.</p>
 
+<p>Read on its own, this section closes on a discouraging note: every operator improves one column and pays for it in another, and none of them reaches the reference. That reading held for as long as the reference's own lid term was taken on trust. It is not where the story ends. Section 16 measures that term, and the picture above turns out to be a comparison between two different boundary conditions rather than a limit of the operators. Section 17 then repeats the whole comparison with both sides removing the same heat.</p>
 <h2 id="sinkaudit">16 — What the Reference Actually Removes</h2>
 
 <p>Every number on this page that says how much of the CFD cooling the replay captures is a ratio, and the bottom of that ratio is the cooling of the reference. That bottom had been taken on trust. It is worth measuring, because the replay copies the reference's own sink formula, so the two ought to be removing the same heat from the same cells.</p>
@@ -3253,6 +3254,8 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <p>One defect survives the matched sink, and it shows up in two places at once. The heterogeneity lags through the whole heating phase: the reference rises to 15.6 K by 100 s and holds, while the replay climbs more slowly and reaches 14.1 K by 310 s, running 1.5 to 4 K low throughout. The same thing appears in the difference maps as a thin line at the thermocline while the inflow is hot. After the inflow stops, both close and stay closed.</p>
 
 <p>So the front builds too slowly and too softly while the tank is filling, and everything else follows. That is a smaller and much better posed question than the one this study began with, and it is where the next round belongs.</p>
+
+<p>One detail in the clips above is worth naming, because it answers a doubt that ran through the earlier sections. Cold fluid now falls from the lid in the replay, and it did not before. Nothing was added to make it: the replay cannot invent motion, it only follows the recorded cell-to-cell map, and that map was recorded from a CFD whose lid was already cooled. The descending plumes were in the database all along. What was missing was something for them to carry. Under the declared coefficient the sink pulled 1930 J, too little to build a film dense enough to show, so the same motion moved fluid that barely differed from its surroundings. With the sink matched the film forms and the recorded motion takes it down. The database was never the problem.</p>
 <h2 id="step3">18 — Step 3: Writing &amp; Finalization</h2>
 
 <div class="wip-card">
