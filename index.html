@@ -3261,7 +3261,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <p>They are kept because they were run and measured, and several of them reach larger capture numbers than the family does. But they answer a different question, and mixing them into the comparison above would make the family look worse or better for reasons that have nothing to do with the family. They are collected here so the two lines stay apart.</p>
 
 <p>Two things are worth carrying over. All of these were scored before the reference's own lid term was measured (§16), so their capture numbers sit on the same compressed scale as the earlier sections, and none of them has been repeated on a matched sink. And the field measurements still stand on their own, because those compare pictures rather than ratios.</p>
-<h3 id="gated-pairs">15.5 &mdash; Turning the same test around, and giving each operator its own window</h3>
+<h3 id="gated-pairs">18.1 &mdash; Turning the same test around, and giving each operator its own window</h3>
 
 <p>The guard of &sect;15.4 has to recognise a statically unstable pair before it can skip it, so the operator already knows where the field is unstable. Under heat loss those pairs are not incidental: the sink manufactures them, cooling the top cell layer so that cold sits above warm beneath the whole lid. In the reference that state does not survive, because the film breaks into plumes that sink while warm fluid rises to replace them. The replay cannot do this on its own. But the same local test can be given the opposite instruction: where a near-vertical pair is unstable, exchange heat <em>down</em> the gradient until the pair is neutral. Nothing new is measured, and no length scale is introduced. The direction still comes from the local gradient, and static stability decides the sign. One form mixes the pair towards its mass-weighted mean, the classical convective adjustment; the other swaps the two cells outright, so a cold parcel falls one cell per sweep undiluted, closer to what a plume does.</p>
 
@@ -3306,7 +3306,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <figcaption><span class="label">Figure 16e.</span> CFD reference (left) against the split schedule (right), temperature 293&ndash;333 K. The replay now drains its upper layer downward instead of only sideways: cold streaks descend from the lid, which is the pair rule standing in for the collapsing film. The amount and the direction are reproduced; the narrow, intermittent texture of the reference is not.</figcaption>
 </figure>
 
-<h3 id="layerbase">15.11 &mdash; The base of the layer: a thickness and a position</h3>
+<h3 id="layerbase">18.2 &mdash; The base of the layer: a thickness and a position</h3>
 
 <p>The field measurements above all point at one place in the chamber. The sharpening operators work at the thermocline and lose on the picture; the transport operators work through the column and win on it. What both readings have in common is the base of the warm layer. It is where the export is fed from below, and it is the feature the eye reads first in a montage. So the one operator that acted there deserved a closer look than it had been given.</p>
 
@@ -3453,7 +3453,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>The field goes the wrong way, by two independent measures. The heterogeneity at the end falls to 2.0&ndash;2.2 K against the reference's 6.76, so the tank is close to well mixed; and the topmost cell ends at 296 K against the reference's 306 K, colder than its own bulk mean, so the layering is not merely weakened but inverted. Accelerating a recorded circulation accelerates it everywhere, including through the stably stratified lower half that the real flow leaves alone. Adding the layer operator on top recovers part of the heterogeneity, 2.2 to 4.7 K, and still leaves the centroid four times further from the reference than the operator alone manages. So the time-step lever buys what every other lever here buys and pays in the same coin; it is recorded for that reason rather than as a candidate.</p>
 
-<h3 id="fluxchannel">15.13 &mdash; Recording the transport, not only the flow</h3>
+<h3 id="fluxchannel">18.3 &mdash; Recording the transport, not only the flow</h3>
 
 <p>Everything in §15.4 to §15.12 is an operator: a rule that rearranges the field the replay already has. Each one improves a column and pays for it in another, and together they settle near half of the CFD cooling. The reason is the same one §12 gave: what is missing is transport, and no rule that only shuffles the existing field can invent it. But transport is exactly the thing a recording can hand over.</p>
 
@@ -3497,7 +3497,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>Two limits should be said out loud with those numbers. The maps already advect the field with the recorded displacement, and the stored flux belongs to the same flow, so part of what the term adds could be transport that is counted twice. Switching the maps off answers that: without them and without the flux the run is meaningless, ending at 329.1 K because nothing carries the inflow away, and with the flux alone it ends at 325.5 K. The channel does transport something in its own right, but roughly an order of magnitude less than the maps carry &mdash; it corrects them rather than copying them. The second limit is more basic. This is still a frozen recording: the flux belongs to the frame it was measured in, and the replay applies it to a field that has drifted away from the CFD field of that frame. It gives back the transport the averaging lost. It does not give back the feedback between the temperature it produces and the flow that would answer to it.</p>
 
-<h3 id="feedback">15.15 &mdash; What happens when the feedback is switched back on</h3>
+<h3 id="feedback">18.4 &mdash; What happens when the feedback is switched back on</h3>
 
 <p>Every operator in §15.4 to §15.14 works on the scalar while the transport stays frozen. The reference does something none of them can imitate: fluid that the lid has cooled becomes heavy, sinks, and <em>changes the flow that carries it</em>. So the fair question is not "which operator draws plumes" but "what would the replay field do if it were handed back to a solver".</p>
 
