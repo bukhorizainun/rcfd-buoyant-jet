@@ -170,6 +170,22 @@
 
 <p>What the run cannot settle is the field. The database was recorded from the CFD with the volumetric source, so the motion it carries belongs to the stronger cooling. Comparing fields rather than energy against the wall-condition case would need a database recorded from that case, which is a preparation run of about fourteen hours. Nothing on this page needs it; it is the natural next step if the reference is to be re-based.</p>
 
+<p>The whole run, seen twice. Temperature on the left of each panel and pathlines on the right, the same view and the same 293 to 333 K scale the reference frames use.</p>
+
+<figure class="wide">
+  <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_cfd_volumetric_vs_wallbc.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 23.</span> The same coefficient, two ways of applying it: the volumetric source on the left, the convective wall condition on the right. While the inflow is hot the two are hard to tell apart. After it stops they separate steadily, and by the end the source has taken the upper layer to about 305 K while the condition leaves it near 320 K.</figcaption>
+</figure>
+
+<figure class="wide">
+  <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_wallbc_vs_replay_h100.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 24.</span> The wall-condition case on the left against the replay on the right, with the replay using the coefficient the case declares and no operator at all. The two end within 0.2 K of each other in mean temperature. The fields do not match: the replay's interface is smeared where the reference holds it sharp, which is the transport question this study is about, now separated from the accounting question.</figcaption>
+</figure>
+
 <h3>16.7 — The sign of the wall term</h3>
 
 <p>One reading of the wall term deserves its own test, because if it held it would overturn all of the above. The term is written here with the heat that <em>leaves</em> as the positive quantity: the cell is cooled by $-q$, and the balance target is lowered by the same amount. It can also be written as a signed source, in which $q$ is what the cell <em>receives</em> and is therefore negative above ambient. The second convention is the more common one, so the question is whether the result depends on the choice.</p>
