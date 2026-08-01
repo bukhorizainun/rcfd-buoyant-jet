@@ -3323,7 +3323,36 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <figcaption><span class="label">Figure 44.</span> The whole run, reference on the left and the second working point, the database-set strength, on the right, same colour scale and same view. The interface forms at the same height and holds there, and the layer above cools at the same rate. What is still visible is the build-up: while the inflow is hot the replay's front is the softer of the two.</figcaption>
 </figure>
 
-<h3>17.5 — What is left</h3>
+<h3>17.5 &mdash; Why the recording has to carry the cooling</h3>
+
+<p>The paragraph above invites a fair challenge. If the sink is what matters, and the sink is a term the replay applies for itself, then the adiabatic database ought to do just as well: record the flow once without heat loss, raise the coefficient, and let the term do the cooling. It would save building a database per boundary condition.</p>
+
+<p>It was run rather than argued about. The same six configurations on the adiabatic database, at the same coefficient, everything else unchanged.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th></th><th class="num">$T$ at 599 s (K)</th><th class="num">profile RMS (K)</th><th class="num">$E_\text{wall}$ (J)</th></tr>
+</thead>
+<tbody>
+<tr><td>Reference CFD</td><td class="num">299.51</td><td class="num">&mdash;</td><td class="num">6581</td></tr>
+<tr><td>Heat-loss database, declared sink</td><td class="num">303.81</td><td class="num">5.15</td><td class="num">1930</td></tr>
+<tr><td>Adiabatic database, matched sink</td><td class="num">301.52</td><td class="num">4.71</td><td class="num">4229</td></tr>
+<tr><td>Heat-loss database, matched sink</td><td class="num">298.61</td><td class="num">2.26</td><td class="num">6623</td></tr>
+<tr><td>&nbsp;&nbsp;+ working point</td><td class="num">299.22</td><td class="num"><strong>0.34</strong></td><td class="num">6881</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Raising the coefficient on the adiabatic recording moves the end profile from 5.15 to 4.71 K. Raising the same coefficient on the heat-loss recording moves it from 5.15 to 2.26 K. The coefficient is identical in both, so the difference is the motion the recording carries and nothing else.</p>
+
+<p>The reason is in the form of the sink. It removes $h A (T_\text{cell} - T_\text{amb})$, so it is driven by the temperature difference it has already created. On the adiabatic recording nothing carries the cooled fluid away from the lid: the top row cools, the difference collapses, and the term throttles itself. At a coefficient set to remove 6.6 kJ it manages 4.2 kJ. On the heat-loss recording the descending plumes keep taking the film down and bringing warm fluid up, so the same coefficient keeps finding a temperature difference to work on.</p>
+
+<p>The operators make it worse there, not better. On the adiabatic database they run from 7.27 to 11.74 K against 4.71 K with no operator at all, and the vertical normal drops the removal to 3375 J. Sharpening seals a film that nothing is carrying away.</p>
+
+<p>The practical reading is that the pairing is between a database and a cooling regime, not between a database and a single coefficient. Within the regime the recording came from, the coefficient is a free parameter, and the same heat-loss database serves the whole ladder from the declared value up to the matched one. Outside it, as the adiabatic case shows, no value of the coefficient recovers what the motion does not contain.</p>
+
+<h3>17.6 &mdash; What is left</h3>
 
 <p>One defect survives the matched sink, and it shows up in two places at once. The heterogeneity lags through the whole heating phase: the reference rises to 15.6 K by 100 s and holds, while the replay climbs more slowly and reaches 14.1 K by 310 s, running 1.5 to 4 K low throughout. The same thing appears in the difference maps as a thin line at the thermocline while the inflow is hot. After the inflow stops, both close and stay closed.</p>
 
