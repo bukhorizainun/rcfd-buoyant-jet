@@ -1,4 +1,4 @@
-<h3 id="pictures-again">15.6 — The pictures against the numbers, again</h3>
+<h3 id="pictures-again">15.5 — The pictures against the numbers, again</h3>
 
 <p>§15.2 ended by warning that the animation and the metric can disagree. The new runs sharpen that warning into something usable. Now there are replays that match the <em>number</em>, replays that match the <em>look</em>, and one that tries to do both.</p>
 
@@ -6,15 +6,15 @@
   <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_plain.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 18.</span> CFD reference (left) against the plain replay on the heat-loss database (right), temperature 293&ndash;333 K. The replay follows the filling phase closely and then under-cools: the upper bulk stays warm while the CFD's fades.</figcaption>
+  <figcaption><span class="label">Figure 17.</span> CFD reference (left) against the plain replay on the heat-loss database (right), temperature 293&ndash;333 K. The replay follows the filling phase closely and then under-cools: the upper bulk stays warm while the CFD's fades.</figcaption>
 </figure>
 
 <figure class="wide">
   <video autoplay loop muted playsinline controls preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_adir.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 19.</span> CFD reference (left) against the local-gradient-based sharpening on the heat-loss database (right), $s = 0.4$. The front is thin and the mid-run structure holds, but the upper bulk ends warmer than the plain replay. The data-driven weight parks a green intrusion inside the hot layer: the sealing that costs the cooling, in motion.</figcaption>
+  <figcaption><span class="label">Figure 18.</span> CFD reference (left) against the local-gradient-based sharpening on the heat-loss database (right), $s = 0.4$. The front is thin and the mid-run structure holds, but the upper bulk ends warmer than the plain replay. The data-driven weight parks a green intrusion inside the hot layer: the sealing that costs the cooling, in motion.</figcaption>
 </figure>
 
-<p>The physics behind that last sentence is the honest limit of the whole exercise. The CFD cools through a feedback loop: the film chills, turns heavy <em>locally</em>, breaks into a plume, and the plume renews the surface behind it. The loop repeats, intermittent and plume-sized. Every replay in the table reaches its end state by some other route, whether smearing, sharpening, or a steady prescribed roll. The one thing a recorded or prescribed motion cannot do is respond to the temperature field the replay is creating. The transport runs close the amount, and even the end-state look. What stays different is the texture of the cooling in between. That residue is the feedback itself, and it is the cleanest statement so far of what the frozen flow leaves out.</p>
+<p>The physics behind that last sentence is the honest limit of the whole exercise. The CFD cools through a feedback loop: the film chills, turns heavy <em>locally</em>, breaks into a plume, and the plume renews the surface behind it. The loop repeats, intermittent and plume-sized. Every replay in the table reaches its end state by some other route, by smearing or by sharpening. The one thing a recorded or prescribed motion cannot do is respond to the temperature field the replay is creating. The transport runs close the amount, and even the end-state look. What stays different is the texture of the cooling in between. That residue is the feedback itself, and it is the cleanest statement so far of what the frozen flow leaves out.</p>
 
