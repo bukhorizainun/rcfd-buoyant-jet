@@ -186,7 +186,55 @@
   <figcaption><span class="label">Figure 24.</span> The wall-condition case on the left against the replay on the right, with the replay using the coefficient the case declares and no operator at all. The two end within 0.2 K of each other in mean temperature. The fields do not match: the replay's interface is smeared where the reference holds it sharp, which is the transport question this study is about, now separated from the accounting question.</figcaption>
 </figure>
 
-<h3>16.7 — The sign of the wall term</h3>
+<h3>16.7 &mdash; Keeping the declared coefficient</h3>
+
+<p>Raising $h$ from 100 to 435 closes the gap, and &sect;17 is built on it. It is worth asking whether the same can be done without discarding the number the case states, because a reader who sees $h = 435$ in the code cannot tell what was added or why.</p>
+
+<p>It can, and the arithmetic is trivial: keep $h$ at its declared value and write the correction as a factor of its own,</p>
+
+<p style="text-align:center">$q_\text{cell} = h\,c_s^2\,(T_\text{cell} - T_\text{amb})\,G$</p>
+
+<p>with $G = 4.35$. That reproduces the raised-coefficient run digit for digit, at every one of the 601 samples, which is the check that the two are the same thing written twice. Nothing is bought except honesty: the declared coefficient stays visible and the correction is named.</p>
+
+<p>The interesting question is whether $G$ has to be a constant. The database stores, frame by frame and cell by cell, the mixing the CFD actually had, and the extra removal was shown above to be tied to the overturning the sink sets off. So the recording ought to know where the correction belongs. Writing</p>
+
+<p style="text-align:center">$G = 1 + (G_0 - 1)\,D_\text{cell} / D_\text{ref}$</p>
+
+<p>leaves one number, the level $G_0$, and takes the shape in space and time from the recording. That form can fail in a way the constant cannot, and the first version of it did: with $D_\text{ref}$ taken as the largest recorded value anywhere in the field, the weight at the lid is small, because the largest values live in the jet. The correction is then nearly absent exactly where it is needed. Taking $D_\text{ref}$ over the lid row instead asks the right question, which is how vigorously this piece of lid is being renewed compared with the rest of the lid.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th></th><th class="num">$T$ end (K)</th><th class="num">bulk</th><th class="num">front</th><th class="num">top</th><th class="num">RMS (K)</th></tr>
+</thead>
+<tbody>
+<tr><td>Declared coefficient alone</td><td class="num">303.81</td><td class="num">+2.28</td><td class="num">+1.91</td><td class="num">+7.83</td><td class="num">5.15</td></tr>
+<tr><td>Constant gain, $G = 4.35$</td><td class="num">298.61</td><td class="num">+1.25</td><td class="num">&minus;1.19</td><td class="num">&minus;2.99</td><td class="num">2.26</td></tr>
+<tr><td>&nbsp;&nbsp;with the operator</td><td class="num">299.22</td><td class="num">+0.20</td><td class="num">&minus;0.03</td><td class="num">+0.22</td><td class="num"><strong>0.34</strong></td></tr>
+<tr><td>Shaped, normalised over the field</td><td class="num">303.12</td><td class="num">+1.96</td><td class="num">+1.51</td><td class="num">+6.75</td><td class="num">4.44</td></tr>
+<tr><td>Shaped, normalised over the lid</td><td class="num">300.33</td><td class="num">+1.70</td><td class="num">&minus;0.13</td><td class="num">+0.37</td><td class="num"><strong>1.43</strong></td></tr>
+<tr><td>&nbsp;&nbsp;level $G_0 = 6$</td><td class="num">299.13</td><td class="num">+1.48</td><td class="num">&minus;0.85</td><td class="num">&minus;2.16</td><td class="num">1.90</td></tr>
+<tr><td>&nbsp;&nbsp;level $G_0 = 9$</td><td class="num">297.51</td><td class="num">+1.15</td><td class="num">&minus;1.83</td><td class="num">&minus;5.52</td><td class="num">3.67</td></tr>
+<tr><td>&nbsp;&nbsp;level $G_0 = 12$</td><td class="num">296.40</td><td class="num">+0.90</td><td class="num">&minus;2.53</td><td class="num">&minus;7.80</td><td class="num">5.03</td></tr>
+<tr><td>Shaped + operator, $s = 0.20$</td><td class="num">300.64</td><td class="num">+1.13</td><td class="num">+0.36</td><td class="num">+2.16</td><td class="num">1.60</td></tr>
+<tr><td>&nbsp;&nbsp;$s = 0.30$</td><td class="num">300.82</td><td class="num">+0.87</td><td class="num">+0.71</td><td class="num">+3.08</td><td class="num">2.01</td></tr>
+<tr><td>&nbsp;&nbsp;$s = 0.40$</td><td class="num">301.01</td><td class="num">+0.64</td><td class="num">+1.09</td><td class="num">+3.91</td><td class="num">2.48</td></tr>
+<tr><td>&nbsp;&nbsp;$s = 0.475$</td><td class="num">301.14</td><td class="num">+0.47</td><td class="num">+1.39</td><td class="num">+4.44</td><td class="num">2.82</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><span class="label">Table.</span> The wall gain, with $h$ left at the declared 100 throughout. The reference ends at 300.44 K. Both ladders are read as the strength ladder of &sect;17 is: the entry is the RMS departure of the end profile, and the zone columns show where it sits.</p>
+
+<p>Three things come out of it. <em>The shape earns its place.</em> At the same cost in fitted numbers, one, the shaped gain reaches 1.43 K where the constant reaches 2.26 K, and it ends 0.11 K from the reference without having been fitted to the end temperature at all.</p>
+
+<p><em>The level is already at its optimum.</em> Raising $G_0$ to 6, 9 and 12 makes it steadily worse, and the way it fails is instructive: the level only trades the bulk against the top. It cannot fix the bulk, because a wall term acts at the wall.</p>
+
+<p><em>The sharpening operator does not belong on top of it.</em> Its ladder is monotone in the wrong direction, 1.43 K rising to 2.82 K, because the operator moves heat from the bulk to the top: useful when the top is too cold, harmful once the surface is removing the right amount in the right places.</p>
+
+<p>So there are two defensible configurations at different cost. With one fitted number and the shape from the recording, the end profile is within 1.43 K. With two, the constant gain and the operator strength, it is within 0.34 K. The second is the working point of this study; the first is what the recording can do on its own, and it is the one that survives a reader asking which numbers came from the answer.</p>
+
+<h3>16.8 — The sign of the wall term</h3>
 
 <p>One reading of the wall term deserves its own test, because if it held it would overturn all of the above. The term is written here with the heat that <em>leaves</em> as the positive quantity: the cell is cooled by $-q$, and the balance target is lowered by the same amount. It can also be written as a signed source, in which $q$ is what the cell <em>receives</em> and is therefore negative above ambient. The second convention is the more common one, so the question is whether the result depends on the choice.</p>
 
