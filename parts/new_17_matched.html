@@ -2,6 +2,12 @@
 
 <p>With both sides removing the same heat, the operators can be compared on their own merits. The runs below all use a lid coefficient set so that the replay removes 6623 J against the reference's 6581 J. Nothing else about the database, the schedule or the limiter changes.</p>
 
+<p>Two labels are used from here on, and it is worth fixing what they mean before the tables use them.</p>
+
+<p><em>Declared sink</em> is the replay run exactly as the case specifies: the wall coefficient set to the $h = 100$ W m<sup>&minus;2</sup>K<sup>&minus;1</sup> the case declares, with no operator. It is faithful to the written boundary condition, it removes 1930 J, and it is where the earlier sections were working. It is kept in every table as the column to improve on, because it shows what the replay does when it is told only what the case says.</p>
+
+<p><em>Working point</em> is the configuration this section arrives at: the coefficient raised so that the replay removes the heat the reference actually removes, plus the operator and strength that come out best on the ladder. The two differ in one quantity that was measured rather than chosen, the sink level, and in one that was tuned, the operator strength. Everything else, including the database and the schedule, is the same in both.</p>
+
 <p>Setting the sink alone, with no operator at all, already moves most of the distance. The end profile falls from an RMS departure of 5.15 K to 2.26 K, the mean temperature from 4.11 to 1.10 K over the run, and the top of the tank from 7.8 K too warm to 3.0 K too cold. Whatever is left after that is what the local rules have to work on, and it is a different problem from the one the earlier sections were solving.</p>
 
 <h3>17.1 — One change that was hiding the rest</h3>
@@ -52,36 +58,40 @@
 
 <p>with $D_\text{ref}$ the largest recorded value in the field at that step, taken by reduction, the strength follows the recording instead of a constant. Nothing is tuned by hand except the overall level.</p>
 
-<p>Its ladder peaks at $s = 0.5$ with an end-profile RMS of 0.36 K, level with the two best fixed-strength operators. It is taken as the working point, not because it wins on the numbers, which it does not do by any margin worth claiming, but because it carries one assumption fewer and because it is the same idea the rest of the study rests on: the recording, not a global constant, decides what the replay does.</p>
+<p>Its ladder peaks at $s = 0.5$ with an end-profile RMS of 0.36 K, level with the best fixed-strength operator.</p>
+
+<p>Two configurations are carried forward rather than one, because the numbers cannot separate them. The directional operator with the vertical normal and the stability test, at $s = 0.475$, is the plain minimum of the ladder at 0.34 K, and it is the simpler of the two to state: a fixed direction, a fixed strength, one test. The database-set strength reaches 0.36 K, the same answer within the resolution of the metric, and it reaches it with the strength following the recorded diffusivity instead of a number chosen by hand. The fixed one is the smaller claim; the database-set one is the same idea the rest of the study rests on, that the recording rather than a global constant should decide what the replay does. Where a figure below shows a single field, it is the database-set strength, because that is the run whose frames were rendered.</p>
 
 <figure class="wide">
   <img src="assets/figures/fig_four_metrics.png" alt="The four monitored metrics: plain replay under the declared coefficient against the working point" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 42.</span> The same four quantities, but against where this study started: green is the plain replay under the declared coefficient, gold the working point, black the reference. Three of the four now follow the reference the whole way. The heterogeneity, top right, still lags while the tank fills and closes once the inflow stops.</figcaption>
+  <figcaption><span class="label">Figure 35.</span> The same four quantities, but against where this study started: green is the plain replay under the declared coefficient, gold the database-set working point, black the reference. Three of the four now follow the reference the whole way. The heterogeneity, top right, still lags while the tank fills and closes once the inflow stops.</figcaption>
 </figure>
 
 <figure class="wide">
   <img src="assets/figures/fig_diff_vs_cfd_workingpoint.png" alt="Difference maps: plain replay, matched sink only, and the working point" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 43.</span> Replay minus reference at two instants, showing what each step buys. Left the plain replay under the declared coefficient, with the whole upper layer one flat colour. Middle the sink matched and the operator off. Right the working point. The mean absolute difference at the end falls from 5.20 K to 0.77 K.</figcaption>
+  <figcaption><span class="label">Figure 36.</span> Replay minus reference at two instants, showing what each step buys. Left the plain replay under the declared coefficient, with the whole upper layer one flat colour. Middle the sink matched and the operator off. Right the database-set working point. The mean absolute difference at the end falls from 5.20 K to 0.77 K.</figcaption>
 </figure>
 
-<h3>17.4 — Where the working point stands</h3>
+<h3>17.4 — Where the working points stand</h3>
+
+<p>Both sit next to the plain replay under the declared boundary condition, which is where this study started. They agree on every number they share, by less than the difference either one has from the reference, so the choice between them is not made on the metrics. The last four rows are read from rendered frames, and those exist for the database-set strength only.</p>
 
 <div class="table-wrap">
 <table>
 <thead>
-<tr><th></th><th class="num">CFD</th><th class="num">declared sink</th><th class="num">working point</th></tr>
+<tr><th></th><th class="num">CFD</th><th class="num">declared sink</th><th class="num">vertical normal<br>+ stability, $s=0.475$</th><th class="num">local-diff strength<br>$s=0.50$</th></tr>
 </thead>
 <tbody>
-<tr><td>End profile, RMS (K)</td><td class="num">—</td><td class="num">5.15</td><td class="num"><strong>0.36</strong></td></tr>
-<tr><td>&nbsp;&nbsp;bulk / front / top (K)</td><td class="num">—</td><td class="num">+2.28 / +1.91 / +7.83</td><td class="num">+0.20 / −0.18 / +0.17</td></tr>
-<tr><td>Mean temperature, RMS (K)</td><td class="num">—</td><td class="num">4.11</td><td class="num"><strong>0.54</strong></td></tr>
-<tr><td>Heterogeneity, RMS (K)</td><td class="num">—</td><td class="num">2.42</td><td class="num"><strong>1.65</strong></td></tr>
-<tr><td>Centre of gravity, RMS (mm)</td><td class="num">—</td><td class="num">0.09</td><td class="num"><strong>0.04</strong></td></tr>
-<tr><td>Field distance (K)</td><td class="num">—</td><td class="num">3.51</td><td class="num"><strong>1.46</strong></td></tr>
-<tr><td>&nbsp;&nbsp;after 400 s</td><td class="num">—</td><td class="num">3.88</td><td class="num"><strong>0.60</strong></td></tr>
-<tr><td>Layering anomaly $A$</td><td class="num">0.0184</td><td class="num">0.0315</td><td class="num"><strong>0.0183</strong></td></tr>
-<tr><td>Front roughness $R$</td><td class="num">0.0051</td><td class="num">0.0067</td><td class="num"><strong>0.0051</strong></td></tr>
-<tr><td>Pattern renewal $\tau_{50}$ (s)</td><td class="num">14.7</td><td class="num">19.5</td><td class="num">9.6</td></tr>
+<tr><td>End profile, RMS (K)</td><td class="num">—</td><td class="num">5.15</td><td class="num"><strong>0.34</strong></td><td class="num"><strong>0.36</strong></td></tr>
+<tr><td>&nbsp;&nbsp;bulk / front / top (K)</td><td class="num">—</td><td class="num">+2.28 / +1.91 / +7.83</td><td class="num">+0.20 / −0.03 / +0.22</td><td class="num">+0.20 / −0.18 / +0.17</td></tr>
+<tr><td>Mean temperature, RMS (K)</td><td class="num">—</td><td class="num">4.11</td><td class="num">0.55</td><td class="num"><strong>0.54</strong></td></tr>
+<tr><td>Heterogeneity, RMS (K)</td><td class="num">—</td><td class="num">2.42</td><td class="num">1.70</td><td class="num"><strong>1.65</strong></td></tr>
+<tr><td>Centre of gravity, RMS (mm)</td><td class="num">—</td><td class="num">0.09</td><td class="num"><strong>0.04</strong></td><td class="num"><strong>0.04</strong></td></tr>
+<tr><td>Field distance (K)</td><td class="num">—</td><td class="num">3.51</td><td class="num">n/m</td><td class="num"><strong>1.46</strong></td></tr>
+<tr><td>&nbsp;&nbsp;after 400 s</td><td class="num">—</td><td class="num">3.88</td><td class="num">n/m</td><td class="num"><strong>0.60</strong></td></tr>
+<tr><td>Layering anomaly $A$</td><td class="num">0.0184</td><td class="num">0.0315</td><td class="num">n/m</td><td class="num"><strong>0.0183</strong></td></tr>
+<tr><td>Front roughness $R$</td><td class="num">0.0051</td><td class="num">0.0067</td><td class="num">n/m</td><td class="num"><strong>0.0051</strong></td></tr>
+<tr><td>Pattern renewal $\tau_{50}$ (s)</td><td class="num">14.7</td><td class="num">19.5</td><td class="num">n/m</td><td class="num">9.6</td></tr>
 </tbody>
 </table>
 </div>
@@ -90,49 +100,56 @@
 
 <figure class="wide">
   <img src="assets/figures/fig_family_vs_cfd_montage.png" alt="Temperature fields: CFD against the plain replay and each operator of the family" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 35.</span> The fields themselves, on one colour scale from 293 to 333 K and one view. The runs read left to right, folded into two blocks of three; each block carries both instants as its two rows. At $t = 300$ s the reference holds a sharp interface. The plain replay smears it and keeps the layer above too warm, and the isotropic operator tears the layer below into fingers that have no counterpart in the reference. The two directional forms and the working point reproduce both the interface and the layer.</figcaption>
+  <figcaption><span class="label">Figure 37.</span> The fields themselves, on one colour scale from 293 to 333 K and one view. The runs read left to right in two blocks of four, with the reference at the head of each block so either half can be read on its own; each block carries both instants as its two rows. At $t = 300$ s the reference holds a sharp interface. The plain replay smears it and keeps the layer above too warm, and the isotropic operator tears the layer below into fingers that have no counterpart in the reference. The directional forms hold the interface, and the two working points in the lower block also reproduce the filaments that hang from the lid at the end of the run.</figcaption>
 </figure>
 
 <figure class="wide">
   <img src="assets/figures/fig_family_montage.png" alt="Replay minus CFD for each operator of the family" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 36.</span> Replay minus reference for the family, on the same colour scale, in the middle of the hot inflow (top) and at the end (bottom). The isotropic operator builds a warm bulge with a scalloped edge that has no counterpart in the reference; the two directional forms remove it. In the top row the working point carries a tighter but more intense line at the thermocline than the gradient normal, which is why its mean there reads slightly higher; every other measure, including the end state below, puts it in front.</figcaption>
+  <figcaption><span class="label">Figure 38.</span> Replay minus reference for the family, on the same colour scale, in the middle of the hot inflow (top) and at the end (bottom). The isotropic operator builds a warm bulge with a scalloped edge that has no counterpart in the reference; the directional forms remove it. In the top row the gradient normal reads the lowest mean, 1.76 K against 1.99 and 2.04 K, because the two working points hold a tighter but more intense line at the thermocline. At the end of the run the ordering reverses and stays that way: 1.06 K for the gradient normal against 0.73 and 0.77 K.</figcaption>
 </figure>
 
-<p>The same run, seen five ways. The reference is on the left in every clip and the replay on the right, all on the matched sink and the same colour scale. Watch the interface: where it forms, whether it holds, and what the layer above does once the inflow stops.</p>
+<p>The same run, seen six ways. The reference is on the left in every clip and the replay on the right, all on the matched sink and the same colour scale. Watch the interface: where it forms, whether it holds, and what the layer above does once the inflow stops.</p>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_plain.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 37.</span> No operator at all, on the matched sink. The interface forms too low and too soft and keeps spreading for the whole run. This is what the sharpening has to work on.</figcaption>
+  <figcaption><span class="label">Figure 39.</span> No operator at all, on the matched sink. The interface forms too low and too soft and keeps spreading for the whole run. This is what the sharpening has to work on.</figcaption>
 </figure>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_isotropic.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 38.</span> The isotropic operator. Sharpening every face without a direction tears the layer below the interface into fingers that have no counterpart in the reference, which is the clearest sign that a direction is needed.</figcaption>
+  <figcaption><span class="label">Figure 40.</span> The isotropic operator. Sharpening every face without a direction tears the layer below the interface into fingers that have no counterpart in the reference, which is the clearest sign that a direction is needed.</figcaption>
 </figure>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_gradnormal.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 39.</span> The directional operator with the gradient normal. The front is held, but the direction comes from the data and the operator keeps reading the sideways ripples as fronts, so the layer below stays warmer than the reference.</figcaption>
+  <figcaption><span class="label">Figure 41.</span> The directional operator with the gradient normal. The front is held, but the direction comes from the data and the operator keeps reading the sideways ripples as fronts, so the layer below stays warmer than the reference.</figcaption>
 </figure>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_vertnormal.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 40.</span> The directional operator with the vertical normal. Ignoring the sideways structure gives a cleaner interface at the right height; what is left is the build-up while the inflow is hot.</figcaption>
+  <figcaption><span class="label">Figure 42.</span> The directional operator with the vertical normal. Ignoring the sideways structure gives a cleaner interface at the right height; what is left is the build-up while the inflow is hot.</figcaption>
+</figure>
+
+<figure class="wide">
+  <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_nadb_cfd_vs_stabtest.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 43.</span> The first working point: the vertical normal with the stability test, $s = 0.475$. Skipping the links that are already statically unstable keeps the step from working against the overturning the database carries, and the interface holds through the cooling phase without the faint banding the previous clip shows below the front.</figcaption>
 </figure>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_workingpoint.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 41.</span> The whole run, reference on the left and the working point on the right, same colour scale and same view. The interface forms at the same height and holds there, and the layer above cools at the same rate. What is still visible is the build-up: while the inflow is hot the replay's front is the softer of the two.</figcaption>
+  <figcaption><span class="label">Figure 44.</span> The whole run, reference on the left and the second working point, the database-set strength, on the right, same colour scale and same view. The interface forms at the same height and holds there, and the layer above cools at the same rate. What is still visible is the build-up: while the inflow is hot the replay's front is the softer of the two.</figcaption>
 </figure>
 
 <h3>17.5 — What is left</h3>
