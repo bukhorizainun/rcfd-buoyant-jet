@@ -16,7 +16,7 @@
 
 <figure class="wide">
   <img src="assets/figures/fig_wall_sink_finding.png" alt="Heat leaving through the lid: the reference measured against its own formula, and the replay" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 20.</span> Left: the heat leaving through the lid. The reference's own formula (dashed) and the replay with the wall term as the case writes it sit together near 3.5 W, while the heat the reference actually loses (solid) runs about four times higher. The gain of &sect;16.5 puts the replay on the measured curve. Right: the mean temperature that follows. Without the gain the replay tracks the <em>adiabatic</em> reference far more closely than the heat-loss one.</figcaption>
+  <figcaption><span class="label">Figure 20.</span> Left: the heat leaving through the lid. The reference's own formula (dashed) and the replay under the declared coefficient sit together near 3.5 W, while the heat the reference actually loses (solid) runs about four times higher. Raising the replay's coefficient puts it on the measured curve. Right: the mean temperature that follows. Under the declared coefficient the replay tracks the <em>adiabatic</em> reference far more closely than the heat-loss one.</figcaption>
 </figure>
 
 <h3>16.2 — Why the gap looked like a limit</h3>
@@ -59,9 +59,41 @@
 
 <p>The extra removal is therefore tied to the buoyancy-driven convection the sink sets off, and not to the sink's own value, its linearisation, the time step or the iteration count.</p>
 
-<h3>16.4 &mdash; How the lid term is implemented</h3>
+<h3>16.4 &mdash; The same coefficient as a boundary condition</h3>
 
-<p>The lid term is a few lines, and they are worth reading, because the rest of this section rests on what they do. The one thing they need first is the height of the top of the tank. An on-demand function walks the cells once before the run and reduces the largest cell-centre height over the partitions, which on this mesh is $y_\text{max} = 74.5$ mm.</p>
+<p>There is one more way to ask the question, and it is the most direct. The lid term does not have to be a volumetric source at all. The same $h$ and the same ambient temperature can be handed to the solver as a convective wall boundary condition, which is how such a term is usually written. If the removal is a property of cooling the lid at $h = 100$ W m<sup>&minus;2</sup>K<sup>&minus;1</sup>, the two routes should agree.</p>
+
+<p>The enclosure is a single wall zone of 16&thinsp;700 faces, so the condition cannot simply be set on it &mdash; that would cool every wall. A profile hands $h$ to the faces at the top of the tank and zero to the rest. The volumetric source is switched off in that build, and the case, the restart field, the window and the time step are unchanged.</p>
+
+<p>The two selections are not quite the same size, and it is worth saying so before the numbers are read. The source selects cells, and the top row is exactly 1125 of them. The profile selects wall faces by height, and the test it was first given, $y > y_\text{max} - 0.5$ mm with $y_\text{max} = 74.5$ mm the highest cell centre, also caught the topmost row of faces on the side walls, whose centres sit at 74.5 mm. That is 180 extra faces, 16&thinsp;% more area than the lid alone. The measurement below therefore reads high by up to that amount, which widens the gap it reports rather than narrowing it: 4.5 W becomes about 3.9 W for the lid on its own, against 13.2 W for the volumetric path. The test has since been written as $y > y_\text{max} + 0.2$ mm, which leaves the lid alone.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_lid_term_sketch.png" alt="The lid term drawn two ways: as a source inside the top cell row, and as a convective condition on the lid faces" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 21.</span> The two ways of writing the same lid term. Left, as the case is run: the sink is a source inside every cell of the top row, driven by that cell's own temperature, and the lid itself carries no flux. Right, the trial: the heat leaves through the lid faces, so it has to conduct through half a cell first and the wall resistance adds to the film resistance. The coefficient and the ambient temperature are the same in both; the surface is the same lid, though the two selections differ slightly in size, which the text below quantifies.</figcaption>
+</figure>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Route</th><th class="num">source (W)</th><th class="num">residual (W)</th><th class="num">total (W)</th></tr>
+</thead>
+<tbody>
+<tr><td>Volumetric source, $h = 100$, as the case is run</td><td class="num">3.47</td><td class="num">9.76</td><td class="num"><strong>13.2</strong></td></tr>
+<tr><td>Convective wall condition, same $h$, same faces</td><td class="num">0.00</td><td class="num">4.48</td><td class="num"><strong>4.5</strong></td></tr>
+<tr><td>Null control, $h = 0$</td><td class="num">0.00</td><td class="num">&minus;1.16</td><td class="num">&minus;1.2</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><span class="label">Table.</span> The lid term by three routes, over the same 20 s window inside the hot plateau, restarted from the same stored field. The budget carries no wall term, so in the boundary-condition build the residual <em>is</em> the wall flux.</p>
+
+<p>The wall condition removes 4.48 W, close to the 3.44 W the declared formula gives on the reference's own field. It reads a little above it for a plain reason: with no source cooling the top row, the fluid there stays warmer, so the same coefficient sees a larger temperature difference. What matters is the scale &mdash; about four and a half watts where the volumetric path removes about thirteen.</p>
+
+<p>So the extra removal follows the volumetric path and not the physical statement of the boundary condition. That is as far as this evidence reaches: it says where to look, not what the mechanism is. The window is short and starts from a field already cooled for 180 s, so the absolute watts would move over a full run and the ratio is what should be read. The number is reported as measured, and every comparison below is made against the heat the reference actually removes.</p>
+
+<h3>16.5 &mdash; How each one is implemented</h3>
+
+<p>Both routes are a few lines, and they are worth putting side by side, because the whole of this section rests on the difference between them. Both need the same thing first: the height of the top of the tank. An on-demand function walks the cells once before the run and reduces the largest cell-centre height over the partitions, which on this mesh is $y_\text{max} = 74.5$ mm.</p>
 
 <p>The volumetric source, as the reference case is run. Fluent calls it for every cell of the fluid zone:</p>
 
@@ -82,13 +114,87 @@
 
 <p>The test $x_1 &gt; y_\text{max} - c_s$ keeps the row whose centres are at 74.5 mm and drops the next row down at 73.5 mm, so the source acts on exactly 1125 cells. Dividing by $c_s$ turns the surface coefficient into a volumetric one: integrated over a cell of edge $c_s$ it is $h\,c_s^2\,(T-T_\text{amb})$, the convective loss across the cell's top face. <code>dS</code> is the derivative Fluent uses to linearise the term, and setting it to zero changes the imbalance by 0.1 W, which is one of the controls above.</p>
 
-<h3>16.5 &mdash; A gain on the wall term</h3>
+<p>The convective wall condition. The profile is attached to the wall zone from the journal, and Fluent calls it for every face of that zone:</p>
 
-<p>The measurement above leaves one thing to do. The replay applies the coefficient the case carries and removes 1930 J; the reference removes 6581 J. The coefficient is not what is wrong, so it is left where it is and the correction is written as a factor of its own,</p>
+<pre><code>DEFINE_PROFILE(lid_h_coeff, t, i_var)
+{
+    begin_f_loop(f, t){
+
+        F_CENTROID(x, f, t);
+
+        F_PROFILE(f, t, i_var) =
+            (Top_region_initialized &amp;&amp; (x[1] &gt; (Top_y_max + 2.0e-4))) ? H_EXT : 0.0;
+
+    }end_f_loop(f, t)
+}</code></pre>
+
+<pre><code>/define/boundary-conditions/set/wall wall () thermal-bc yes convection q
+/define/boundary-conditions/set/wall wall () convective-heat-transfer-coefficient
+    yes yes "udf" "lid_h_coeff::libudf_cfd" q
+/define/boundary-conditions/set/wall wall () tinf no 293 q</code></pre>
+
+<p>Faces that receive zero are adiabatic, so the floor, the side walls and the pipe walls carry no flux in either build. The threshold decides how much of the top is cooled: above $y_\text{max}$ it is the lid, 1125 faces; below it, the topmost band of the side walls comes with it.</p>
+
+<p>The difference that matters is not the count. It is where the heat leaves from. The source takes it out of the cell, and nothing crosses the lid: the cell's own temperature sets the rate and there is no wall between the fluid and the ambient. The condition takes it out through the face, so the heat has to conduct through half a cell first and the wall resistance $\Delta y / 2k$ adds to the film resistance $1/h$. On this mesh that second resistance is about eight per cent of the total, which is small; the factor of two the runs show is not accounted for by it, and that is the open part of the finding.</p>
+
+<h3>16.6 &mdash; The same question over the whole run</h3>
+
+<p>A 25 s window is a narrow place to settle something this consequential, so the wall condition was run to the end: the same case, the same start field, 630 episodes of five steps at $\Delta t = 0.2$ s, the same 30 inner iterations, the same 1125 lid faces. The only difference from the reference is where the lid term is applied.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th></th><th class="num">$T$ at end (K)</th><th class="num">cooling depth (K)</th><th class="num">share of the CFD</th></tr>
+</thead>
+<tbody>
+<tr><td>CFD, adiabatic</td><td class="num">309.17</td><td class="num">&mdash;</td><td class="num">&mdash;</td></tr>
+<tr><td>CFD, lid as a volumetric source</td><td class="num">298.98</td><td class="num">10.19</td><td class="num">100&thinsp;%</td></tr>
+<tr><td>CFD, lid as a wall condition, same $h$</td><td class="num">303.85</td><td class="num">5.32</td><td class="num">100&thinsp;%</td></tr>
+<tr><td>Replay, adiabatic</td><td class="num">307.62</td><td class="num">&mdash;</td><td class="num">&mdash;</td></tr>
+<tr class="best"><td>Replay, $h = 100$ as declared, no operator</td><td class="num">304.04</td><td class="num">3.59</td><td class="num">35.2&thinsp;% / <strong>67.4&thinsp;%</strong></td></tr>
+<tr><td>Replay, working point</td><td class="num">299.39</td><td class="num">8.24</td><td class="num">80.9&thinsp;% / 154.8&thinsp;%</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><span class="label">Table.</span> The cooling depth is measured against each method's own adiabatic run. The last column gives that depth as a share of the CFD's, against the volumetric reference and against the wall condition.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_wallbc_traces.png" alt="Mean temperature for the two ways of applying the lid term, against the replay" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 22.</span> Left: the mean temperature of the tank. The wall condition (blue) lies between the adiabatic run and the reference this study has been scored against (red). Right: the cooling each one achieves, measured against its own adiabatic run.</figcaption>
+</figure>
+
+<p>The replay's own number does not move. Under the coefficient the case declares it cools 3.59 K below its adiabatic run, and it did so before any of this was measured. What moves is the denominator: 35.2&thinsp;% of the cooling against the reference as it is run, <strong>67.4&thinsp;%</strong> against the same case with its boundary condition applied as stated. Two thirds of the reference's cooling, with nothing fitted at all &mdash; no coefficient raised, no strength tuned, no schedule chosen.</p>
+
+<p>The other half of that statement belongs in the same paragraph. The working point of &sect;17 is tied to the reference as it is run. Against the wall-condition case it removes 155&thinsp;% of the cooling and ends 4.5 K too cold. The coefficient of 435 W m<sup>&minus;2</sup>K<sup>&minus;1</sup> was set to match a removal that the volumetric path produces and the stated condition does not, so if the reference is ever re-based on the stated condition, that number goes with it.</p>
+
+<p>What the run cannot settle is the field. The database was recorded from the CFD with the volumetric source, so the motion it carries belongs to the stronger cooling. Comparing fields rather than energy against the wall-condition case would need a database recorded from that case, which is a preparation run of about fourteen hours. Nothing on this page needs it; it is the natural next step if the reference is to be re-based.</p>
+
+<p>The whole run, seen twice. Temperature on the left of each panel and pathlines on the right, the same view and the same 293 to 333 K scale the reference frames use.</p>
+
+<figure class="wide">
+  <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_cfd_volumetric_vs_wallbc.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 23.</span> The same coefficient, two ways of applying it: the volumetric source on the left, the convective wall condition on the right. While the inflow is hot the two are hard to tell apart. After it stops they separate steadily, and by the end the source has taken the upper layer to about 305 K while the condition leaves it near 320 K.</figcaption>
+</figure>
+
+<figure class="wide">
+  <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
+    <source src="assets/videos/vid_wallbc_vs_replay_h100.mp4" type="video/mp4">
+  </video>
+  <figcaption><span class="label">Figure 24.</span> The wall-condition case on the left against the replay on the right, with the replay using the coefficient the case declares and no operator at all. The two end within 0.2 K of each other in mean temperature. The fields do not match: the replay's interface is smeared where the reference holds it sharp, which is the transport question this study is about, now separated from the accounting question.</figcaption>
+</figure>
+
+<h3>16.7 &mdash; Keeping the declared coefficient</h3>
+
+<p>Raising $h$ from 100 to 435 closes the gap, and &sect;17 is built on it. It is worth asking whether the same can be done without discarding the number the case states, because a reader who sees $h = 435$ in the code cannot tell what was added or why.</p>
+
+<p>It can, and the arithmetic is trivial: keep $h$ at its declared value and write the correction as a factor of its own,</p>
 
 <p style="text-align:center">$q_\text{cell} = h\,c_s^2\,(T_\text{cell} - T_\text{amb})\,G$</p>
 
-<p>with $G = 4.35$. The value is not fitted to the temperature the replay should reach: it is set so that the two sides remove the same heat, 6623 J against 6581 J. Writing it this way rather than folding it into $h$ keeps the coefficient the case carries visible in the code and gives the correction a name, so a reader can see what was added and can set it back to one.</p>
+<p>with $G = 4.35$. That reproduces the raised-coefficient run digit for digit, at every one of the 601 samples, which is the check that the two are the same thing written twice. Nothing is bought except honesty: the declared coefficient stays visible and the correction is named.</p>
 
 <p>The interesting question is whether $G$ has to be a constant. The database stores, frame by frame and cell by cell, the mixing the CFD actually had, and the extra removal was shown above to be tied to the overturning the sink sets off. So the recording ought to know where the correction belongs. Writing</p>
 
@@ -102,7 +208,7 @@
 <tr><th></th><th class="num">$T$ end (K)</th><th class="num">bulk</th><th class="num">front</th><th class="num">top</th><th class="num">RMS (K)</th></tr>
 </thead>
 <tbody>
-<tr><td>$h = 100$, no gain, no operator</td><td class="num">303.81</td><td class="num">+2.28</td><td class="num">+1.91</td><td class="num">+7.83</td><td class="num">5.15</td></tr>
+<tr><td>Declared coefficient alone</td><td class="num">303.81</td><td class="num">+2.28</td><td class="num">+1.91</td><td class="num">+7.83</td><td class="num">5.15</td></tr>
 <tr><td>Constant gain, $G = 4.35$</td><td class="num">298.61</td><td class="num">+1.25</td><td class="num">&minus;1.19</td><td class="num">&minus;2.99</td><td class="num">2.26</td></tr>
 <tr><td>&nbsp;&nbsp;with the operator</td><td class="num">299.22</td><td class="num">+0.20</td><td class="num">&minus;0.03</td><td class="num">+0.22</td><td class="num"><strong>0.34</strong></td></tr>
 <tr><td>Shaped, normalised over the field</td><td class="num">303.12</td><td class="num">+1.96</td><td class="num">+1.51</td><td class="num">+6.75</td><td class="num">4.44</td></tr>
@@ -118,13 +224,13 @@
 </table>
 </div>
 
-<p><span class="label">Table.</span> The wall gain, with $h$ at 100 throughout. The reference ends at 300.44 K. Both ladders are read as the strength ladder of &sect;17 is: the entry is the RMS departure of the end profile, and the zone columns show where it sits.</p>
+<p><span class="label">Table.</span> The wall gain, with $h$ left at the declared 100 throughout. The reference ends at 300.44 K. Both ladders are read as the strength ladder of &sect;17 is: the entry is the RMS departure of the end profile, and the zone columns show where it sits.</p>
 
 <p>Three things come out of it. <em>The shape earns its place.</em> At the same cost in fitted numbers, one, the shaped gain reaches 1.43 K where the constant reaches 2.26 K, and it ends 0.11 K from the reference without having been fitted to the end temperature at all.</p>
 
 <p><em>The level is already at its optimum.</em> Raising $G_0$ to 6, 9 and 12 makes it steadily worse, and the way it fails is instructive: the level only trades the bulk against the top. It cannot fix the bulk, because a wall term acts at the wall.</p>
 
-<h3>16.6 &mdash; The family on the shaped gain</h3>
+<h3>16.8 &mdash; The family on the shaped gain</h3>
 
 <p>The end profile alone would have closed this section with the wrong sentence. Read on that column, the sharpening operator makes the shaped gain steadily worse, 1.43 K rising to 2.82 K, and the natural conclusion is that it does not belong there. The other three metrics say something different, and so does the rest of the family, which had not been tried on it. Each member is taken at the strength it settled on in &sect;17, so what is compared is the form of the operator and not its strength.</p>
 
@@ -134,7 +240,7 @@
 <tr><th></th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$\delta T$ (K)</th><th class="num">CoG (mm)</th><th class="num">profile (K)</th></tr>
 </thead>
 <tbody>
-<tr><td>Constant gain, no operator</td><td class="num">1.10</td><td class="num">3.03</td><td class="num">0.084</td><td class="num">2.26</td></tr>
+<tr><td>Raised coefficient, no operator</td><td class="num">1.10</td><td class="num">3.03</td><td class="num">0.084</td><td class="num">2.26</td></tr>
 <tr><td>&nbsp;&nbsp;+ vertical and stability, $s=0.475$</td><td class="num"><strong>0.55</strong></td><td class="num"><strong>1.70</strong></td><td class="num"><strong>0.045</strong></td><td class="num"><strong>0.34</strong></td></tr>
 <tr><td>Shaped gain, no operator</td><td class="num">2.53</td><td class="num">2.38</td><td class="num"><strong>0.045</strong></td><td class="num"><strong>1.43</strong></td></tr>
 <tr><td>&nbsp;&nbsp;+ isotropic, $s=0.3$</td><td class="num">3.97</td><td class="num">4.75</td><td class="num">0.218</td><td class="num">3.04</td></tr>
@@ -150,18 +256,18 @@
 
 <figure class="wide">
   <img src="assets/figures/fig_wallgain_metrics.png" alt="The four monitored quantities for the wall gain, with and without an operator" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 21.</span> The four monitored quantities for the wall gain. The shaped gain reaches the right end temperature by the wrong path: it runs warm through the whole filling phase and only catches up at the end. An operator on top of it pulls the traces towards the reference and pushes the end profile away.</figcaption>
+  <figcaption><span class="label">Figure 25.</span> The four monitored quantities for the wall gain. The shaped gain reaches the right end temperature by the wrong path: it runs warm through the whole filling phase and only catches up at the end. An operator on top of it pulls the traces towards the reference and pushes the end profile away.</figcaption>
 </figure>
 
 <p>What the table shows is a trade, not a loss. On the shaped gain an operator improves both histories, the mean temperature from 2.53 to 2.02 K and the heterogeneity from 2.38 to 1.57 K, and worsens both end quantities, the profile from 1.43 to 2.77 K and the height of the heat from 0.045 to 0.099 mm. Which way that reads depends on the column, and saying it in one direction would be choosing the column after seeing the answer.</p>
 
-<p>Two further things fall out of it. <em>The ranking inside the family is the same as on the constant gain</em>: the database-set strength and the adaptive one lead, the vertical normal with its stability test is level with them, then the vertical normal alone, then the gradient normal, and the isotropic form is worst by a distance, with a centre of gravity five times further out than the rest. That the ordering survives a change in how the wall term is written is worth more than any single number in the table.</p>
+<p>Two further things fall out of it. <em>The ranking inside the family is the same as on the raised coefficient</em>: the database-set strength and the adaptive one lead, the vertical normal with its stability test is level with them, then the vertical normal alone, then the gradient normal, and the isotropic form is worst by a distance, with a centre of gravity five times further out than the rest. That the ordering survives a change in how the wall term is written is worth more than any single number in the table.</p>
 
 <p><em>The right strength on the shaped gain is a weaker one.</em> At $s = 0.20$ the vertical normal with the stability test gives 2.31 / 1.89 / 0.051 / 1.60, which keeps the end state almost intact while taking part of the gain in the histories. That makes sense: the shaped gain already does part of the sharpening's work through where it removes heat, so less is left for the operator.</p>
 
-<p>So three configurations are defensible, at three costs. One fitted number and no operator gives the best end state for that price. One fitted number and a weak operator gives the best balance. Two fitted numbers, the gain and the strength of &sect;17, still win every column outright, and that remains the working point of this study.</p>
+<p>So three configurations are defensible, at three costs. One fitted number and no operator gives the best end state for that price. One fitted number and a weak operator gives the best balance. Two fitted numbers, the constant gain and the strength of &sect;17, still win every column outright, and that remains the working point of this study.</p>
 
-<h3>16.7 — The sign of the wall term</h3>
+<h3>16.9 — The sign of the wall term</h3>
 
 <p>One reading of the wall term deserves its own test, because if it held it would overturn all of the above. The term is written here with the heat that <em>leaves</em> as the positive quantity: the cell is cooled by $-q$, and the balance target is lowered by the same amount. It can also be written as a signed source, in which $q$ is what the cell <em>receives</em> and is therefore negative above ambient. The second convention is the more common one, so the question is whether the result depends on the choice.</p>
 

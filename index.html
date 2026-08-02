@@ -199,7 +199,7 @@
     <summary>Step 3 — Finalization<span class="step-status plan">planned</span></summary>
     <ol>
       <li><a href="#sinkaudit">What the Reference Removes</a></li>
-      <li><a href="#matched">The Family on a Matched Sink</a></li>
+      <li><a href="#matched">The Family on the Gain</a></li>
       <li><a href="#step3">Writing &amp; Finalization</a></li>
     </ol>
   </details>
@@ -2947,7 +2947,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <figure class="wide">
   <img src="assets/figures/fig_wall_sink_finding.png" alt="Heat leaving through the lid: the reference measured against its own formula, and the replay" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 20.</span> Left: the heat leaving through the lid. The reference's own formula (dashed) and the replay under the declared coefficient sit together near 3.5 W, while the heat the reference actually loses (solid) runs about four times higher. Raising the replay's coefficient puts it on the measured curve. Right: the mean temperature that follows. Under the declared coefficient the replay tracks the <em>adiabatic</em> reference far more closely than the heat-loss one.</figcaption>
+  <figcaption><span class="label">Figure 20.</span> Left: the heat leaving through the lid. The reference's own formula (dashed) and the replay with the wall term as the case writes it sit together near 3.5 W, while the heat the reference actually loses (solid) runs about four times higher. The gain of &sect;16.5 puts the replay on the measured curve. Right: the mean temperature that follows. Without the gain the replay tracks the <em>adiabatic</em> reference far more closely than the heat-loss one.</figcaption>
 </figure>
 
 <h3>16.2 — Why the gap looked like a limit</h3>
@@ -2990,41 +2990,9 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>The extra removal is therefore tied to the buoyancy-driven convection the sink sets off, and not to the sink's own value, its linearisation, the time step or the iteration count.</p>
 
-<h3>16.4 &mdash; The same coefficient as a boundary condition</h3>
+<h3>16.4 &mdash; How the lid term is implemented</h3>
 
-<p>There is one more way to ask the question, and it is the most direct. The lid term does not have to be a volumetric source at all. The same $h$ and the same ambient temperature can be handed to the solver as a convective wall boundary condition, which is how such a term is usually written. If the removal is a property of cooling the lid at $h = 100$ W m<sup>&minus;2</sup>K<sup>&minus;1</sup>, the two routes should agree.</p>
-
-<p>The enclosure is a single wall zone of 16&thinsp;700 faces, so the condition cannot simply be set on it &mdash; that would cool every wall. A profile hands $h$ to the faces at the top of the tank and zero to the rest. The volumetric source is switched off in that build, and the case, the restart field, the window and the time step are unchanged.</p>
-
-<p>The two selections are not quite the same size, and it is worth saying so before the numbers are read. The source selects cells, and the top row is exactly 1125 of them. The profile selects wall faces by height, and the test it was first given, $y > y_\text{max} - 0.5$ mm with $y_\text{max} = 74.5$ mm the highest cell centre, also caught the topmost row of faces on the side walls, whose centres sit at 74.5 mm. That is 180 extra faces, 16&thinsp;% more area than the lid alone. The measurement below therefore reads high by up to that amount, which widens the gap it reports rather than narrowing it: 4.5 W becomes about 3.9 W for the lid on its own, against 13.2 W for the volumetric path. The test has since been written as $y > y_\text{max} + 0.2$ mm, which leaves the lid alone.</p>
-
-<figure class="wide">
-  <img src="assets/figures/fig_lid_term_sketch.png" alt="The lid term drawn two ways: as a source inside the top cell row, and as a convective condition on the lid faces" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 21.</span> The two ways of writing the same lid term. Left, as the case is run: the sink is a source inside every cell of the top row, driven by that cell's own temperature, and the lid itself carries no flux. Right, the trial: the heat leaves through the lid faces, so it has to conduct through half a cell first and the wall resistance adds to the film resistance. The coefficient and the ambient temperature are the same in both; the surface is the same lid, though the two selections differ slightly in size, which the text below quantifies.</figcaption>
-</figure>
-
-<div class="table-wrap">
-<table>
-<thead>
-<tr><th>Route</th><th class="num">source (W)</th><th class="num">residual (W)</th><th class="num">total (W)</th></tr>
-</thead>
-<tbody>
-<tr><td>Volumetric source, $h = 100$, as the case is run</td><td class="num">3.47</td><td class="num">9.76</td><td class="num"><strong>13.2</strong></td></tr>
-<tr><td>Convective wall condition, same $h$, same faces</td><td class="num">0.00</td><td class="num">4.48</td><td class="num"><strong>4.5</strong></td></tr>
-<tr><td>Null control, $h = 0$</td><td class="num">0.00</td><td class="num">&minus;1.16</td><td class="num">&minus;1.2</td></tr>
-</tbody>
-</table>
-</div>
-
-<p><span class="label">Table.</span> The lid term by three routes, over the same 20 s window inside the hot plateau, restarted from the same stored field. The budget carries no wall term, so in the boundary-condition build the residual <em>is</em> the wall flux.</p>
-
-<p>The wall condition removes 4.48 W, close to the 3.44 W the declared formula gives on the reference's own field. It reads a little above it for a plain reason: with no source cooling the top row, the fluid there stays warmer, so the same coefficient sees a larger temperature difference. What matters is the scale &mdash; about four and a half watts where the volumetric path removes about thirteen.</p>
-
-<p>So the extra removal follows the volumetric path and not the physical statement of the boundary condition. That is as far as this evidence reaches: it says where to look, not what the mechanism is. The window is short and starts from a field already cooled for 180 s, so the absolute watts would move over a full run and the ratio is what should be read. The number is reported as measured, and every comparison below is made against the heat the reference actually removes.</p>
-
-<h3>16.5 &mdash; How each one is implemented</h3>
-
-<p>Both routes are a few lines, and they are worth putting side by side, because the whole of this section rests on the difference between them. Both need the same thing first: the height of the top of the tank. An on-demand function walks the cells once before the run and reduces the largest cell-centre height over the partitions, which on this mesh is $y_\text{max} = 74.5$ mm.</p>
+<p>The lid term is a few lines, and they are worth reading, because the rest of this section rests on what they do. The one thing they need first is the height of the top of the tank. An on-demand function walks the cells once before the run and reduces the largest cell-centre height over the partitions, which on this mesh is $y_\text{max} = 74.5$ mm.</p>
 
 <p>The volumetric source, as the reference case is run. Fluent calls it for every cell of the fluid zone:</p>
 
@@ -3045,87 +3013,13 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>The test $x_1 &gt; y_\text{max} - c_s$ keeps the row whose centres are at 74.5 mm and drops the next row down at 73.5 mm, so the source acts on exactly 1125 cells. Dividing by $c_s$ turns the surface coefficient into a volumetric one: integrated over a cell of edge $c_s$ it is $h\,c_s^2\,(T-T_\text{amb})$, the convective loss across the cell's top face. <code>dS</code> is the derivative Fluent uses to linearise the term, and setting it to zero changes the imbalance by 0.1 W, which is one of the controls above.</p>
 
-<p>The convective wall condition. The profile is attached to the wall zone from the journal, and Fluent calls it for every face of that zone:</p>
+<h3>16.5 &mdash; A gain on the wall term</h3>
 
-<pre><code>DEFINE_PROFILE(lid_h_coeff, t, i_var)
-{
-    begin_f_loop(f, t){
-
-        F_CENTROID(x, f, t);
-
-        F_PROFILE(f, t, i_var) =
-            (Top_region_initialized &amp;&amp; (x[1] &gt; (Top_y_max + 2.0e-4))) ? H_EXT : 0.0;
-
-    }end_f_loop(f, t)
-}</code></pre>
-
-<pre><code>/define/boundary-conditions/set/wall wall () thermal-bc yes convection q
-/define/boundary-conditions/set/wall wall () convective-heat-transfer-coefficient
-    yes yes "udf" "lid_h_coeff::libudf_cfd" q
-/define/boundary-conditions/set/wall wall () tinf no 293 q</code></pre>
-
-<p>Faces that receive zero are adiabatic, so the floor, the side walls and the pipe walls carry no flux in either build. The threshold decides how much of the top is cooled: above $y_\text{max}$ it is the lid, 1125 faces; below it, the topmost band of the side walls comes with it.</p>
-
-<p>The difference that matters is not the count. It is where the heat leaves from. The source takes it out of the cell, and nothing crosses the lid: the cell's own temperature sets the rate and there is no wall between the fluid and the ambient. The condition takes it out through the face, so the heat has to conduct through half a cell first and the wall resistance $\Delta y / 2k$ adds to the film resistance $1/h$. On this mesh that second resistance is about eight per cent of the total, which is small; the factor of two the runs show is not accounted for by it, and that is the open part of the finding.</p>
-
-<h3>16.6 &mdash; The same question over the whole run</h3>
-
-<p>A 25 s window is a narrow place to settle something this consequential, so the wall condition was run to the end: the same case, the same start field, 630 episodes of five steps at $\Delta t = 0.2$ s, the same 30 inner iterations, the same 1125 lid faces. The only difference from the reference is where the lid term is applied.</p>
-
-<div class="table-wrap">
-<table>
-<thead>
-<tr><th></th><th class="num">$T$ at end (K)</th><th class="num">cooling depth (K)</th><th class="num">share of the CFD</th></tr>
-</thead>
-<tbody>
-<tr><td>CFD, adiabatic</td><td class="num">309.17</td><td class="num">&mdash;</td><td class="num">&mdash;</td></tr>
-<tr><td>CFD, lid as a volumetric source</td><td class="num">298.98</td><td class="num">10.19</td><td class="num">100&thinsp;%</td></tr>
-<tr><td>CFD, lid as a wall condition, same $h$</td><td class="num">303.85</td><td class="num">5.32</td><td class="num">100&thinsp;%</td></tr>
-<tr><td>Replay, adiabatic</td><td class="num">307.62</td><td class="num">&mdash;</td><td class="num">&mdash;</td></tr>
-<tr class="best"><td>Replay, $h = 100$ as declared, no operator</td><td class="num">304.04</td><td class="num">3.59</td><td class="num">35.2&thinsp;% / <strong>67.4&thinsp;%</strong></td></tr>
-<tr><td>Replay, working point</td><td class="num">299.39</td><td class="num">8.24</td><td class="num">80.9&thinsp;% / 154.8&thinsp;%</td></tr>
-</tbody>
-</table>
-</div>
-
-<p><span class="label">Table.</span> The cooling depth is measured against each method's own adiabatic run. The last column gives that depth as a share of the CFD's, against the volumetric reference and against the wall condition.</p>
-
-<figure class="wide">
-  <img src="assets/figures/fig_wallbc_traces.png" alt="Mean temperature for the two ways of applying the lid term, against the replay" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 22.</span> Left: the mean temperature of the tank. The wall condition (blue) lies between the adiabatic run and the reference this study has been scored against (red). Right: the cooling each one achieves, measured against its own adiabatic run.</figcaption>
-</figure>
-
-<p>The replay's own number does not move. Under the coefficient the case declares it cools 3.59 K below its adiabatic run, and it did so before any of this was measured. What moves is the denominator: 35.2&thinsp;% of the cooling against the reference as it is run, <strong>67.4&thinsp;%</strong> against the same case with its boundary condition applied as stated. Two thirds of the reference's cooling, with nothing fitted at all &mdash; no coefficient raised, no strength tuned, no schedule chosen.</p>
-
-<p>The other half of that statement belongs in the same paragraph. The working point of &sect;17 is tied to the reference as it is run. Against the wall-condition case it removes 155&thinsp;% of the cooling and ends 4.5 K too cold. The coefficient of 435 W m<sup>&minus;2</sup>K<sup>&minus;1</sup> was set to match a removal that the volumetric path produces and the stated condition does not, so if the reference is ever re-based on the stated condition, that number goes with it.</p>
-
-<p>What the run cannot settle is the field. The database was recorded from the CFD with the volumetric source, so the motion it carries belongs to the stronger cooling. Comparing fields rather than energy against the wall-condition case would need a database recorded from that case, which is a preparation run of about fourteen hours. Nothing on this page needs it; it is the natural next step if the reference is to be re-based.</p>
-
-<p>The whole run, seen twice. Temperature on the left of each panel and pathlines on the right, the same view and the same 293 to 333 K scale the reference frames use.</p>
-
-<figure class="wide">
-  <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-    <source src="assets/videos/vid_cfd_volumetric_vs_wallbc.mp4" type="video/mp4">
-  </video>
-  <figcaption><span class="label">Figure 23.</span> The same coefficient, two ways of applying it: the volumetric source on the left, the convective wall condition on the right. While the inflow is hot the two are hard to tell apart. After it stops they separate steadily, and by the end the source has taken the upper layer to about 305 K while the condition leaves it near 320 K.</figcaption>
-</figure>
-
-<figure class="wide">
-  <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
-    <source src="assets/videos/vid_wallbc_vs_replay_h100.mp4" type="video/mp4">
-  </video>
-  <figcaption><span class="label">Figure 24.</span> The wall-condition case on the left against the replay on the right, with the replay using the coefficient the case declares and no operator at all. The two end within 0.2 K of each other in mean temperature. The fields do not match: the replay's interface is smeared where the reference holds it sharp, which is the transport question this study is about, now separated from the accounting question.</figcaption>
-</figure>
-
-<h3>16.7 &mdash; Keeping the declared coefficient</h3>
-
-<p>Raising $h$ from 100 to 435 closes the gap, and &sect;17 is built on it. It is worth asking whether the same can be done without discarding the number the case states, because a reader who sees $h = 435$ in the code cannot tell what was added or why.</p>
-
-<p>It can, and the arithmetic is trivial: keep $h$ at its declared value and write the correction as a factor of its own,</p>
+<p>The measurement above leaves one thing to do. The replay applies the coefficient the case carries and removes 1930 J; the reference removes 6581 J. The coefficient is not what is wrong, so it is left where it is and the correction is written as a factor of its own,</p>
 
 <p style="text-align:center">$q_\text{cell} = h\,c_s^2\,(T_\text{cell} - T_\text{amb})\,G$</p>
 
-<p>with $G = 4.35$. That reproduces the raised-coefficient run digit for digit, at every one of the 601 samples, which is the check that the two are the same thing written twice. Nothing is bought except honesty: the declared coefficient stays visible and the correction is named.</p>
+<p>with $G = 4.35$. The value is not fitted to the temperature the replay should reach: it is set so that the two sides remove the same heat, 6623 J against 6581 J. Writing it this way rather than folding it into $h$ keeps the coefficient the case carries visible in the code and gives the correction a name, so a reader can see what was added and can set it back to one.</p>
 
 <p>The interesting question is whether $G$ has to be a constant. The database stores, frame by frame and cell by cell, the mixing the CFD actually had, and the extra removal was shown above to be tied to the overturning the sink sets off. So the recording ought to know where the correction belongs. Writing</p>
 
@@ -3139,7 +3033,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <tr><th></th><th class="num">$T$ end (K)</th><th class="num">bulk</th><th class="num">front</th><th class="num">top</th><th class="num">RMS (K)</th></tr>
 </thead>
 <tbody>
-<tr><td>Declared coefficient alone</td><td class="num">303.81</td><td class="num">+2.28</td><td class="num">+1.91</td><td class="num">+7.83</td><td class="num">5.15</td></tr>
+<tr><td>$h = 100$, no gain, no operator</td><td class="num">303.81</td><td class="num">+2.28</td><td class="num">+1.91</td><td class="num">+7.83</td><td class="num">5.15</td></tr>
 <tr><td>Constant gain, $G = 4.35$</td><td class="num">298.61</td><td class="num">+1.25</td><td class="num">&minus;1.19</td><td class="num">&minus;2.99</td><td class="num">2.26</td></tr>
 <tr><td>&nbsp;&nbsp;with the operator</td><td class="num">299.22</td><td class="num">+0.20</td><td class="num">&minus;0.03</td><td class="num">+0.22</td><td class="num"><strong>0.34</strong></td></tr>
 <tr><td>Shaped, normalised over the field</td><td class="num">303.12</td><td class="num">+1.96</td><td class="num">+1.51</td><td class="num">+6.75</td><td class="num">4.44</td></tr>
@@ -3155,13 +3049,13 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 </table>
 </div>
 
-<p><span class="label">Table.</span> The wall gain, with $h$ left at the declared 100 throughout. The reference ends at 300.44 K. Both ladders are read as the strength ladder of &sect;17 is: the entry is the RMS departure of the end profile, and the zone columns show where it sits.</p>
+<p><span class="label">Table.</span> The wall gain, with $h$ at 100 throughout. The reference ends at 300.44 K. Both ladders are read as the strength ladder of &sect;17 is: the entry is the RMS departure of the end profile, and the zone columns show where it sits.</p>
 
 <p>Three things come out of it. <em>The shape earns its place.</em> At the same cost in fitted numbers, one, the shaped gain reaches 1.43 K where the constant reaches 2.26 K, and it ends 0.11 K from the reference without having been fitted to the end temperature at all.</p>
 
 <p><em>The level is already at its optimum.</em> Raising $G_0$ to 6, 9 and 12 makes it steadily worse, and the way it fails is instructive: the level only trades the bulk against the top. It cannot fix the bulk, because a wall term acts at the wall.</p>
 
-<h3>16.8 &mdash; The family on the shaped gain</h3>
+<h3>16.6 &mdash; The family on the shaped gain</h3>
 
 <p>The end profile alone would have closed this section with the wrong sentence. Read on that column, the sharpening operator makes the shaped gain steadily worse, 1.43 K rising to 2.82 K, and the natural conclusion is that it does not belong there. The other three metrics say something different, and so does the rest of the family, which had not been tried on it. Each member is taken at the strength it settled on in &sect;17, so what is compared is the form of the operator and not its strength.</p>
 
@@ -3171,7 +3065,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <tr><th></th><th class="num">$T_\text{mean}$ (K)</th><th class="num">$\delta T$ (K)</th><th class="num">CoG (mm)</th><th class="num">profile (K)</th></tr>
 </thead>
 <tbody>
-<tr><td>Raised coefficient, no operator</td><td class="num">1.10</td><td class="num">3.03</td><td class="num">0.084</td><td class="num">2.26</td></tr>
+<tr><td>Constant gain, no operator</td><td class="num">1.10</td><td class="num">3.03</td><td class="num">0.084</td><td class="num">2.26</td></tr>
 <tr><td>&nbsp;&nbsp;+ vertical and stability, $s=0.475$</td><td class="num"><strong>0.55</strong></td><td class="num"><strong>1.70</strong></td><td class="num"><strong>0.045</strong></td><td class="num"><strong>0.34</strong></td></tr>
 <tr><td>Shaped gain, no operator</td><td class="num">2.53</td><td class="num">2.38</td><td class="num"><strong>0.045</strong></td><td class="num"><strong>1.43</strong></td></tr>
 <tr><td>&nbsp;&nbsp;+ isotropic, $s=0.3$</td><td class="num">3.97</td><td class="num">4.75</td><td class="num">0.218</td><td class="num">3.04</td></tr>
@@ -3187,31 +3081,31 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <figure class="wide">
   <img src="assets/figures/fig_wallgain_metrics.png" alt="The four monitored quantities for the wall gain, with and without an operator" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 25.</span> The four monitored quantities for the wall gain. The shaped gain reaches the right end temperature by the wrong path: it runs warm through the whole filling phase and only catches up at the end. An operator on top of it pulls the traces towards the reference and pushes the end profile away.</figcaption>
+  <figcaption><span class="label">Figure 21.</span> The four monitored quantities for the wall gain. The shaped gain reaches the right end temperature by the wrong path: it runs warm through the whole filling phase and only catches up at the end. An operator on top of it pulls the traces towards the reference and pushes the end profile away.</figcaption>
 </figure>
 
 <p>What the table shows is a trade, not a loss. On the shaped gain an operator improves both histories, the mean temperature from 2.53 to 2.02 K and the heterogeneity from 2.38 to 1.57 K, and worsens both end quantities, the profile from 1.43 to 2.77 K and the height of the heat from 0.045 to 0.099 mm. Which way that reads depends on the column, and saying it in one direction would be choosing the column after seeing the answer.</p>
 
-<p>Two further things fall out of it. <em>The ranking inside the family is the same as on the raised coefficient</em>: the database-set strength and the adaptive one lead, the vertical normal with its stability test is level with them, then the vertical normal alone, then the gradient normal, and the isotropic form is worst by a distance, with a centre of gravity five times further out than the rest. That the ordering survives a change in how the wall term is written is worth more than any single number in the table.</p>
+<p>Two further things fall out of it. <em>The ranking inside the family is the same as on the constant gain</em>: the database-set strength and the adaptive one lead, the vertical normal with its stability test is level with them, then the vertical normal alone, then the gradient normal, and the isotropic form is worst by a distance, with a centre of gravity five times further out than the rest. That the ordering survives a change in how the wall term is written is worth more than any single number in the table.</p>
 
 <p><em>The right strength on the shaped gain is a weaker one.</em> At $s = 0.20$ the vertical normal with the stability test gives 2.31 / 1.89 / 0.051 / 1.60, which keeps the end state almost intact while taking part of the gain in the histories. That makes sense: the shaped gain already does part of the sharpening's work through where it removes heat, so less is left for the operator.</p>
 
-<p>So three configurations are defensible, at three costs. One fitted number and no operator gives the best end state for that price. One fitted number and a weak operator gives the best balance. Two fitted numbers, the constant gain and the strength of &sect;17, still win every column outright, and that remains the working point of this study.</p>
+<p>So three configurations are defensible, at three costs. One fitted number and no operator gives the best end state for that price. One fitted number and a weak operator gives the best balance. Two fitted numbers, the gain and the strength of &sect;17, still win every column outright, and that remains the working point of this study.</p>
 
-<h3>16.9 — The sign of the wall term</h3>
+<h3>16.7 — The sign of the wall term</h3>
 
 <p>One reading of the wall term deserves its own test, because if it held it would overturn all of the above. The term is written here with the heat that <em>leaves</em> as the positive quantity: the cell is cooled by $-q$, and the balance target is lowered by the same amount. It can also be written as a signed source, in which $q$ is what the cell <em>receives</em> and is therefore negative above ambient. The second convention is the more common one, so the question is whether the result depends on the choice.</p>
 
 <p>It does not. Rewriting the block in the signed convention, with every downstream sign following, reproduces the original run byte for byte across all 601 samples. The convention is a way of writing it down, not a physical choice.</p>
 
 <p>The mistake that the convention invites is a different matter, and it was run as well. If the field is cooled while the balance target is <em>raised</em> by the same amount, the global-balance correction has to put the heat back. That run ends at 307.93 K against 303.81 K for the code as it stands: <strong>+4.12 K</strong>, and warmer than a run with no sink at all. The cooling disappears completely. The replay does the opposite, ending 2.5 K below its own adiabatic run, which is the direct evidence that it is not making that slip.</p>
-<h2 id="matched">17 — The Operator Family on a Matched Sink</h2>
+<h2 id="matched">17 — The Operator Family on the Gain</h2>
 
 <p>With both sides removing the same heat, the operators can be compared on their own merits. The runs below all use a lid coefficient set so that the replay removes 6623 J against the reference's 6581 J. Nothing else about the database, the schedule or the limiter changes.</p>
 
 <p>Two labels are used from here on, and it is worth fixing what they mean before the tables use them.</p>
 
-<p><em>Declared sink</em> is the replay run exactly as the case specifies: the wall coefficient set to the $h = 100$ W m<sup>&minus;2</sup>K<sup>&minus;1</sup> the case declares, with no operator. It is faithful to the written boundary condition, it removes 1930 J, and it is where the earlier sections were working. It is kept in every table as the column to improve on, because it shows what the replay does when it is told only what the case says.</p>
+<p><em>Sink only</em> is the replay run exactly as the case specifies: the wall coefficient set to the $h = 100$ W m<sup>&minus;2</sup>K<sup>&minus;1</sup> the case declares, with no operator. It is faithful to the written boundary condition, it removes 1930 J, and it is where the earlier sections were working. It is kept in every table as the column to improve on, because it shows what the replay does when it is told only what the case says.</p>
 
 <p><em>Working point</em> is the configuration this section arrives at: the coefficient raised so that the replay removes the heat the reference actually removes, plus the operator and strength that come out best on the ladder. The two differ in one quantity that was measured rather than chosen, the sink level, and in one that was tuned, the operator strength. Everything else, including the database and the schedule, is the same in both.</p>
 
@@ -3221,7 +3115,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>The first result had nothing to do with which operator is used. It is <em>when</em> the operator is allowed to run.</p>
 
-<p>The earlier work split the replay into two windows and stopped the sharpening when the inflow stopped, at 315 s. That choice was made for good reasons at the time: run from the start and left running, the step was seen to interfere with the rising jet. On a matched sink the split costs most of what the operator can give. The directional operator with the vertical normal, at the same strength, reaches an end-profile RMS of <strong>2.18 K</strong> when it stops at 315 s and <strong>0.42 K</strong> when it is left running for the whole replay.</p>
+<p>The earlier work split the replay into two windows and stopped the sharpening when the inflow stopped, at 315 s. That choice was made for good reasons at the time: run from the start and left running, the step was seen to interfere with the rising jet. On the gain the split costs most of what the operator can give. The directional operator with the vertical normal, at the same strength, reaches an end-profile RMS of <strong>2.18 K</strong> when it stops at 315 s and <strong>0.42 K</strong> when it is left running for the whole replay.</p>
 
 <p>The reason is visible in the cooling phase. After the inflow stops, the lid keeps working and the thermocline keeps being eroded by the film it produces. That is exactly when a sharpening step has something to hold, and the split schedule switched it off at that moment. On the earlier, weaker sink there was little film to speak of, so the loss was small and the split looked harmless.</p>
 
@@ -3235,7 +3129,7 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <tr><th>Operator</th><th class="num">$s=0.3$</th><th class="num">0.45</th><th class="num">0.5</th><th class="num">0.6</th><th class="num">0.7</th><th class="num">0.85</th></tr>
 </thead>
 <tbody>
-<tr><td>no operator, matched sink only</td><td class="num" colspan="6">2.26</td></tr>
+<tr><td>no operator, gain only</td><td class="num" colspan="6">2.26</td></tr>
 <tr><td>isotropic</td><td class="num"><strong>1.92</strong></td><td class="num">—</td><td class="num">2.09</td><td class="num">—</td><td class="num">2.19</td><td class="num">—</td></tr>
 <tr><td>directional, gradient normal</td><td class="num">1.16</td><td class="num">—</td><td class="num"><strong>1.05</strong></td><td class="num">—</td><td class="num">1.22</td><td class="num">—</td></tr>
 <tr><td>directional, vertical normal</td><td class="num">0.77</td><td class="num">—</td><td class="num"><strong>0.59</strong></td><td class="num">—</td><td class="num">1.13</td><td class="num">—</td></tr>
@@ -3250,11 +3144,11 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <p>The adaptive strength shows why a single-strength comparison is not safe. At $s = 0.5$ it reads 0.68 K and looks clearly beaten. Its own optimum is at $s = 0.7$, where it reads 0.36 K and is level with the best. Had the ladder not been run, the study would have reported it as a failure.</p>
 
-<p>Three further switches inside the family were tried on the matched sink and none of them helps: restricting the operator to a band under the lid gives 2.27 K, gating it on the strength of the local gradient 1.74 K, smoothing the gradient normal over neighbours 1.03 K, and blending the gradient normal with the vertical one 0.45 K.</p>
+<p>Three further switches inside the family were tried with the gain in place and none of them helps: restricting the operator to a band under the lid gives 2.27 K, gating it on the strength of the local gradient 1.74 K, smoothing the gradient normal over neighbours 1.03 K, and blending the gradient normal with the vertical one 0.45 K.</p>
 
 <figure class="wide">
   <img src="assets/figures/fig_family_metrics.png" alt="The four monitored metrics for each operator of the family against the CFD" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 26.</span> The family on the four monitored quantities, each operator at its own best strength, all on the matched sink and the same schedule. The ordering is the same in every panel: the isotropic operator furthest from the reference, the gradient normal next, the vertical normal closest, with the stability test and the database-set strength lying on top of one another. The grey curve is the sink alone, with no operator.</figcaption>
+  <figcaption><span class="label">Figure 22.</span> The family on the four monitored quantities, each operator at its own best strength, all with the same gain and the same schedule. The ordering is the same in every panel: the isotropic operator furthest from the reference, the gradient normal next, the vertical normal closest, with the stability test and the database-set strength lying on top of one another. The grey curve is the sink alone, with no operator.</figcaption>
 </figure>
 
 <h3>17.3 — Letting the database set the strength</h3>
@@ -3270,23 +3164,23 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 <p>Two configurations are carried forward rather than one, because the numbers cannot separate them. The directional operator with the vertical normal and the stability test, at $s = 0.475$, is the plain minimum of the ladder at 0.34 K, and it is the simpler of the two to state: a fixed direction, a fixed strength, one test. The database-set strength reaches 0.36 K, the same answer within the resolution of the metric, and it reaches it with the strength following the recorded diffusivity instead of a number chosen by hand. The fixed one is the smaller claim; the database-set one is the same idea the rest of the study rests on, that the recording rather than a global constant should decide what the replay does. Where a figure below shows a single field, it is the database-set strength, because that is the run whose frames were rendered.</p>
 
 <figure class="wide">
-  <img src="assets/figures/fig_four_metrics.png" alt="The four monitored metrics: plain replay under the declared coefficient against the working point" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 27.</span> The same four quantities, but against where this study started: green is the plain replay under the declared coefficient, black the reference, and the other two are the working points, drawn solid and dashed because they lie on top of one another. Three of the four follow the reference the whole way. The heterogeneity, top right, is the exception: it lags while the tank fills and closes once the inflow stops.</figcaption>
+  <img src="assets/figures/fig_four_metrics.png" alt="The four monitored metrics: plain replay with no gain against the working point" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 23.</span> The same four quantities, but against where this study started: green is the plain replay with no gain, black the reference, and the other two are the working points, drawn solid and dashed because they lie on top of one another. Three of the four follow the reference the whole way. The heterogeneity, top right, is the exception: it lags while the tank fills and closes once the inflow stops.</figcaption>
 </figure>
 
 <figure class="wide">
-  <img src="assets/figures/fig_diff_vs_cfd_workingpoint.png" alt="Difference maps: plain replay, matched sink only, and the working point" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 28.</span> Replay minus reference at two instants, showing what each step buys. Left the plain replay under the declared coefficient, with the whole upper layer one flat colour. Middle the sink matched and the operator off. Right the database-set working point. The mean absolute difference at the end falls from 5.20 K to 0.77 K.</figcaption>
+  <img src="assets/figures/fig_diff_vs_cfd_workingpoint.png" alt="Difference maps: plain replay, gain only, and the working point" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 24.</span> Replay minus reference at two instants, showing what each step buys. Left the plain replay with no gain, with the whole upper layer one flat colour. Middle the sink matched and the operator off. Right the database-set working point. The mean absolute difference at the end falls from 5.20 K to 0.77 K.</figcaption>
 </figure>
 
 <h3>17.4 — Where the working points stand</h3>
 
-<p>Both sit next to the plain replay under the declared boundary condition, which is where this study started. They agree on every number they share, by less than the difference either one has from the reference, so the choice between them is not made on the metrics. The last four rows are read from the rendered frames of each run. Where the two part at all they part in opposite directions: the fixed strength is marginally closer on the late field distance, the database-set one on the structure of the field.</p>
+<p>Both sit next to the plain replay with no gain, which is where this study started. They agree on every number they share, by less than the difference either one has from the reference, so the choice between them is not made on the metrics. The last four rows are read from the rendered frames of each run. Where the two part at all they part in opposite directions: the fixed strength is marginally closer on the late field distance, the database-set one on the structure of the field.</p>
 
 <div class="table-wrap">
 <table>
 <thead>
-<tr><th></th><th class="num">CFD</th><th class="num">declared sink</th><th class="num">vertical normal<br>+ stability, $s=0.475$</th><th class="num">local-diff strength<br>$s=0.50$</th></tr>
+<tr><th></th><th class="num">CFD</th><th class="num">sink alone</th><th class="num">vertical normal<br>+ stability, $s=0.475$</th><th class="num">local-diff strength<br>$s=0.50$</th></tr>
 </thead>
 <tbody>
 <tr><td>End profile, RMS (K)</td><td class="num">—</td><td class="num">5.15</td><td class="num"><strong>0.34</strong></td><td class="num"><strong>0.36</strong></td></tr>
@@ -3307,56 +3201,56 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <figure class="wide">
   <img src="assets/figures/fig_family_vs_cfd_montage.png" alt="Temperature fields: CFD against the plain replay and each operator of the family" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 29.</span> The fields themselves, on one colour scale from 293 to 333 K and one view. The runs read left to right in two blocks of four, with the reference at the head of each block so either half can be read on its own; each block carries both instants as its two rows. At $t = 300$ s the reference holds a sharp interface. The plain replay smears it and keeps the layer above too warm, and the isotropic operator tears the layer below into fingers that have no counterpart in the reference. The directional forms hold the interface, and the two working points in the lower block also reproduce the filaments that hang from the lid at the end of the run.</figcaption>
+  <figcaption><span class="label">Figure 25.</span> The fields themselves, on one colour scale from 293 to 333 K and one view. The runs read left to right in two blocks of four, with the reference at the head of each block so either half can be read on its own; each block carries both instants as its two rows. At $t = 300$ s the reference holds a sharp interface. The plain replay smears it and keeps the layer above too warm, and the isotropic operator tears the layer below into fingers that have no counterpart in the reference. The directional forms hold the interface, and the two working points in the lower block also reproduce the filaments that hang from the lid at the end of the run.</figcaption>
 </figure>
 
 <figure class="wide">
   <img src="assets/figures/fig_family_montage.png" alt="Replay minus CFD for each operator of the family" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 30.</span> Replay minus reference for the family, on the same colour scale, in the middle of the hot inflow (top) and at the end (bottom). The isotropic operator builds a warm bulge with a scalloped edge that has no counterpart in the reference; the directional forms remove it. In the top row the gradient normal reads the lowest mean, 1.76 K against 1.99 and 2.04 K, because the two working points hold a tighter but more intense line at the thermocline. At the end of the run the ordering reverses and stays that way: 1.06 K for the gradient normal against 0.73 and 0.77 K.</figcaption>
+  <figcaption><span class="label">Figure 26.</span> Replay minus reference for the family, on the same colour scale, in the middle of the hot inflow (top) and at the end (bottom). The isotropic operator builds a warm bulge with a scalloped edge that has no counterpart in the reference; the directional forms remove it. In the top row the gradient normal reads the lowest mean, 1.76 K against 1.99 and 2.04 K, because the two working points hold a tighter but more intense line at the thermocline. At the end of the run the ordering reverses and stays that way: 1.06 K for the gradient normal against 0.73 and 0.77 K.</figcaption>
 </figure>
 
-<p>The same run, seen six ways. The reference is on the left in every clip and the replay on the right, all on the matched sink and the same colour scale. Watch the interface: where it forms, whether it holds, and what the layer above does once the inflow stops.</p>
+<p>The same run, seen six ways. The reference is on the left in every clip and the replay on the right, all with the same gain and the same colour scale. Watch the interface: where it forms, whether it holds, and what the layer above does once the inflow stops.</p>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_plain.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 31.</span> No operator at all, on the matched sink. The interface forms too low and too soft and keeps spreading for the whole run. This is what the sharpening has to work on.</figcaption>
+  <figcaption><span class="label">Figure 27.</span> No operator at all, with the gain alone. The interface forms too low and too soft and keeps spreading for the whole run. This is what the sharpening has to work on.</figcaption>
 </figure>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_isotropic.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 32.</span> The isotropic operator. Sharpening every face without a direction tears the layer below the interface into fingers that have no counterpart in the reference, which is the clearest sign that a direction is needed.</figcaption>
+  <figcaption><span class="label">Figure 28.</span> The isotropic operator. Sharpening every face without a direction tears the layer below the interface into fingers that have no counterpart in the reference, which is the clearest sign that a direction is needed.</figcaption>
 </figure>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_gradnormal.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 33.</span> The directional operator with the gradient normal. The front is held, but the direction comes from the data and the operator keeps reading the sideways ripples as fronts, so the layer below stays warmer than the reference.</figcaption>
+  <figcaption><span class="label">Figure 29.</span> The directional operator with the gradient normal. The front is held, but the direction comes from the data and the operator keeps reading the sideways ripples as fronts, so the layer below stays warmer than the reference.</figcaption>
 </figure>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_vertnormal.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 34.</span> The directional operator with the vertical normal. Ignoring the sideways structure gives a cleaner interface at the right height; what is left is the build-up while the inflow is hot.</figcaption>
+  <figcaption><span class="label">Figure 30.</span> The directional operator with the vertical normal. Ignoring the sideways structure gives a cleaner interface at the right height; what is left is the build-up while the inflow is hot.</figcaption>
 </figure>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_stabtest.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 35.</span> The first working point: the vertical normal with the stability test, $s = 0.475$. Skipping the links that are already statically unstable keeps the step from working against the overturning the database carries, and the interface holds through the cooling phase without the faint banding the previous clip shows below the front.</figcaption>
+  <figcaption><span class="label">Figure 31.</span> The first working point: the vertical normal with the stability test, $s = 0.475$. Skipping the links that are already statically unstable keeps the step from working against the overturning the database carries, and the interface holds through the cooling phase without the faint banding the previous clip shows below the front.</figcaption>
 </figure>
 
 <figure class="wide">
   <video controls muted playsinline preload="metadata" style="max-width:1280px;width:100%;display:block;margin:0 auto;border-radius:6px;">
     <source src="assets/videos/vid_nadb_cfd_vs_workingpoint.mp4" type="video/mp4">
   </video>
-  <figcaption><span class="label">Figure 36.</span> The whole run, reference on the left and the second working point, the database-set strength, on the right, same colour scale and same view. The interface forms at the same height and holds there, and the layer above cools at the same rate. What is still visible is the build-up: while the inflow is hot the replay's front is the softer of the two.</figcaption>
+  <figcaption><span class="label">Figure 32.</span> The whole run, reference on the left and the second working point, the database-set strength, on the right, same colour scale and same view. The interface forms at the same height and holds there, and the layer above cools at the same rate. What is still visible is the build-up: while the inflow is hot the replay's front is the softer of the two.</figcaption>
 </figure>
 
 <h3>17.5 &mdash; Why the recording has to carry the cooling</h3>
@@ -3372,9 +3266,9 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 </thead>
 <tbody>
 <tr><td>Reference CFD</td><td class="num">299.51</td><td class="num">&mdash;</td><td class="num">6581</td></tr>
-<tr><td>Heat-loss database, declared sink</td><td class="num">303.81</td><td class="num">5.15</td><td class="num">1930</td></tr>
-<tr><td>Adiabatic database, matched sink</td><td class="num">301.52</td><td class="num">4.71</td><td class="num">4229</td></tr>
-<tr><td>Heat-loss database, matched sink</td><td class="num">298.61</td><td class="num">2.26</td><td class="num">6623</td></tr>
+<tr><td>Heat-loss database, no gain</td><td class="num">303.81</td><td class="num">5.15</td><td class="num">1930</td></tr>
+<tr><td>Adiabatic database, with the gain</td><td class="num">301.52</td><td class="num">4.71</td><td class="num">4229</td></tr>
+<tr><td>Heat-loss database, with the gain</td><td class="num">298.61</td><td class="num">2.26</td><td class="num">6623</td></tr>
 <tr><td>&nbsp;&nbsp;+ working point</td><td class="num">299.22</td><td class="num"><strong>0.34</strong></td><td class="num">6881</td></tr>
 </tbody>
 </table>
@@ -3390,11 +3284,17 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
 
 <h3>17.6 &mdash; What is left</h3>
 
-<p>One defect survives the matched sink, and it shows up in two places at once. The heterogeneity lags through the whole heating phase: the reference rises to 15.6 K by 100 s and holds, while the replay climbs more slowly and reaches 14.1 K by 310 s. The same thing appears in the difference maps as a thin line at the thermocline while the inflow is hot. After the inflow stops, both close and stay closed.</p>
+<p>One defect survives the gain, and it shows up in two places at once. The heterogeneity lags through the whole heating phase: the reference rises to 15.6 K by 100 s and holds, while the replay climbs more slowly and reaches 14.1 K by 310 s. The same thing appears in the difference maps as a thin line at the thermocline while the inflow is hot. After the inflow stops, both close and stay closed.</p>
 
 <p>So the front builds too slowly and too softly while the tank is filling, and everything else follows. That is a smaller and much better posed question than the one this study began with, and it is where the next round belongs.</p>
 
-<p>One detail in the clips above is worth naming, because it answers a doubt that ran through the earlier sections. Cold fluid now falls from the lid in the replay, and it did not before. Nothing was added to make it: the replay cannot invent motion, it only follows the recorded cell-to-cell map, and that map was recorded from a CFD whose lid was already cooled. The descending plumes were in the database all along. What was missing was something for them to carry. Under the declared coefficient the sink pulled 1930 J, too little to build a film dense enough to show, so the same motion moved fluid that barely differed from its surroundings. With the sink matched the film forms and the recorded motion takes it down. The database was never the problem.</p>
+<p>Two things narrow it further. It is not an end-state error: at 599 s the three zones of the profile sit at +0.20, &minus;0.03 and +0.22 K, so the replay finishes with the layers in the right places at the right temperatures. And it is not the thickness of the front, which the operator does control. What lags is the separation between the two layers while the tank is still filling, which is the phase in which the reference is moving fluid from one layer to the other.</p>
+
+<p>The obvious repair was tried and it fails in a way worth recording. The database-set strength holds the step back where the recorded diffusivity is large, $w = 1 - D_\text{face}/D_\text{ref}$. Read as a numerical correction the sign looks backwards: the face swap smears a face in proportion to the diffusivity recorded there, so a counter-step should be strongest at the same faces. Both normalisations were run. Against the largest value in the field the weight is near zero wherever the front is, because the largest values live in the jet, and the operator is all but switched off &mdash; a 2.4-fold change in strength moves the mean-temperature trace by 0.02 K. Against the mean over the cells that hold any recorded mixing the weight is of order one almost everywhere, and the run collapses: the top of the tank ends 17 to 21 K too warm and the end profile reaches 10.6 to 13.6 K, worse than running with no operator at all.</p>
+
+<p>The failure says what the weight is for. Where the database holds a large diffusivity, the CFD itself was mixing at that face, and the smearing the swap produces there is the recording doing its job. Sharpening against it puts back a gradient the reference does not have, which is what the 21 K under the lid is. The step belongs where the recording says the fluid was quiet and the map's own interpolation is the only thing blurring the field. The sign the operator was first written with is the right one, and it is fixed by what the stored field means rather than chosen.</p>
+
+<p>One detail in the clips above is worth naming, because it answers a doubt that ran through the earlier sections. Cold fluid now falls from the lid in the replay, and it did not before. Nothing was added to make it: the replay cannot invent motion, it only follows the recorded cell-to-cell map, and that map was recorded from a CFD whose lid was already cooled. The descending plumes were in the database all along. What was missing was something for them to carry. With no gain the sink pulled 1930 J, too little to build a film dense enough to show, so the same motion moved fluid that barely differed from its surroundings. With the sink matched the film forms and the recorded motion takes it down. The database was never the problem.</p>
 <h2 id="step3">18 — Step 3: Writing &amp; Finalization</h2>
 
 <div class="wip-card">
