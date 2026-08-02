@@ -3086,6 +3086,34 @@ rcfd_modify_balance_mass_source_one(handle, water, water_temp, -per_node_wall_he
   <figcaption><span class="label">Figure 24.</span> The reference and four replays over the whole run, played together. The plain replay has no film under the lid and lets the cooling seep downward. The gain builds the film and reaches the right end temperature, but its interface is the softest of the three. The two on the recorded flux hold the interface and the film, and they pay for it where the jet enters: the rising plume is stepped there in a way the reference is not, which is the flux acting on an anomaly far larger than anything in the layer it was meant to move.</figcaption>
 </figure>
 
+<script>
+(function(){
+  var root=document.getElementById('syncp-cases');
+  if(!root) return;
+  var vids=[].slice.call(root.querySelectorAll('.syncp-vid'));
+  if(!vids.length) return;
+  var play=root.querySelector('.syncp-play'), reset=root.querySelector('.syncp-reset'),
+      slider=root.querySelector('.syncp-slider'), pct=root.querySelector('.syncp-pct'),
+      lead=vids[0], on=false, raf=null;
+  function show(f){ slider.value=Math.round(f*1000); pct.textContent=Math.round(f*100)+'%'; }
+  function seek(f){ f=Math.max(0,Math.min(1,f)); vids.forEach(function(v){ if(v.duration) v.currentTime=f*v.duration; }); show(f); }
+  function loop(){
+    if(!on) return;
+    if(lead.ended || (lead.duration && lead.currentTime>=lead.duration-0.04)){ vids.forEach(function(v){ v.currentTime=0; v.play(); }); }
+    show(lead.duration ? lead.currentTime/lead.duration : 0);
+    raf=requestAnimationFrame(loop);
+  }
+  play.addEventListener('click', function(){
+    on=!on;
+    if(on){ vids.forEach(function(v){v.play();}); play.innerHTML='&#10074;&#10074; Pause'; raf=requestAnimationFrame(loop); }
+    else { vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); }
+  });
+  reset.addEventListener('click', function(){ on=false; vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); seek(0); });
+  slider.addEventListener('input', function(){ on=false; vids.forEach(function(v){v.pause();}); play.innerHTML='&#9654; Play'; if(raf)cancelAnimationFrame(raf); seek((+slider.value)/1000); });
+  vids.forEach(function(v){ if(v.readyState>=1){try{v.currentTime=0.001;}catch(e){}} else { v.addEventListener('loadedmetadata',function(){try{v.currentTime=0.001;}catch(e){}},{once:true}); } });
+})();
+</script>
+
 <h3>17.5 &mdash; Why the recording has to carry the cooling</h3>
 
 <p>The paragraph above invites a fair challenge. If the sink is what matters, and the sink is a term the replay applies for itself, then the adiabatic database ought to do just as well: record the flow once without heat loss, raise the coefficient, and let the term do the cooling. It would save building a database per boundary condition.</p>
