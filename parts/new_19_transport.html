@@ -1,0 +1,155 @@
+<h2 id="transport">18 — Giving the Replay Its Transport</h2>
+
+<p>§17 ends on a "no". Seven local rules were tried and none of them touched the one thing that stayed wrong, and the reason turned out to be structural: every one of them takes heat from a cell and gives the same heat to its neighbour, so none of them can change how much heat leaves the tank. If the missing piece really is transport, then the only honest move is to supply transport rather than approximate it.</p>
+
+<p>Two things had to be sorted out first.</p>
+
+<h3>18.1 — The balance hands some of it back</h3>
+
+<p>Here is something that does not look right until you check it. The replay's wall term removes 1930 J — <em>more</em> than the same formula gives on the reference's own field. And yet the tank only ends up 893 J colder than the same replay with no sink at all. About a thousand joules come back, and the only thing in the run that can put heat into the field is the global balance correction.</p>
+
+<p>The mechanism is a feedback loop. The outlet part of the balance target is built from the temperature of the replay's own outlet channel. Cool the tank down, and the replay exports less; export less, and the target goes up; the target goes up, and the correction makes up the difference by pushing heat across the faces with the biggest temperature difference — which is the front. In the reference the same cooling does the opposite, because the denser fluid sinks and brings the front to the outlet sooner.</p>
+
+<p>How big is it? Switch the correction off and see. Nothing then holds the total, so the run is not physical, but it puts a number on it.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th></th><th class="num">end (K)</th><th class="num">cooling (K)</th><th class="num">share of the CFD</th></tr>
+</thead>
+<tbody>
+<tr><td>Correction as built</td><td class="num">303.81</td><td class="num">3.81</td><td class="num">47&thinsp;%</td></tr>
+<tr class="best"><td>Correction switched off</td><td class="num">301.54</td><td class="num">6.08</td><td class="num"><strong>75&thinsp;%</strong></td></tr>
+<tr><td>Reference</td><td class="num">299.51</td><td class="num">8.11</td><td class="num">100&thinsp;%</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>From 47&thinsp;% to 75&thinsp;% with nothing added. The correction was quietly returning 2.27 K.</p>
+
+<p>That is a diagnosis, not a fix. Without the correction the heterogeneity gets worse, 2.42 to 3.82 K, and the centre of gravity nearly doubles its error, because now nothing enforces conservation at all. The method as published puts the balance on <em>compartments</em>, not on one domain, and this working directory uses the coarsest choice there is: one compartment for the whole tank. Splitting it is the proper repair, and it has not been done yet.</p>
+
+<h3>18.2 — A transport that was recorded, not invented</h3>
+
+<p>The database can hold more than the map and the diffusivity. During the same preparation run the CFD also writes, frame by frame and cell by cell,</p>
+
+<p style="text-align:center">$F = \rho\,c_p\,v\,(T - \bar{T}_\text{band})$</p>
+
+<p>the vertical convective heat flux carried by the local temperature anomaly, with $\bar{T}_\text{band}$ the mean over the horizontal band one cell layer thick. In the replay the file for the frame being played is read back and its divergence applied face by face, under the same head-room limiter the sharpening step already uses. Nothing is tuned here at all.</p>
+
+<p>It lives in <code>data/flux/flux_&lt;frame&gt;_&lt;phase&gt;_&lt;partition&gt;</code>, 2401 files, laid out like the recorded diffusivity. The writer is <code>user_set_rec_vars</code> in <code>rCFD_user_prep_local.h</code>, which the library calls once per recorded frame — deliberately not a CFD-side UDF, because those run on the solver's schedule and would count frames differently from the diffusivity.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th></th><th class="num">$T_\text{mean}$</th><th class="num">$\delta T$</th><th class="num">CoG (mm)</th><th class="num">profile</th></tr>
+</thead>
+<tbody>
+<tr><td>$h = 100$ as written, nothing else</td><td class="num">4.11</td><td class="num">2.42</td><td class="num">0.091</td><td class="num">5.15</td></tr>
+<tr><td>&nbsp;&nbsp;+ the best local operator</td><td class="num">0.55</td><td class="num">1.70</td><td class="num">0.045</td><td class="num"><strong>0.34</strong></td></tr>
+<tr class="best"><td>&nbsp;&nbsp;+ the recorded flux</td><td class="num">3.11</td><td class="num"><strong>0.95</strong></td><td class="num">0.135</td><td class="num">4.20</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The heterogeneity is the measure §17 could not shift. The flux halves it in a single run, with no gain and no operator. That is about as direct a confirmation as you get that the leftover really was transport.</p>
+
+<p>One detail worth knowing: it works mostly through the <em>outlet</em>, not the wall. With the flux on, the wall term goes up only from 1930 to 2017 J — 87 J — while the tank loses 437 J more. The flux carries heat downwards, the front reaches the outlet sooner, and more heat leaves that way.</p>
+
+<h3>18.3 — The operator was simply being driven too hard</h3>
+
+<p>The family was tried on the flux once, at the strength that had won without it, and every single member came out worse. That test does not stand. With the flux already carrying part of the transport, the operator has less left to do, so its strength has to come down. Sweeping it downwards changes everything.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th class="num">$s$</th><th class="num">$T_\text{mean}$</th><th class="num">$\delta T$</th><th class="num">CoG (mm)</th><th class="num">profile</th></tr>
+</thead>
+<tbody>
+<tr><td class="num">0</td><td class="num">1.21</td><td class="num">0.93</td><td class="num">0.068</td><td class="num">0.90</td></tr>
+<tr><td class="num">0.10</td><td class="num">1.08</td><td class="num">0.60</td><td class="num">0.080</td><td class="num">0.63</td></tr>
+<tr><td class="num">0.15</td><td class="num">1.01</td><td class="num">0.44</td><td class="num">0.087</td><td class="num"><strong>0.61</strong></td></tr>
+<tr><td class="num">0.20</td><td class="num">0.95</td><td class="num">0.32</td><td class="num">0.094</td><td class="num">0.70</td></tr>
+<tr class="best"><td class="num">0.25</td><td class="num">0.90</td><td class="num"><strong>0.26</strong></td><td class="num">0.101</td><td class="num">0.87</td></tr>
+<tr><td class="num">0.30</td><td class="num">0.85</td><td class="num">0.32</td><td class="num">0.107</td><td class="num">1.08</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>At $s = 0.25$ the heterogeneity gets down to 0.26 K, the lowest anywhere in this study, and the other three stay below one. The strength that does it is a third of the one that won without the flux.</p>
+
+<p>The same correction was applied to the rest of the family, and to the stability test, which the earlier ladder had only ever handed to the vertical normal. Adding the guard to the gradient normal and to the isotropic form barely moves them, 0.53 to 0.49 and 0.32 to 0.31 — so the older comparison was fair after all. But look at what the whole set does:</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>operator form</th><th class="num">wall term alone</th><th class="num">with the flux</th></tr>
+</thead>
+<tbody>
+<tr><td>isotropic</td><td class="num">5.54</td><td class="num">0.49</td></tr>
+<tr><td>gradient normal</td><td class="num">2.94</td><td class="num">0.31</td></tr>
+<tr><td>vertical normal</td><td class="num">1.97</td><td class="num">0.26</td></tr>
+<tr><td>adaptive strength</td><td class="num">2.01</td><td class="num">0.27</td></tr>
+<tr><td>database-set strength</td><td class="num">1.65</td><td class="num">0.30</td></tr>
+<tr class="best"><td><strong>spread across the forms</strong></td><td class="num"><strong>1.65&ndash;5.54</strong></td><td class="num"><strong>0.26&ndash;0.49</strong></td></tr>
+</tbody>
+</table>
+</div>
+
+<p><span class="label">Table.</span> Heterogeneity in kelvin, each form at its own best strength.</p>
+
+<p>This is the result of the whole section, and it is not one anybody would have guessed. <strong>Which operator form you pick only matters while there is no real transport in the run.</strong> With the wall term alone the forms are spread over a factor of three. With the flux they all land within a quarter of a kelvin of each other. The family stops being six competitors and becomes one operator whose only real setting is a strength that has to be matched to whatever else is already moving heat.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_cases_metrics.png" alt="The four monitored quantities for each case, every configuration at its own best setting" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 25.</span> The four monitored quantities, one curve per case, each at its own best setting. Black is the reference, grey the replay with the coefficient the case carries. Blue is the wall term with the gain, dashed without an operator and solid with one; red and green are the recorded flux. The gain closes the mean temperature and the end profile. The flux closes the heterogeneity — the panel the gain alone never reaches.</figcaption>
+</figure>
+
+<h3>18.4 — What it costs</h3>
+
+<p>Neither the gain nor the flux is free, and they are not interchangeable. Read across the row, not down one column.</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th></th><th class="num">$T_\text{mean}$</th><th class="num">$\delta T$</th><th class="num">CoG (mm)</th><th class="num">profile</th></tr>
+</thead>
+<tbody>
+<tr><td>$h = 100$ as written</td><td class="num">4.11</td><td class="num">2.42</td><td class="num">0.091</td><td class="num">5.15</td></tr>
+<tr><td>gain, operator $s = 0.475$</td><td class="num"><strong>0.55</strong></td><td class="num">1.70</td><td class="num"><strong>0.045</strong></td><td class="num"><strong>0.34</strong></td></tr>
+<tr><td>flux and gain 3.0, operator $s = 0.25$</td><td class="num">0.90</td><td class="num"><strong>0.26</strong></td><td class="num">0.101</td><td class="num">0.87</td></tr>
+<tr><td>flux and gain 3.5, operator $s = 0.20$</td><td class="num">0.68</td><td class="num">0.62</td><td class="num">0.081</td><td class="num">0.68</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Nothing here dominates. The second row reaches the right end state. The third reproduces the structure of the field on the way there and gives up a bit of the end state to do it. The fourth is the most even of the lot, with nothing above 0.68. Which one you prefer depends on what you want to claim — and the honest way to put it is that the end temperature can be reached by the wrong route, while the structure cannot.</p>
+
+<figure class="wide">
+  <img src="assets/figures/fig_cases_montage.png" alt="The fields, one column per case, at two instants" loading="lazy" decoding="async">
+  <figcaption><span class="label">Figure 26.</span> The fields, one column per case, on one colour scale and one view. The thin bright band along the top edge of the reference is the cooled film in the lid cell row — the replay with the coefficient as written never builds it at all. The gain builds the film and reaches the right temperature. The flux holds both the film and the interface, and you can see the price at $t = 300$ s: the rising plume is stepped in a way the reference is not.</figcaption>
+</figure>
+
+<h3>18.5 — The price, and three attempts to dodge it</h3>
+
+<p>That stepped plume is not a rendering glitch. In the jet the departure from the band mean is far bigger than anything in the layer the flux was meant to move, so the recorded flux there is large and the per-cell limiter shifts it in discrete lumps. None of the four measures notices: it lives in the filling phase and in a thin feature, and the metrics that would catch it are averages. It took watching the frames.</p>
+
+<p>Three ways of taming it were tried. All three cost the heterogeneity by roughly the same amount.</p>
+
+<p><em>Restrict the term to a band under the lid</em>, where the film forms and the jet is not. That gives 0.31 K at 30 mm, 0.73 at 20 mm and 1.84 at 10 mm, against 0.26 unrestricted. It also brings its own defect: the term switches off at a fixed height, so the plume changes behaviour as it crosses and the field ends up with a seam through it.</p>
+
+<p><em>Put a soft ceiling on the flux</em> in units of its own mean magnitude, $F \rightarrow F_c \tanh(F/F_c)$. No seam, but it costs 0.55 K at $F_c = 5\overline{|F|}$, 0.76 at three and 0.94 at two.</p>
+
+<p><em>Apply that ceiling only while the inflow is hot</em>, so the film is left alone afterwards. Still costs: 0.71 K at three, 1.24 at one.</p>
+
+<p>The conclusion is uncomfortable, and better said out loud than buried. <strong>The transport that closes the heterogeneity is carried by the big events of the filling phase — and those are the same events that tear the plume.</strong> They are not two separate things you can pull apart. So the recorded flux is reported here as it behaves, with the cost visible in the figure, and not as something ready to use.</p>
+
+<p>The ceiling does buy one thing. Used in the inflow window it improves the centre of gravity a lot without hurting the end profile, 0.101 to 0.076 mm. So the defect and the height of the heat are linked.</p>
+
+<h3>18.6 — Two things that turned out cheaper than expected</h3>
+
+<p>Both of these remove an objection rather than answer a question, which is why they are worth keeping.</p>
+
+<p><strong>The channel does not need every frame.</strong> Read only every fifteenth recorded frame and hold it in between, and the end profile goes from 0.90 to 1.04 K. Every sixtieth — ten frames instead of six hundred — gives 1.32 K. What the replay needs from that channel changes far more slowly than the interval it was recorded at. So the worry that every new database channel costs another three quarters of a gigabyte does not hold here: it could be a fortieth of that.</p>
+
+<p><strong>And the velocity does not have to be read at all.</strong> Swap it for a free-convection scaling on the replay's own anomaly, $F = \rho c_p A |\theta|^{3/2}$, gated to the statically unstable bands, and the heterogeneity still reaches 0.67 K — one constant, no preparation run. It is not carried further here, because on the other three measures it stays well behind the recorded channel and its plume is stepped in the same way. It is reported because of what it says about the recording: a single scaling law recovers most of the structural gain, and the rest is what the measurement adds on top.</p>

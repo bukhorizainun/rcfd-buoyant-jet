@@ -111,7 +111,13 @@
 <p>The same run, five ways, in sync and on one colour scale. The reference is the first panel rather than a figure in another section, so the comparison needs no memory. Watch three things: the thin bright band under the lid, which is the cooled film and which the plain replay never builds; where the interface forms and whether it holds; and the first seconds, when the hot water arrives.</p>
 
 <figure class="wide">
-  <div class="syncp">
+  <div class="syncp" id="syncp-cases">
+    <div class="syncp-bar">
+      <button class="syncp-btn syncp-play" type="button">&#9654; Play</button>
+      <button class="syncp-btn sec syncp-reset" type="button">Reset</button>
+      <input class="syncp-slider" type="range" min="0" max="1000" value="0" aria-label="Time">
+      <span class="syncp-pct">0%</span>
+    </div>
     <div class="syncp-grid">
       <div class="syncp-cell">
         <video class="syncp-vid" muted playsinline preload="metadata"><source src="assets/videos/syncp_cfd.mp4" type="video/mp4"></video>

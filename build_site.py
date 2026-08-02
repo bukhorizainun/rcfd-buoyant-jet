@@ -59,6 +59,8 @@ ORDER = [
     S + "new_16_sink_audit.html",
     S + "new_17_matched.html",
 ] + [
+    S + "new_19_transport.html",
+    S + "new_20_predictive.html",
     S + "16_16_step_3_writing_finalization.html",
     S + "17_references.html",
 ]
