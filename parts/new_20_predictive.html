@@ -1,53 +1,36 @@
-<h2 id="predictive">19 — Turning the Constants into Recordings</h2>
+<h2 id="predictive">19 — What Could Stop Being a Constant</h2>
 
-<p>Four numbers in this study were set by hand: the face-swap factor, the gain, the operator strength, and the level of the convective scaling. One of them has already stopped being a constant, and how that happened is the template for the rest.</p>
+<p>Four numbers in this study were set by hand: the face-swap factor, the gain, the operator strength, and the level of the convective scaling. One of them has already stopped being a constant, and that gives a test for the rest.</p>
 
-<h3>19.1 — The one that already went</h3>
+<p>The face exchange began as a single number, $f_\text{sd}$, chosen once for the whole run. It is a field now: the preparation writes the local diffusivity frame by frame and cell by cell, and the replay takes its exchange from that. A constant was replaced by a measurement of the thing it was standing in for, and nothing about the replay got more complicated.</p>
 
-<p>The face exchange started life as a single number, $f_\text{sd}$, picked once for the whole domain and the whole run. It is a field now. The preparation writes the local diffusivity frame by frame and cell by cell, and the replay takes its exchange from that instead. Nothing about the replay got more complicated — a constant was simply replaced by a measurement of the thing it was standing in for.</p>
+<p>So: <strong>a constant can become a recording when it stands for a physical quantity the CFD actually computes</strong>, and when the channel carries motion or a coefficient rather than the scalar it was recorded with. That second part matters — a channel carrying the recorded temperature is only good for the case it came from, which is exactly the limitation of the flux channel in §18.</p>
 
-<p>That gives a test to apply to the others. <strong>A constant can become a recording when it stands for a physical quantity the CFD actually computes.</strong> There is a second condition too, and the recorded flux of §18 is exactly why it is needed: the channel has to carry motion or a coefficient, not the scalar it was recorded with. A channel that carries the recorded temperature is only good for the case it came from.</p>
+<p>On that test, here is what is left to do.</p>
 
-<h3>19.2 — The gain</h3>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>what is set by hand now</th><th>what could be recorded instead</th><th class="num">status</th></tr>
+</thead>
+<tbody>
+<tr><td>$f_\text{sd}$, the face-swap factor</td><td>the local diffusivity field</td><td class="num">done, in use</td></tr>
+<tr><td>$G$, the gain on the wall term</td><td>an effective wall coefficient per lid cell per frame</td><td class="num">not started</td></tr>
+<tr><td>the recorded flux carries the CFD's temperature</td><td>its kinematic half alone, with the replay supplying its own anomaly</td><td class="num">written, not run</td></tr>
+<tr><td>the local diffusivity is one scalar per cell</td><td>the full dispersion tensor of the shift operation</td><td class="num">not started</td></tr>
+<tr><td>the outlet term is estimated from the channel mean</td><td>the relation the CFD's own exit flux follows</td><td class="num">not started</td></tr>
+<tr><td>the balance is applied over one compartment</td><td>a compartment level, as the method prescribes</td><td class="num">not started</td></tr>
+<tr><td>$s$, the operator strength</td><td>&mdash; nothing; see below</td><td class="num">n/a</td></tr>
+</tbody>
+</table>
+</div>
 
-<p>$G$ is not a physical quantity and cannot be recorded. What it stands in for is, and that is the whole difference.</p>
+<p>Two of these deserve a sentence of their own.</p>
 
-<p>The lid is cooled with a fixed film coefficient applied to a cell average. On a one millimetre mesh the thermal boundary layer is thinner than the cell, so $h(T_\text{cell} - T_\text{amb})$ is already a sub-grid model — and its true value varies in space and time, because the fluid at the wall is being renewed at a rate no constant can know about. The thing that varies is an effective coefficient, and Fluent computes the wall flux that defines it. The preparation could write</p>
+<p><strong>The gain is the one to do first.</strong> Not only because it removes the last fitted number from the wall term, but because it would settle the disagreement §16.1 leaves open: two measurements of the same lid term, four times apart, with no way to decide between them from a balance. A recorded coefficient measures the term directly.</p>
 
-<p style="text-align:center">$h_\text{eff} = q_\text{actual} \,/\, \bigl(A\,(T_\text{cell} - T_\text{amb})\bigr)$</p>
+<p><strong>The dispersion tensor is the one most likely to change the answers.</strong> It would take over both the directional weighting of the operator and part of the sharpening at once, so it does not just remove a constant — it removes a whole family of choices.</p>
 
-<p>per lid cell and per frame. It is a coefficient, so it transfers; the replay multiplies it by its own temperature difference and $G$ disappears. The parallel with $f_\text{sd}$ and the local diffusivity is exact.</p>
+<p><strong>And the operator strength cannot go.</strong> Sharpening does not model anything; it corrects the numerical smearing the map introduces, and there is no quantity in the CFD called sharpening for the preparation to write down. Its fate is different: §18 shows that once a real transport is in the run, the choice of operator stops mattering and its strength drops to a third. It does not become a recording. It becomes small, and eventually unnecessary.</p>
 
-<p>There is a second reason to want it. §16.1 leaves two measurements of the lid term disagreeing by a factor of four, and neither this study nor the gain can settle which is right. $h_\text{eff}$ settles it as a by-product, because it measures the term directly instead of inferring it from a balance.</p>
-
-<h3>19.3 — The flux</h3>
-
-<p>The recorded channel stores $\rho c_p v (T - \bar{T}_\text{band})$, which has the CFD's own temperature inside it. The kinematic half, $\rho c_p v$ on its own, does not. Written that way the recording supplies the motion and the replay supplies its own anomaly — which is what a closure is supposed to do — and the channel becomes valid for a scalar field other than the one it was recorded with.</p>
-
-<p>Dividing by a gradient to get an effective diffusivity instead was considered and dropped: it blows up in a well-mixed layer, where the gradient goes to zero and the flux does not.</p>
-
-<p>Both sides of the kinematic channel are written and build. The preparation run that would fill it has not been made — and after the stride result in §18.6, it need not be an expensive one.</p>
-
-<h3>19.4 — The strength, which cannot go</h3>
-
-<p>$s$ is the one that cannot be recorded, and the reason is worth saying because it is not a limitation of the method.</p>
-
-<p>Sharpening does not model anything. It corrects the numerical smearing that the cell-to-cell interpolation and the face exchange introduce, and there is no quantity in the CFD called sharpening for the preparation to write down. What <em>could</em> be recorded is the map's own error: push the CFD's field at one frame through the map, compare it with the CFD's field at the next, and the difference is the defect, measurable. But that is a property of this mesh and this frame interval rather than of the flow, so it would not transfer the way the other channels do.</p>
-
-<p>The better answer is the one §18 arrives at without going looking for it. Once a real transport is in the run, the choice of operator stops mattering and its strength drops to a third. The fate of $s$ is not to become a recording but to become small, and eventually unnecessary.</p>
-
-<h3>19.5 — What else is waiting</h3>
-
-<p>Three more channels follow from the same test.</p>
-
-<p><strong>The dispersion tensor.</strong> The recorded diffusivity is one scalar per cell. The effective dispersion of the shift operation is a tensor, and its off-diagonal part carries contributions from the gradients of the field, not from a diffusivity alone. Recording it would subsume both the directional weighting of the operator and part of the sharpening at once. Of everything named here, this is the one most likely to change the results.</p>
-
-<p><strong>The outlet term.</strong> It is estimated from the heat-weighted mean over a channel twenty-five millimetres long, so it counts fluid that has not left yet. The CFD knows the enthalpy flux through the exit. The adiabatic tests showed this to be the term that matters most — prescribing it from the reference improves the mean-temperature trace from 1.48 to 0.60 K. What has to be recorded is the <em>relation</em> rather than the value, otherwise the channel is just borrowing the answer.</p>
-
-<p><strong>The compartments.</strong> The balance is applied over one compartment, the whole tank, where the method as published prescribes a compartment level. That is not a channel but a choice, and §18.1 measures what it costs.</p>
-
-<h3>19.6 — The objection that does not hold</h3>
-
-<p>Every channel added to the database is another file per frame, and the recorded diffusivity and flux are about three quarters of a gigabyte each. Push the argument far enough and it is fatal: a database that stores everything <em>is</em> the CFD solution, and rCFD is worth having precisely because it stores little and extrapolates.</p>
-
-<p>The stride test in §18.6 takes the force out of that, for the flux at least. Holding every fifteenth recorded frame changes the end profile from 0.90 to 1.04 K, and every sixtieth — ten frames in place of six hundred — gives 1.32 K. It could be stored at a fortieth of the size. Whether the same is true of the others is not known, and finding the point where a channel stops paying for its own storage is a question worth asking on its own.</p>
+<p>One worry about all of this is worth putting to rest. Every channel is another file per frame, and the recorded diffusivity and flux are about three quarters of a gigabyte each; carried far enough, a database that stores everything <em>is</em> the CFD solution, and rCFD is worth having because it stores little. But the stride test in §18.6 shows the flux needs only every fifteenth frame, or even every sixtieth, so it could be kept at a fortieth of the size. Whether the same holds for the others is not known, and finding where a channel stops paying for its own storage is a question worth asking on its own.</p>
