@@ -21,6 +21,10 @@ S15 = "parts/s15/"
 # contain, so it answers a different question. The sources stay in parts/ so
 # the work is not lost and can be put back by adding them to ORDER.
 OTHER_BODY = [
+    S15 + "06_15_6_the_pictures_against_the_numbers_ag.html",
+    S15 + "08_15_8_where_the_cooling_actually_comes_fr.html",
+    S15 + "10_15_10_letting_the_database_place_the_sha.html",
+    S15 + "12_15_12_the_smallest_feature_the_replay_ca.html",
     S15 + "14_15_14_the_number_the_picture_and_whether.html",
     S15 + "09_15_9_the_curves_and_the_fields_not_just_.html",
     S15 + "07_15_7_measuring_the_texture_not_just_the_.html",
@@ -52,10 +56,6 @@ ORDER = [
     S15 + "02_15_2_the_animation_against_the_number.html",
     S15 + "03_15_3_rebuilding_it_once_more_with_the_lo.html",
     S15 + "04_15_4_sharpening_on_the_recorded_cooling_.html",
-    S15 + "06_15_6_the_pictures_against_the_numbers_ag.html",
-    S15 + "08_15_8_where_the_cooling_actually_comes_fr.html",
-    S15 + "10_15_10_letting_the_database_place_the_sha.html",
-    S15 + "12_15_12_the_smallest_feature_the_replay_ca.html",
     S + "new_16_sink_audit.html",
     S + "new_17_matched.html",
 ] + [
