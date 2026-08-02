@@ -16,7 +16,7 @@
 
 <figure class="wide">
   <img src="assets/figures/fig_wall_sink_finding.png" alt="Heat leaving through the lid: the reference measured against its own formula, and the replay" loading="lazy" decoding="async">
-  <figcaption><span class="label">Figure 20.</span> Left: the heat leaving through the lid. The reference's own formula (dashed) and the replay with the wall term as the case writes it sit together near 3.5 W, while the heat the reference actually loses (solid) runs about four times higher. The gain of &sect;16.4 puts the replay on the measured curve. Right: the mean temperature that follows. Without the gain the replay tracks the <em>adiabatic</em> reference far more closely than the heat-loss one.</figcaption>
+  <figcaption><span class="label">Figure 20.</span> Left: the heat leaving through the lid. The reference's own formula (dashed) and the replay with the wall term as the case writes it sit together near 3.5 W, while the heat the reference actually loses (solid) runs about four times higher. The gain of &sect;16.5 puts the replay on the measured curve. Right: the mean temperature that follows. Without the gain the replay tracks the <em>adiabatic</em> reference far more closely than the heat-loss one.</figcaption>
 </figure>
 
 <h3>16.2 — Why the gap looked like a limit</h3>
@@ -59,15 +59,36 @@
 
 <p>The extra removal is therefore tied to the buoyancy-driven convection the sink sets off, and not to the sink's own value, its linearisation, the time step or the iteration count.</p>
 
-<h3>16.4 &mdash; A gain on the wall term</h3>
+<h3>16.4 &mdash; How the lid term is implemented</h3>
+
+<p>The lid term is a few lines, and they are worth reading, because the rest of this section rests on what they do. The one thing they need first is the height of the top of the tank. An on-demand function walks the cells once before the run and reduces the largest cell-centre height over the partitions, which on this mesh is $y_\text{max} = 74.5$ mm.</p>
+
+<p>The volumetric source, as the reference case is run. Fluent calls it for every cell of the fluid zone:</p>
+
+<pre><code>DEFINE_SOURCE(top_heat_loss, c, t, dS, eqn)
+{
+    C_CENTROID(x, c, t);
+    cs = pow(C_VOLUME(c, t), 1.0/3.0);        /* cell edge length */
+
+    if(Top_region_initialized &amp;&amp; (x[1] &gt; (Top_y_max - cs))){
+
+        source  = -H_EXT * (C_T(c, t) - T_AMB) / cs;   /* (W/m3) */
+        dS[eqn] = -H_EXT / cs;
+        return source;
+    }
+    dS[eqn] = 0.0;
+    return 0.0;
+}</code></pre>
+
+<p>The test $x_1 &gt; y_\text{max} - c_s$ keeps the row whose centres are at 74.5 mm and drops the next row down at 73.5 mm, so the source acts on exactly 1125 cells. Dividing by $c_s$ turns the surface coefficient into a volumetric one: integrated over a cell of edge $c_s$ it is $h\,c_s^2\,(T-T_\text{amb})$, the convective loss across the cell's top face. <code>dS</code> is the derivative Fluent uses to linearise the term, and setting it to zero changes the imbalance by 0.1 W, which is one of the controls above.</p>
+
+<h3>16.5 &mdash; A gain on the wall term</h3>
 
 <p>The measurement above leaves one thing to do. The replay applies the coefficient the case carries and removes 1930 J; the reference removes 6581 J. The coefficient is not what is wrong, so it is left where it is and the correction is written as a factor of its own,</p>
 
 <p style="text-align:center">$q_\text{cell} = h\,c_s^2\,(T_\text{cell} - T_\text{amb})\,G$</p>
 
 <p>with $G = 4.35$. The value is not fitted to the temperature the replay should reach: it is set so that the two sides remove the same heat, 6623 J against 6581 J. Writing it this way rather than folding it into $h$ keeps the coefficient the case carries visible in the code and gives the correction a name, so a reader can see what was added and can set it back to one.</p>
-
-<p>One caveat belongs here and not in a footnote. The 6581 J that $G$ is set against comes from the balance route of &sect;16.1. The other measurement of the same quantity, the case's own formula evaluated on the case's own stored fields, gives 1575 J over the same run, and a factor of four separates them. Only one of the two can be the lid term of a closed budget. If it is the second, then the reference does not lose that heat at the lid at all, and $G$ is supplying through the wall term a cooling the reference gets from its outlet &mdash; a correction that works under the wrong name. Nothing measured on this page moves either way, because every metric is a direct comparison of fields and traces, but what the gain <em>means</em> does. What settles it is a direct measurement of the outlet enthalpy flux on both sides, and that is the first thing the next round should do.</p>
 
 <p>The interesting question is whether $G$ has to be a constant. The database stores, frame by frame and cell by cell, the mixing the CFD actually had, and the extra removal was shown above to be tied to the overturning the sink sets off. So the recording ought to know where the correction belongs. Writing</p>
 
@@ -103,7 +124,7 @@
 
 <p><em>The level is already at its optimum.</em> Raising $G_0$ to 6, 9 and 12 makes it steadily worse, and the way it fails is instructive: the level only trades the bulk against the top. It cannot fix the bulk, because a wall term acts at the wall.</p>
 
-<h3>16.5 &mdash; The family on the shaped gain</h3>
+<h3>16.6 &mdash; The family on the shaped gain</h3>
 
 <p>The end profile alone would have closed this section with the wrong sentence. Read on that column, the sharpening operator makes the shaped gain steadily worse, 1.43 K rising to 2.82 K, and the natural conclusion is that it does not belong there. The other three metrics say something different, and so does the rest of the family, which had not been tried on it. Each member is taken at the strength it settled on in &sect;17, so what is compared is the form of the operator and not its strength.</p>
 
@@ -140,7 +161,7 @@
 
 <p>So three configurations are defensible, at three costs. One fitted number and no operator gives the best end state for that price. One fitted number and a weak operator gives the best balance. Two fitted numbers, the gain and the strength of &sect;17, still win every column outright, and that remains the working point of this study.</p>
 
-<h3>16.6 — The sign of the wall term</h3>
+<h3>16.7 — The sign of the wall term</h3>
 
 <p>One reading of the wall term deserves its own test, because if it held it would overturn all of the above. The term is written here with the heat that <em>leaves</em> as the positive quantity: the cell is cooled by $-q$, and the balance target is lowered by the same amount. It can also be written as a signed source, in which $q$ is what the cell <em>receives</em> and is therefore negative above ambient. The second convention is the more common one, so the question is whether the result depends on the choice.</p>
 
